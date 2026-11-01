@@ -1,0 +1,15 @@
+name: Render & DB Keep Alive
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent Render free service and Neon DB from sleeping
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Health
+        run: |
+          curl -f -s -S -m 30 https://narendra-kirana.onrender.com/health/ || exit 0

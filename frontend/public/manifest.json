@@ -1,0 +1,17 @@
+﻿{
+  "short_name": "Kirana",
+  "name": "Narendra Kirana Store",
+  "description": "Your local grocery store, now online.",
+  "icons": [
+    {
+      "src": "/favicon.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "theme_color": "#059669",
+  "orientation": "portrait"
+}

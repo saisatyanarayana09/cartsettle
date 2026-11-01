@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Dashboard - Narendra Kirana</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+    
+    <!-- Top Navigation -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
+                        <i class="fa-solid fa-server text-sm"></i>
+                    </div>
+                    <span class="text-xl font-black tracking-tight text-slate-900">Backend API</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm font-medium text-slate-500">Logged in as <b>{{ request.user.username }}</b></span>
+                    <a href="/admin/logout/" class="text-sm font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-md transition-colors">
+                        Sign Out
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        
+        <div class="mb-10">
+            <h1 class="text-3xl font-extrabold text-slate-900">API Directory</h1>
+            <p class="mt-2 text-slate-500 text-lg">Central hub for Narendra Kirana's backend services and databases.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Owner Web Portal Quick Launch -->
+            <a href="https://narendra-kirana-owner.vercel.app/" target="_blank" rel="noopener" class="group block p-6 bg-gradient-to-br from-emerald-800 to-teal-950 rounded-2xl border border-emerald-500/50 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all md:col-span-2 lg:col-span-3">
+                <div class="flex items-center justify-between gap-6">
+                    <div class="flex items-center gap-6">
+                        <div class="w-16 h-16 bg-white/10 text-emerald-300 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                            <i class="fa-solid fa-store text-3xl"></i>
+                        </div>
+                        <div>
+                            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                Live Store Management
+                            </div>
+                            <h3 class="text-2xl font-black text-white mb-1">Owner Management Web Portal</h3>
+                            <p class="text-emerald-100/80 text-base">Open the web management application for live orders, catalog products, banner showcase, coupons, and analytics.</p>
+                        </div>
+                    </div>
+                    <div class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-white font-bold text-sm group-hover:bg-white group-hover:text-emerald-900 transition-all">
+                        <span>Launch Portal</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Swagger UI -->
+            <a href="/api/schema/swagger-ui/" class="group block p-6 bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl border border-indigo-500 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all md:col-span-2 lg:col-span-3">
+                <div class="flex items-center gap-6">
+                    <div class="w-16 h-16 bg-white/10 text-emerald-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+                        <i class="fa-solid fa-book-open text-3xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-white mb-1">Swagger Interactive API Docs</h3>
+                        <p class="text-indigo-200 text-base">Click here to view, test, and interact with the complete OpenAPI documentation for Narendra Kirana.</p>
+                    </div>
+                </div>
+            </a>
+            
+            <!-- Admin DB Card -->
+            <a href="/admin/" class="group block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all">
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-database text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Django Admin Database</h3>
+                <p class="text-slate-500 text-sm">Direct, unrestricted access to the raw PostgreSQL database tables and user management.</p>
+            </a>
+
+            <!-- Auth API -->
+            <a href="/api/v1/auth/" class="group block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:teal-300 transition-all">
+                <div class="w-12 h-12 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Auth & Accounts API</h3>
+                <p class="text-slate-500 text-sm">/api/v1/auth/ — User profiles, login, signup, addresses, and wallets.</p>
+            </a>
+
+            <!-- Products API -->
+            <a href="/api/v1/" class="group block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:orange-300 transition-all">
+                <div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-box-open text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Catalog API</h3>
+                <p class="text-slate-500 text-sm">/api/v1/ — Products, categories, and inventory management endpoints.</p>
+            </a>
+
+            <!-- Orders API -->
+            <a href="/api/v1/orders/" class="group block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:blue-300 transition-all">
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-receipt text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Orders API</h3>
+                <p class="text-slate-500 text-sm">/api/v1/orders/ — Order processing, status updates, and transaction history.</p>
+            </a>
+
+            <!-- Cart API -->
+            <a href="/api/v1/cart/" class="group block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:pink-300 transition-all">
+                <div class="w-12 h-12 bg-pink-50 text-pink-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-cart-shopping text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Shopping Cart API</h3>
+                <p class="text-slate-500 text-sm">/api/v1/cart/ — Session-based cart management for customers.</p>
+            </a>
+            
+            <!-- Store Settings & Home API -->
+            <a href="/api/v1/store/" class="group block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:purple-300 transition-all">
+                <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-shop text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Store Configuration</h3>
+                <p class="text-slate-500 text-sm">/api/v1/store/ — Dynamic homepage layouts, global settings, and feedback.</p>
+            </a>
+
+            <!-- Offers API -->
+            <a href="/api/v1/offers/" class="group block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:emerald-300 transition-all">
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-tags text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Offers & Promos API</h3>
+                <p class="text-slate-500 text-sm">/api/v1/offers/ — Coupon codes, discounts, and promotional banners.</p>
+            </a>
+
+            <!-- Notifications API -->
+            <a href="/api/v1/notifications/" class="group block p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:amber-300 transition-all">
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-bell text-xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Notifications API</h3>
+                <p class="text-slate-500 text-sm">/api/v1/notifications/ — System alerts and user notifications.</p>
+            </a>
+
+        </div>
+    </main>
+
+</body>
+</html>
+

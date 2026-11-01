@@ -1,0 +1,44 @@
+name: React Native QA Test Suite
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/qa-tests.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'mobile/**'
+
+jobs:
+  test:
+    name: Run Automated Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+        cache-dependency-path: 'mobile/package-lock.json'
+
+    - name: Install Dependencies
+      working-directory: ./mobile
+      run: npm install --legacy-peer-deps
+
+    - name: Unit & Component Tests (Jest)
+      working-directory: ./mobile
+      run: npm run test -- --coverage
+
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: mobile/coverage/

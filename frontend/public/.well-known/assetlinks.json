@@ -1,0 +1,26 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.narendrakirana.app",
+      "sha256_cert_fingerprints": [
+        "9B:1F:16:2D:28:9A:4D:F0:C9:DF:AE:AE:28:23:F8:22:91:62:2A:7E:B9:72:BE:93:1B:86:36:70:1D:C2:1B:AD"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.narendrakirana.owner",
+      "sha256_cert_fingerprints": [
+        "9B:1F:16:2D:28:9A:4D:F0:C9:DF:AE:AE:28:23:F8:22:91:62:2A:7E:B9:72:BE:93:1B:86:36:70:1D:C2:1B:AD"
+      ]
+    }
+  }
+]

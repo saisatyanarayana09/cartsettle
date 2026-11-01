@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>Invoice</title>
+    <style>
+        :root {
+            color-scheme: light;
+            supported-color-schemes: light;
+        }
+        /* Modern CSS for Playwright/Chromium */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            background-color: #ffffff;
+            color-scheme: light;
+        }
+        
+        .page-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 1.5cm;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid #064e3b;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .brand {
+            font-size: 26px;
+            font-weight: 900;
+            color: #064e3b;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin: 0 0 8px 0;
+        }
+        .brand span { color: #16a34a; }
+        
+        .store-details {
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        
+        .invoice-title {
+            font-size: 42px;
+            font-weight: 900;
+            color: #e2e8f0;
+            letter-spacing: 4px;
+            margin: 0;
+            line-height: 1;
+        }
+        
+        .info-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+        
+        .billed-to {
+            width: 50%;
+        }
+        .billed-to-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            margin: 0 0 6px 0;
+        }
+        .customer-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 0 0 6px 0;
+        }
+        .order-status {
+            font-size: 11px;
+            color: #64748b;
+            margin: 0 0 2px 0;
+        }
+        .order-status strong { color: #0f172a; }
+        
+        .meta-table {
+            border-collapse: collapse;
+        }
+        .meta-table td {
+            padding: 5px 0 5px 15px;
+            font-size: 11px;
+            text-align: right;
+        }
+        .meta-table td.label {
+            color: #64748b;
+            text-align: left;
+            width: 100px;
+            padding-left: 0;
+        }
+        .meta-table td.value {
+            font-weight: bold;
+            color: #0f172a;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
+        .items-table th {
+            background-color: #f8fafc;
+            border-top: 1px solid #cbd5e1;
+            border-bottom: 1px solid #cbd5e1;
+            padding: 12px 10px;
+            font-size: 10px;
+            color: #1e293b;
+            text-align: left;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .items-table td {
+            padding: 15px 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .items-table th.center, .items-table td.center { text-align: center; }
+        .items-table th.right, .items-table td.right { text-align: right; }
+        
+        .item-name {
+            font-size: 13px;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 0 0 4px 0;
+        }
+        .item-unit {
+            font-size: 11px;
+            color: #94a3b8;
+            margin: 0;
+        }
+        
+        .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: auto; /* Pushes everything below this down */
+        }
+        .totals-table {
+            width: 300px;
+            border-collapse: collapse;
+        }
+        .totals-table td {
+            padding: 10px 0;
+            font-size: 12px;
+            color: #64748b;
+        }
+        .totals-table td.right {
+            text-align: right;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        .totals-table .discount-row td {
+            color: #16a34a;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+        }
+        .totals-table .grand-total td {
+            padding-top: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #0f172a;
+            letter-spacing: 1px;
+        }
+        .totals-table .grand-total td.right {
+            font-size: 20px;
+            font-weight: 900;
+            color: #064e3b;
+        }
+        
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 25px;
+            margin-top: 50px;
+        }
+        .terms-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #0f172a;
+            letter-spacing: 1px;
+            margin: 0 0 10px 0;
+        }
+        .terms-title span { color: #064e3b; font-size: 13px; }
+        .terms-text {
+            font-size: 11px;
+            color: #64748b;
+            margin: 0 0 5px 0;
+        }
+        .thank-you {
+            font-size: 12px;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 15px 0 0 0;
+        }
+        
+        .signature-box {
+            text-align: center;
+            width: 250px;
+        }
+        .signature-line {
+            border-bottom: 1px solid #94a3b8;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            height: 50px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .signature-line img {
+            max-height: 45px;
+        }
+        .signature-line .text-sig {
+            font-size: 18px;
+            font-style: italic;
+            color: #334155;
+        }
+        .auth-signatory {
+            font-size: 12px;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 0 0 5px 0;
+        }
+        .store-tag {
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <p class="brand">
+                    {% if store_settings %}
+                        {% if "narendra kirana" in store_settings.store_name|lower %}
+                            NARENDRA <span>KIRANA</span> {% if "store" in store_settings.store_name|lower %}<span>STORE</span>{% endif %}
+                        {% else %}
+                            {{ store_settings.store_name|default:"NARENDRA KIRANA"|upper }}
+                        {% endif %}
+                    {% else %}
+                        {% if "narendra kirana" in settings.store_name|lower %}
+                            NARENDRA <span>KIRANA</span> {% if "store" in settings.store_name|lower %}<span>STORE</span>{% endif %}
+                        {% else %}
+                            {{ settings.store_name|default:"NARENDRA KIRANA"|upper }}
+                        {% endif %}
+                    {% endif %}
+                </p>
+                <div class="store-details">
+                    {% if store_settings.store_address %}{{ store_settings.store_address }}<br/>{% elif settings.store_address %}{{ settings.store_address }}<br/>{% endif %}
+                    {% if store_settings.store_phone %}{{ store_settings.store_phone }}<br/>{% elif settings.store_phone %}{{ settings.store_phone }}<br/>{% endif %}
+                    {% if store_settings.store_email %}{{ store_settings.store_email }}<br/>{% elif settings.store_email %}{{ settings.store_email }}<br/>{% endif %}
+                    {% if store_settings.fssai_license_number %}<strong>FSSAI Lic No:</strong> {{ store_settings.fssai_license_number }}<br/>{% elif settings.fssai_license_number %}<strong>FSSAI Lic No:</strong> {{ settings.fssai_license_number }}<br/>{% endif %}
+                    {% if store_settings.gstin %}<strong>GSTIN:</strong> {{ store_settings.gstin }}<br/>{% elif settings.gstin %}<strong>GSTIN:</strong> {{ settings.gstin }}<br/>{% endif %}
+                </div>
+            </div>
+            <div>
+                <p class="invoice-title">INVOICE</p>
+            </div>
+        </div>
+        
+        <!-- Info Grid -->
+        <div class="info-grid">
+            <div class="billed-to">
+                <p class="billed-to-label">BILLED TO</p>
+                <p class="customer-name">{{ order.customer.first_name }} {{ order.customer.last_name }}</p>
+                <p class="order-status">Order Status: <strong>{{ order.status|upper }}</strong></p>
+                {% if order.customer.email %}<p class="order-status">{{ order.customer.email }}</p>{% endif %}
+                {% if order.customer.mobile_number %}<p class="order-status">{{ order.customer.mobile_number }}</p>{% endif %}
+            </div>
+            <div>
+                <table class="meta-table">
+                    <tr>
+                        <td class="label">Invoice No:</td>
+                        <td class="value">{{ order.id }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Invoice Date:</td>
+                        <td class="value">{{ order.created_at|date:"d F Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Order Date:</td>
+                        <td class="value">{{ order.created_at|date:"d F Y" }} at {{ order.created_at|date:"P"|lower }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 45%;">ITEM DESCRIPTION</th>
+                    <th class="center" style="width: 15%;">QTY</th>
+                    <th class="right" style="width: 20%;">PRICE</th>
+                    <th class="right" style="width: 20%;">AMOUNT</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>
+                        <p class="item-name">{{ item.product_name_snapshot }}</p>
+                        <p class="item-unit">{{ item.unit_snapshot }}</p>
+                    </td>
+                    <td class="center"><strong style="color: #475569;">{{ item.quantity }}</strong></td>
+                    <td class="right" style="color: #64748b;">Rs. {{ item.price_snapshot|floatformat:2 }}</td>
+                    <td class="right"><strong style="color: #0f172a;">Rs. {{ item.subtotal|floatformat:2 }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Totals -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td>Subtotal</td>
+                    <td class="right">Rs. {{ subtotal|floatformat:2 }}</td>
+                </tr>
+                {% if discount_applied > 0 %}
+                <tr class="discount-row">
+                    <td>Discount Applied</td>
+                    <td class="right">-Rs. {{ discount_applied|floatformat:2 }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2" style="border-bottom: 1px solid #e2e8f0;"></td></tr>
+                {% endif %}
+                <tr class="grand-total">
+                    <td>TOTAL DUE</td>
+                    <td class="right">Rs. {{ order.total_amount|floatformat:2 }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <div style="max-width: 60%;">
+                <p class="terms-title"><span>&#10004;</span> TERMS & CONDITIONS</p>
+                {% if store_settings.invoice_terms_and_conditions %}
+                    <div class="terms-text" style="white-space: pre-line;">{{ store_settings.invoice_terms_and_conditions }}</div>
+                {% elif settings.invoice_terms_and_conditions %}
+                    <div class="terms-text" style="white-space: pre-line;">{{ settings.invoice_terms_and_conditions }}</div>
+                {% else %}
+                    <p class="terms-text">1. Goods once sold will not be taken back without original bill.</p>
+                    <p class="terms-text">2. In case of any dispute, local jurisdiction applies.</p>
+                    <p class="terms-text">3. Perishable goods must be reported within 24 hours.</p>
+                {% endif %}
+                <p class="thank-you">Thank you for your business!</p>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line">
+                    {% if signature_url %}
+                        <img src="{{ signature_url }}" alt="Signature" />
+                    {% else %}
+                        <span class="text-sig">{% if store_settings %}{{ store_settings.store_name|default:"Narendra Kirana" }}{% else %}{{ settings.store_name|default:"Narendra Kirana" }}{% endif %}</span>
+                    {% endif %}
+                </div>
+                <p class="auth-signatory">Authorized Signatory</p>
+                <p class="store-tag">{% if store_settings %}{{ store_settings.store_name|default:"NARENDRA KIRANA"|upper }}{% else %}{{ settings.store_name|default:"NARENDRA KIRANA"|upper }}{% endif %}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

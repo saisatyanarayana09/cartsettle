@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>Your Invoice</title>
+    <style>
+        :root {
+            color-scheme: light;
+            supported-color-schemes: light;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+            color-scheme: light;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        .email-wrapper {
+            width: 100%;
+            background-color: #f3f4f6;
+            padding: 40px 0;
+        }
+        .email-content {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .header {
+            background-color: #064e3b; /* Emerald Darker */
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .body-padding {
+            padding: 40px 30px;
+        }
+        .greeting {
+            color: #111827;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            margin-top: 0;
+        }
+        .message {
+            color: #4b5563;
+            font-size: 16px;
+            line-height: 24px;
+            margin-bottom: 30px;
+        }
+        .order-summary {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .order-summary-title {
+            color: #111827;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        .summary-row {
+            display: table;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .summary-label {
+            display: table-cell;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .summary-value {
+            display: table-cell;
+            text-align: right;
+            color: #111827;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .summary-total {
+            border-top: 1px dashed #d1d5db;
+            padding-top: 15px;
+            margin-top: 5px;
+        }
+        .summary-total .summary-label,
+        .summary-total .summary-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #047857; /* Emerald */
+        }
+        .btn-container {
+            text-align: center;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #10b981; /* Emerald Primary */
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 16px;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .footer {
+            background-color: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+        .footer-text {
+            color: #6b7280;
+            font-size: 13px;
+            line-height: 20px;
+            margin: 0;
+        }
+        .footer-link {
+            color: #10b981;
+            text-decoration: none;
+        }
+        
+        /* Mobile adjustments */
+        @media only screen and (max-width: 600px) {
+            .email-content {
+                width: 100% !important;
+                border-radius: 0 !important;
+            }
+            .body-padding {
+                padding: 30px 20px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <table class="email-wrapper" cellpadding="0" cellspacing="0" role="presentation">
+        <tr>
+            <td align="center">
+                <table class="email-content" cellpadding="0" cellspacing="0" role="presentation">
+                    <!-- Header -->
+                    <tr>
+                        <td class="header">
+                            <h1>{% if store_settings %}{{ store_settings.store_name|default:"Narendra Kirana" }}{% else %}{{ settings.store_name|default:"Narendra Kirana" }}{% endif %}</h1>
+                            {% if store_settings.fssai_license_number or settings.fssai_license_number or store_settings.gstin or settings.gstin %}
+                            <p style="color: #a7f3d0; font-size: 12px; margin: 6px 0 0 0;">
+                                {% if store_settings.fssai_license_number %}FSSAI: {{ store_settings.fssai_license_number }}{% elif settings.fssai_license_number %}FSSAI: {{ settings.fssai_license_number }}{% endif %}
+                                {% if store_settings.fssai_license_number and store_settings.gstin or settings.fssai_license_number and settings.gstin %} | {% endif %}
+                                {% if store_settings.gstin %}GSTIN: {{ store_settings.gstin }}{% elif settings.gstin %}GSTIN: {{ settings.gstin }}{% endif %}
+                            </p>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    
+                    <!-- Body -->
+                    <tr>
+                        <td class="body-padding">
+                            <h2 class="greeting">Hello {{ order.customer.first_name }},</h2>
+                            
+                            <p class="message">
+                                Thank you for shopping with us! Your order <strong>#{{ order.id }}</strong> has been successfully processed and is now complete. You can view your official invoice online or download it as a PDF at any time.
+                            </p>
+                            
+                            <!-- Order Summary Box -->
+                            <div class="order-summary">
+                                <h3 class="order-summary-title">Order Summary</h3>
+                                
+                                <div class="summary-row">
+                                    <div class="summary-label">Order Date</div>
+                                    <div class="summary-value">{{ order.created_at|date:"M d, Y" }}</div>
+                                </div>
+                                <div class="summary-row">
+                                    <div class="summary-label">Total Items</div>
+                                    <div class="summary-value">{{ items.count }}</div>
+                                </div>
+                                
+                                {% if discount_applied > 0 %}
+                                <div class="summary-row">
+                                    <div class="summary-label">Subtotal</div>
+                                    <div class="summary-value">₹{{ subtotal|floatformat:2 }}</div>
+                                </div>
+                                <div class="summary-row">
+                                    <div class="summary-label">Discount</div>
+                                    <div class="summary-value" style="color: #ef4444;">-₹{{ discount_applied|floatformat:2 }}</div>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="summary-row summary-total">
+                                    <div class="summary-label">Total Amount</div>
+                                    <div class="summary-value">₹{{ order.total_amount|floatformat:2 }}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Call to Action Button -->
+                            <div class="btn-container">
+                                <a href="{{ invoice_link }}" class="btn" target="_blank">View & Download Invoice</a>
+                            </div>
+
+                            <!-- Terms and Conditions -->
+                            {% if store_settings.invoice_terms_and_conditions %}
+                            <div style="margin-top: 25px; margin-bottom: 25px; padding: 16px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #64748b; text-align: left;">
+                                <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px; font-size: 13px;">Terms & Conditions:</div>
+                                <div style="white-space: pre-line; line-height: 1.5;">{{ store_settings.invoice_terms_and_conditions }}</div>
+                            </div>
+                            {% elif settings.invoice_terms_and_conditions %}
+                            <div style="margin-top: 25px; margin-bottom: 25px; padding: 16px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #64748b; text-align: left;">
+                                <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px; font-size: 13px;">Terms & Conditions:</div>
+                                <div style="white-space: pre-line; line-height: 1.5;">{{ settings.invoice_terms_and_conditions }}</div>
+                            </div>
+                            {% endif %}
+                            
+                            <p class="message" style="font-size: 14px; text-align: center; margin-bottom: 0;">
+                                We would love to hear about your experience.<br>Please let us know how we did!
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td class="footer">
+                            <p class="footer-text">
+                                &copy; {% now "Y" %} {% if store_settings %}{{ store_settings.store_name|default:"Narendra Kirana" }}{% else %}{{ settings.store_name|default:"Narendra Kirana" }}{% endif %}. All rights reserved.<br>
+                                {% if store_settings.store_address %}{{ store_settings.store_address }}<br/>{% elif settings.store_address %}{{ settings.store_address }}<br/>{% endif %}
+                                {% if store_settings.fssai_license_number %}FSSAI Lic No: {{ store_settings.fssai_license_number }}{% elif settings.fssai_license_number %}FSSAI Lic No: {{ settings.fssai_license_number }}{% endif %}
+                                {% if store_settings.fssai_license_number and store_settings.gstin or settings.fssai_license_number and settings.gstin %} | {% endif %}
+                                {% if store_settings.gstin %}GSTIN: {{ store_settings.gstin }}<br/>{% elif settings.gstin %}GSTIN: {{ settings.gstin }}<br/>{% elif store_settings.fssai_license_number or settings.fssai_license_number %}<br/>{% endif %}
+                                <a href="mailto:{% if store_settings.store_email %}{{ store_settings.store_email }}{% elif settings.store_email %}{{ settings.store_email }}{% else %}support@narendrakirana.in{% endif %}" class="footer-link">Contact Support</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

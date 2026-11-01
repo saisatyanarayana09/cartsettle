@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+ <head>
+ <meta charset="UTF-8"/>
+ <!-- Prevent Caching -->
+ <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+ <meta http-equiv="Pragma" content="no-cache" />
+ <meta http-equiv="Expires" content="0" />
+ <link rel="icon" type="image/jpeg" href="/favicon.jpg"/>
+ <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+ <link rel="preconnect" href="https://fonts.googleapis.com">
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ <link rel="preconnect" href="https://narendra-kirana.onrender.com" crossorigin>
+ <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+ <title>Narendra Kirana</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#5ba8a6" />
+    <link rel="apple-touch-icon" href="/favicon.jpg" />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('sk_theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = saved === 'dark' || (!saved && prefersDark);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.style.colorScheme = 'dark';
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', '#181a1b');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.documentElement.style.colorScheme = 'light';
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.setAttribute('content', '#5ba8a6');
+          }
+        } catch (e) {}
+      })();
+    </script>
+ </head>
+ <body class="bg-[#f7f5f0] dark:bg-[#181a1b] text-[#323232] dark:text-[#f3efe6] font-sans antialiased tracking-tight" style="-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+ <div id="root"></div>
+ <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Unregister Service Workers to forcefully clear PWA cache -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log("Service Worker unregistered to clear cache");
+          }
+        });
+      }
+    </script>
+ </body>
+</html>

@@ -1,0 +1,68 @@
+name: React Native CI Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+      - 'owner-mobile/**'
+      - '.github/workflows/validate.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+      - 'owner-mobile/**'
+      - '.github/workflows/validate.yml'
+
+jobs:
+  validate-mobile:
+    name: Customer Mobile CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mobile
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: './mobile/package-lock.json'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: 🔍 TypeScript Typecheck
+        run: npm run typecheck
+
+      - name: 🧪 Run Jest Unit Tests
+        run: npm run test
+
+  validate-owner-mobile:
+    name: Owner Mobile CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./owner-mobile
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: './owner-mobile/package-lock.json'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: 🔍 TypeScript Typecheck
+        run: npm run typecheck

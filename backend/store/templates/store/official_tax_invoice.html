@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>Tax Invoice - {{ invoice_number }}</title>
+  <style>
+    :root {
+      color-scheme: light;
+    }
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+      padding: 16px;
+    }
+    @media print {
+      html, body {
+        background-color: #ffffff !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .invoice-container {
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+      .meta-box {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+      }
+      .compliance-strip {
+        background: transparent !important;
+        border-color: #cbd5e1 !important;
+      }
+      .grid-col, .items-table {
+        border-color: #cbd5e1 !important;
+        box-shadow: none !important;
+      }
+      .avoid-break {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
+    .invoice-container {
+      position: relative;
+      max-width: 850px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 32px 36px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+    }
+    /* Cancelled watermark stamp */
+    .cancelled-watermark {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0.22;
+    }
+    .cancelled-stamp {
+      border: 6px solid #e11d48;
+      color: #e11d48;
+      font-size: 58px;
+      font-weight: 900;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      padding: 12px 36px;
+      border-radius: 14px;
+      transform: rotate(-14deg);
+      user-select: none;
+    }
+    .content-body {
+      position: relative;
+      z-index: 10;
+    }
+    .dimmed {
+      opacity: 0.85;
+    }
+
+    /* Header */
+    .hdr {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 18px;
+      margin-bottom: 16px;
+      gap: 16px;
+    }
+    .brand-wrap {
+      max-width: 480px;
+    }
+    .brand-name {
+      font-size: 22px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    .brand-sub {
+      font-size: 11px;
+      font-weight: 700;
+      color: #047857;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 2px;
+    }
+    .brand-contact {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    /* Invoice Meta Box */
+    .meta-wrap {
+      text-align: right;
+    }
+    .meta-title-row {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .meta-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+    .meta-badge {
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      display: inline-block;
+    }
+    .meta-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .meta-lbl {
+      color: #64748b;
+      font-weight: 500;
+    }
+    .meta-val {
+      font-weight: 700;
+      color: #0f172a;
+      font-family: inherit;
+    }
+    .meta-mono {
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    /* Compliance strip */
+    .compliance-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      gap: 8px;
+    }
+    .govt-badge {
+      font-size: 8px;
+      font-weight: 800;
+      background: #d1fae5;
+      color: #065f46;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-left: 4px;
+      text-transform: uppercase;
+    }
+
+    /* 2 Column Customer & Fulfillment Grid */
+    .grid-2 {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .grid-col {
+      flex: 1;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .grid-hdr {
+      font-size: 9px;
+      font-weight: 900;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+    }
+    .cust-name {
+      font-size: 13px;
+      font-weight: 900;
+      color: #0f172a;
+      margin-bottom: 2px;
+    }
+    .grid-item {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+    .grid-lbl {
+      color: #64748b;
+    }
+    .grid-val {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Items Table */
+    .table-wrap {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    thead th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+    }
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+    tbody td {
+      padding: 8px 10px;
+      color: #1e293b;
+      vertical-align: middle;
+    }
+    .col-idx {
+      width: 5%;
+      text-align: center;
+      color: #64748b;
+      font-weight: 700;
+    }
+    .col-desc {
+      width: 55%;
+    }
+    .col-qty {
+      width: 12%;
+      text-align: center;
+      font-weight: 700;
+    }
+    .col-rate {
+      width: 14%;
+      text-align: right;
+    }
+    .col-amt {
+      width: 14%;
+      text-align: right;
+      font-weight: 800;
+    }
+    .item-unit {
+      color: #64748b;
+      font-size: 10px;
+      margin-top: 1px;
+    }
+    .rejected-tag {
+      background: #fee2e2;
+      color: #b91c1c;
+      font-size: 8px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-left: 6px;
+      text-transform: uppercase;
+    }
+    .line-through {
+      text-decoration: line-through;
+      color: #94a3b8 !important;
+    }
+
+    /* Totals Box */
+    .totals-wrap {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+    .totals-box {
+      width: 320px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #ffffff;
+      font-size: 11px;
+    }
+    .tot-inner {
+      padding: 10px 14px;
+    }
+    .tot-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      color: #475569;
+    }
+    .tot-val {
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .tot-grand {
+      background: #ecfdf5;
+      border-top: 2px solid #059669;
+      padding: 8px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #064e3b;
+      font-weight: 800;
+    }
+    .tot-grand-amt {
+      font-size: 18px;
+      font-weight: 900;
+      color: #065f46;
+    }
+
+    /* Footer */
+    .ftr {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      font-size: 10px;
+      color: #64748b;
+    }
+    .ftr-terms {
+      flex: 1;
+    }
+    .ftr-terms-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .ftr-sig {
+      width: 200px;
+      text-align: right;
+    }
+    .sig-line {
+      height: 48px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      margin-bottom: 4px;
+    }
+    .sig-img {
+      max-height: 44px;
+      object-fit: contain;
+    }
+    .sig-dash {
+      width: 140px;
+      border-bottom: 1px dashed #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-container">
+    {% if order.status == 'REJECTED' %}
+    <div class="cancelled-watermark">
+      <div class="cancelled-stamp">CANCELLED</div>
+    </div>
+    {% endif %}
+
+    <div class="content-body {% if order.status == 'REJECTED' %}dimmed{% endif %}">
+      <!-- Header -->
+      <div class="hdr">
+        <div class="brand-wrap">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+            <img src="/logo.jpg" alt="Store Logo" style="width: 40px; height: 40px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0;" onerror="this.style.display='none';" />
+            <div>
+              <div class="brand-name">{{ store_name }}</div>
+              <div class="brand-sub">Grocery & Daily Essentials</div>
+            </div>
+          </div>
+          <div class="brand-contact">
+            {% if store_address %}<div>{{ store_address }}</div>{% endif %}
+            <div>
+              {% if store_phone %}<span>Phone: {{ store_phone }}</span>{% endif %}
+              {% if store_phone and store_email %} &bull; {% endif %}
+              {% if store_email %}<span>Email: {{ store_email }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="meta-wrap">
+          <div class="meta-title-row">
+            <span class="meta-title">TAX INVOICE</span>
+            <span class="meta-badge">Original for Recipient</span>
+          </div>
+          <div class="meta-box">
+            <div class="meta-row">
+              <span class="meta-lbl">Invoice No:</span>
+              <span class="meta-val meta-mono">{{ invoice_number }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-lbl">Invoice Date:</span>
+              <span class="meta-val">{{ invoice_date }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-lbl">Order Ref:</span>
+              <span class="meta-val meta-mono">#{{ order.id }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-lbl">Order Date:</span>
+              <span class="meta-val">{{ order_date }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statutory Compliance Strip -->
+      {% if gstin or fssai %}
+      <div class="compliance-strip">
+        {% if gstin %}
+        <div>
+          <b>GSTIN:</b> <span class="meta-mono" style="font-weight:700;">{{ gstin }}</span>
+        </div>
+        {% endif %}
+        {% if fssai %}
+        <div>
+          <b>FSSAI Lic. No:</b> <span class="meta-mono" style="font-weight:700;">{{ fssai }}</span>
+          <span class="govt-badge">Govt Reg.</span>
+        </div>
+        {% endif %}
+        <div style="color:#64748b;">
+          Place of Supply: <b>State Code (09)</b>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Customer & Fulfillment Grid -->
+      <div class="grid-2">
+        <div class="grid-col">
+          <div class="grid-hdr">Billed / Shipped To</div>
+          <div class="cust-name">{{ customer_name }}</div>
+          {% if customer_phone %}
+          <div class="grid-item">
+            <span class="grid-lbl">Phone:</span>
+            <span class="grid-val">{{ customer_phone }}</span>
+          </div>
+          {% endif %}
+          <div class="grid-item">
+            <span class="grid-lbl">Address:</span>
+            <span class="grid-val" style="text-align:right;max-width:180px;">
+              {% if order.order_type == 'DELIVERY' %}{{ order.delivery_address|default:"Home Delivery Address" }}{% else %}Store Counter Pickup{% endif %}
+            </span>
+          </div>
+          {% if order.delivery_pincode %}
+          <div class="grid-item">
+            <span class="grid-lbl">PIN Code:</span>
+            <span class="grid-val meta-mono">{{ order.delivery_pincode }}</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="grid-col">
+          <div class="grid-hdr">Fulfillment Details</div>
+          <div class="grid-item">
+            <span class="grid-lbl">Fulfillment Mode:</span>
+            <span class="grid-val">{% if order.order_type == 'DELIVERY' %}Home Delivery{% else %}Store Pickup{% endif %}</span>
+          </div>
+          {% if slot_info %}
+          <div class="grid-item">
+            <span class="grid-lbl">Scheduled Slot:</span>
+            <span class="grid-val" style="color:#4f46e5;">{{ slot_info }}</span>
+          </div>
+          {% endif %}
+          <div class="grid-item">
+            <span class="grid-lbl">Order Status:</span>
+            <span class="grid-val" style="color:{% if order.status == 'COMPLETED' %}#059669{% elif order.status == 'REJECTED' %}#e11d48{% else %}#1e293b{% endif %};">
+              {{ order.status }}
+            </span>
+          </div>
+          <div class="grid-item">
+            <span class="grid-lbl">Payment Status:</span>
+            <span class="grid-val" style="color:{% if order.status == 'COMPLETED' %}#059669{% elif order.status == 'REJECTED' %}#e11d48{% else %}#059669{% endif %};">
+              {% if order.status == 'COMPLETED' %}PAID{% elif order.status == 'REJECTED' %}CANCELLED{% else %}DUE AT DELIVERY{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Itemized Table -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-idx">#</th>
+              <th class="col-desc">Item Description</th>
+              <th class="col-qty">Qty</th>
+              <th class="col-rate">Rate (₹)</th>
+              <th class="col-amt">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items_list %}
+            <tr>
+              <td class="col-idx">{{ forloop.counter }}</td>
+              <td class="col-desc">
+                <span class="{% if item.is_rejected %}line-through{% else %}{% endif %}" style="font-weight:700;">
+                  {{ item.name }}
+                </span>
+                {% if item.is_rejected %}
+                <span class="rejected-tag">Unavailable</span>
+                {% endif %}
+                {% if item.unit %}
+                <div class="item-unit">{{ item.unit }}</div>
+                {% endif %}
+              </td>
+              <td class="col-qty {% if item.is_rejected %}line-through{% endif %}">{{ item.qty }}</td>
+              <td class="col-rate {% if item.is_rejected %}line-through{% endif %}">₹{{ item.rate }}</td>
+              <td class="col-amt {% if item.is_rejected %}line-through{% endif %}">₹{{ item.amount }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals -->
+      <div class="totals-wrap avoid-break">
+        <div class="totals-box">
+          <div class="tot-inner">
+            <div class="tot-row">
+              <span>Subtotal ({{ active_items_count }} items)</span>
+              <span class="tot-val">₹{{ subtotal }}</span>
+            </div>
+            {% if discount_applied > 0 %}
+            <div class="tot-row" style="color:#4f46e5;">
+              <span>Product Savings</span>
+              <span class="tot-val" style="color:#4f46e5;">-₹{{ discount_applied_formatted }}</span>
+            </div>
+            {% endif %}
+            {% if promo_discount > 0 %}
+            <div class="tot-row" style="color:#059669;">
+              <span>Promo Code Discount</span>
+              <span class="tot-val" style="color:#059669;">-₹{{ promo_discount_formatted }}</span>
+            </div>
+            {% endif %}
+            {% if packaging_fee > 0 %}
+            <div class="tot-row">
+              <span>Packaging Charges</span>
+              <span class="tot-val">₹{{ packaging_fee_formatted }}</span>
+            </div>
+            {% endif %}
+            {% if order.order_type == 'DELIVERY' %}
+            <div class="tot-row">
+              <span>Delivery Charges</span>
+              <span class="tot-val">{% if delivery_fee > 0 %}₹{{ delivery_fee_formatted }}{% else %}FREE{% endif %}</span>
+            </div>
+            {% endif %}
+            {% if wallet_discount > 0 %}
+            <div class="tot-row" style="color:#059669;font-weight:700;">
+              <span>Wallet Applied</span>
+              <span class="tot-val" style="color:#059669;">-₹{{ wallet_discount_formatted }}</span>
+            </div>
+            {% endif %}
+            <div class="tot-row" style="border-top:1px solid #f1f5f9;padding-top:6px;margin-top:6px;">
+              <span>Payment Mode</span>
+              <span class="tot-val" style="text-align:right;max-width:170px;">{{ payment_method_display }}</span>
+            </div>
+          </div>
+          <div class="tot-grand">
+            <span>{% if order.status == 'COMPLETED' %}TOTAL AMOUNT PAID{% else %}TOTAL AMOUNT DUE{% endif %}</span>
+            <span class="tot-grand-amt">₹{{ total_amount_formatted }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="ftr avoid-break">
+        <div class="ftr-terms">
+          <div class="ftr-terms-title">Terms & Conditions</div>
+          {% for term in terms_list %}
+          <div>{{ term }}</div>
+          {% endfor %}
+          <div style="margin-top:6px;font-weight:700;color:#047857;">
+            Thank you for shopping with {{ store_name }}!
+          </div>
+        </div>
+
+        <div class="ftr-sig">
+          <div>For <b>{{ store_name }}</b></div>
+          <div class="sig-line">
+            {% if signature_url %}
+            <img src="{{ signature_url }}" alt="Signature" class="sig-img" />
+            {% else %}
+            <div class="sig-dash"></div>
+            {% endif %}
+          </div>
+          <div style="font-weight:800;color:#0f172a;">Authorized Signatory</div>
+          <div style="font-size:9px;color:#94a3b8;text-transform:uppercase;">Computer Generated Invoice</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

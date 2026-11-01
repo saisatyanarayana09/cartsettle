@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner & Backend Login - Narendra Kirana</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 min-h-screen flex text-slate-900 font-sans antialiased">
+    <!-- Left Side: Login Console -->
+    <div class="flex-1 flex items-center justify-center p-6 sm:p-10 lg:p-14 bg-white">
+        <div class="w-full max-w-md">
+            
+            <!-- Store Brand Header -->
+            <div class="mb-8">
+                <!-- Status Pill & Cross-Nav -->
+                <div class="flex items-center justify-between gap-2 mb-5">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-800">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Render Server Online
+                    </div>
+                    <a href="https://narendra-kirana.vercel.app/owner/" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+                        <span>Owner Web Portal</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
+                </div>
+
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
+                        <i class="fa-solid fa-store text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-black tracking-[0.2em] uppercase">
+                            <span class="text-emerald-900">NARENDRA</span> <span class="text-indigo-600">KIRANA</span>
+                        </p>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Backend & Vault Login</h1>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-500 mt-1 font-medium">
+                    Sign in with your registered <b>Owner Email</b> or username to access the backend console and database.
+                </p>
+            </div>
+
+            <!-- Error Notification Placeholder -->
+            <div id="errorAlert" class="hidden mb-6 p-4 rounded-xl bg-red-50 text-sm font-bold text-red-700 border border-red-200 flex items-start gap-3">
+                <i class="fa-solid fa-triangle-exclamation mt-0.5 text-red-500"></i>
+                <span id="errorMessage"></span>
+            </div>
+
+            <!-- Main Password Form -->
+            <form method="post" action="{% url 'admin:login' %}" class="space-y-5" id="adminLoginForm">
+                {% csrf_token %}
+                <input type='hidden' name='next' value='/'>
+
+                <!-- Email or Username Field -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                        <span>Email or Username</span>
+                        <span id="inputTypeBadge" class="text-[10px] uppercase font-bold text-slate-400">Email-ready</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" id="identifierIcon">
+                            <i class="fa-regular fa-user"></i>
+                        </span>
+                        <input type="text" name="username" id="identifierInput" required autofocus
+                            placeholder="perali.narendra@gmail.com or username"
+                            class="w-full rounded-xl border border-slate-200 pl-10 pr-4 py-3.5 bg-slate-50 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-900 shadow-sm" />
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-sm font-bold text-slate-700">Password</label>
+                        <a href="https://narendra-kirana.vercel.app/owner/forgot-password" target="_blank" rel="noopener"
+                           class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+                            Forgot password?
+                        </a>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" name="password" id="passwordInput" required
+                            placeholder="Enter your password"
+                            class="w-full rounded-xl border border-slate-200 pl-10 pr-12 py-3.5 bg-slate-50 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm text-slate-900 shadow-sm" />
+                        <button type="button" id="togglePasswordBtn"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors focus:outline-none"
+                            title="Toggle password visibility">
+                            <i class="fa-regular fa-eye" id="passwordEyeIcon"></i>
+                        </button>
+                    </div>
+                    <!-- Caps Lock Warning -->
+                    <div id="capsLockWarning" class="hidden mt-1 text-xs font-bold text-amber-600 flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-up"></i> Caps Lock is ON
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="w-full rounded-xl bg-slate-900 px-4 py-3.5 font-bold text-white hover:bg-slate-800 active:scale-[0.99] transition-all shadow-md shadow-slate-900/20 hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-shield-halved text-sm text-emerald-400"></i>
+                    <span>Sign In to Backend Server</span>
+                </button>
+            </form>
+
+            <div class="relative flex items-center justify-center my-6">
+                <span class="absolute bg-white px-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
+                    or authenticate with google
+                </span>
+                <div class="w-full border-t border-slate-200"></div>
+            </div>
+            
+            <!-- Google One Tap / GSI Configuration -->
+            <div id="g_id_onload"
+                 data-client_id="729937153109-6e8fivp20b3ri2qsah1d6u2a7oi0uls6.apps.googleusercontent.com"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            
+            <!-- Standard Google Button Container -->
+            <div class="flex justify-center w-full mb-3">
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-size="large"
+                     data-theme="outline"
+                     data-text="sign_in_with"
+                     data-shape="rectangular"
+                     data-logo_alignment="left"
+                     data-width="384">
+                </div>
+            </div>
+            
+            <!-- Hidden form for Google credential submission -->
+            <form method="POST" action="/api/v1/auth/admin-google-login/" id="customGoogleForm">
+               <input type="hidden" name="credential" id="custom_credential_input">
+            </form>
+
+            <!-- Bottom Support & Switcher -->
+            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                <p class="text-xs text-slate-500">
+                    Need the customer storefront?
+                    <a href="https://narendra-kirana.vercel.app" class="font-bold text-emerald-700 hover:underline ml-1">Visit Storefront →</a>
+                </p>
+            </div>
+
+        </div>
+    </div>
+    
+    <!-- Right Side: Retail Modern Operations Showcase -->
+    <div class="hidden lg:block lg:flex-1 relative overflow-hidden bg-slate-950">
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-950/80 via-slate-900/90 to-emerald-950/80 z-10 mix-blend-multiply"></div>
+        <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1920" 
+            alt="Grocery operations" 
+            class="absolute inset-0 w-full h-full object-cover scale-105 opacity-60" />
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent z-10"></div>
+        
+        <div class="absolute bottom-0 left-0 p-16 z-20 w-full max-w-2xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 backdrop-blur-md border border-emerald-400/20 text-xs font-bold text-emerald-300 mb-4">
+                <i class="fa-solid fa-database text-xs"></i> Unified Cloud Architecture
+            </div>
+            <h2 class="text-4xl font-black text-white mb-4 tracking-tight leading-tight">
+                Store operations and data, <br/><span class="text-emerald-400">unified in one place.</span>
+            </h2>
+            <p class="text-indigo-100/80 text-base leading-relaxed font-medium mb-6">
+                Direct access to PostgreSQL database tables, OpenAPI documentation, live Redis caches, and real-time inventory synchronization.
+            </p>
+            <div class="grid grid-cols-2 gap-3 text-xs font-semibold text-slate-300">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                    <span>Email & Username Login</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                    <span>Synchronized Roles</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                    <span>Google OAuth 2.0</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                    <span>Render & Neon Cloud</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Dynamic Icon Detection (Email vs Username)
+        const identifierInput = document.getElementById('identifierInput');
+        const identifierIcon = document.getElementById('identifierIcon');
+        const inputTypeBadge = document.getElementById('inputTypeBadge');
+
+        identifierInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val.includes('@')) {
+                identifierIcon.innerHTML = '<i class="fa-regular fa-envelope text-indigo-600"></i>';
+                inputTypeBadge.innerText = 'Detected Email';
+                inputTypeBadge.className = 'text-[10px] uppercase font-bold text-indigo-600';
+            } else if (val.length > 0) {
+                identifierIcon.innerHTML = '<i class="fa-regular fa-user text-emerald-600"></i>';
+                inputTypeBadge.innerText = 'Detected Username';
+                inputTypeBadge.className = 'text-[10px] uppercase font-bold text-emerald-600';
+            } else {
+                identifierIcon.innerHTML = '<i class="fa-regular fa-user"></i>';
+                inputTypeBadge.innerText = 'Email-ready';
+                inputTypeBadge.className = 'text-[10px] uppercase font-bold text-slate-400';
+            }
+        });
+
+        // Password Visibility Toggle
+        const passwordInput = document.getElementById('passwordInput');
+        const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+        const passwordEyeIcon = document.getElementById('passwordEyeIcon');
+
+        togglePasswordBtn.addEventListener('click', () => {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordEyeIcon.className = 'fa-regular fa-eye-slash text-indigo-600';
+            } else {
+                passwordInput.type = 'password';
+                passwordEyeIcon.className = 'fa-regular fa-eye';
+            }
+        });
+
+        // Caps Lock Warning
+        const capsLockWarning = document.getElementById('capsLockWarning');
+        passwordInput.addEventListener('keyup', (e) => {
+            if (e.getModifierState('CapsLock')) {
+                capsLockWarning.classList.remove('hidden');
+            } else {
+                capsLockWarning.classList.add('hidden');
+            }
+        });
+
+        // Google Sign-In Handler
+        function handleCredentialResponse(response) {
+            document.getElementById('custom_credential_input').value = response.credential;
+            document.getElementById('customGoogleForm').submit();
+        }
+        
+        // URL Error handling
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        if (error) {
+            const errorAlert = document.getElementById('errorAlert');
+            const errorMessage = document.getElementById('errorMessage');
+            errorAlert.classList.remove('hidden');
+            errorMessage.innerText = 'Authentication Failed: ' + error.replace(/_/g, ' ');
+        }
+    </script>
+</body>
+</html>

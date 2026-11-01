@@ -1,0 +1,808 @@
+/* Font loaded via <link> in index.html — do NOT duplicate with @import */
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Nunito", sans-serif;
+  
+  /* Vacation Primary Palette (Seafoam Teal) */
+  --color-primary-50: #f4faf9;
+  --color-primary-100: #d8eeed;
+  --color-primary-200: #b5dedc;
+  --color-primary-300: #88c8c6;
+  --color-primary-400: #5ba8a6;
+  --color-primary-500: #5ba8a6;
+  --color-primary-600: #3d8b89;
+  --color-primary-700: #2c6e6c;
+  --color-primary-800: #245856;
+  --color-primary-900: #1f4948;
+
+  /* Aliasing emerald to Vacation Seafoam Teal so existing classes adopt the new brand identity */
+  --color-emerald-50: #f4faf9;
+  --color-emerald-100: #d8eeed;
+  --color-emerald-200: #b5dedc;
+  --color-emerald-300: #88c8c6;
+  --color-emerald-400: #5ba8a6;
+  --color-emerald-500: #5ba8a6;
+  --color-emerald-600: #3d8b89;
+  --color-emerald-700: #2c6e6c;
+  --color-emerald-800: #245856;
+  --color-emerald-900: #1f4948;
+
+  /* Vacation Palette Distinct Tokens */
+  --color-vacation-teal: #5ba8a6;
+  --color-vacation-blue: #4d69a5;
+  --color-vacation-gold: #ecd386;
+  --color-vacation-cream: #eae6dd;
+  --color-vacation-charcoal: #323232;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-vacation-cream, #f7f5f0);
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-vacation-cream, #f7f5f0);
+    color: var(--color-vacation-charcoal, #323232);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Smooth hover lift for interactive cards */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.12);
+}
+
+/* Hide Vercel Toolbar which can render as a broken white iframe if blocked by adblockers */
+#vercel-toolbar-wrapper,
+vercel-live-feedback {
+  display: none !important;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-fade {
+  animation: pageFadeIn 0.22s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+/* =========================================================================
+   PREMIUM MODERN DARK THEME DESIGN SYSTEM
+   ========================================================================= */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark,
+html.dark body {
+  background-color: #090d16 !important;
+  color: #f8fafc !important;
+}
+
+/* Base Page Backgrounds */
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/95,
+html.dark .bg-slate-50\/90,
+html.dark .bg-slate-50\/80,
+html.dark .bg-slate-50\/50,
+html.dark .bg-gray-50,
+html.dark .min-h-screen.bg-slate-50,
+html.dark .min-h-screen.bg-gray-50 {
+  background-color: #090d16 !important;
+}
+
+/* Level 1 Elevated Surfaces: Cards, Containers, Sections */
+html.dark .bg-white:not([class*="dark:bg-"]):not(.keep-white):not([data-keep-white="true"]):not(.invoice-paper *):not([data-keep-white="true"] *):not([data-invoice-paper="true"] *),
+html.dark .bg-white\/95:not([class*="dark:bg-"]):not(.keep-white):not([data-keep-white="true"]):not(.invoice-paper *):not([data-keep-white="true"] *):not([data-invoice-paper="true"] *),
+html.dark .bg-white\/90:not([class*="dark:bg-"]):not(.keep-white):not([data-keep-white="true"]):not(.invoice-paper *):not([data-keep-white="true"] *):not([data-invoice-paper="true"] *),
+html.dark .bg-white\/80:not([class*="dark:bg-"]):not(.keep-white):not([data-keep-white="true"]):not(.invoice-paper *):not([data-keep-white="true"] *):not([data-invoice-paper="true"] *),
+html.dark .bg-white\/70:not([class*="dark:bg-"]):not(.keep-white):not([data-keep-white="true"]):not(.invoice-paper *):not([data-keep-white="true"] *):not([data-invoice-paper="true"] *) {
+  background-color: #111827 !important;
+}
+
+/* Level 2 Sub-surfaces: Secondary Containers, Badges, Hover states */
+html.dark .bg-slate-100:not([class*="dark:bg-"]):not(.invoice-paper *):not([data-keep-white="true"] *):not([data-invoice-paper="true"] *),
+html.dark .bg-slate-100\/90:not([class*="dark:bg-"]):not(.invoice-paper *):not([data-keep-white="true"] *):not([data-invoice-paper="true"] *),
+html.dark .bg-slate-100\/80:not([class*="dark:bg-"]):not(.invoice-paper *):not([data-keep-white="true"] *):not([data-invoice-paper="true"] *),
+html.dark .bg-gray-100:not([class*="dark:bg-"]):not(.invoice-paper *):not([data-keep-white="true"] *):not([data-invoice-paper="true"] *) {
+  background-color: #182234 !important;
+}
+
+html.dark .bg-slate-200,
+html.dark .bg-gray-200 {
+  background-color: #202d44 !important;
+}
+
+/* Subtle, Crisp Dark Borders */
+html.dark .border-slate-50,
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/50,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-300,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* High-Contrast Typography */
+html.dark .text-black,
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-500,
+html.dark .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-slate-400,
+html.dark .text-gray-400 {
+  color: #64748b !important;
+}
+
+/* Accent Colors Adaptation in Dark Mode */
+html.dark .text-primary-700,
+html.dark .text-primary-800,
+html.dark .text-emerald-700,
+html.dark .text-emerald-800,
+html.dark .text-emerald-900 {
+  color: var(--color-emerald-300, #88c8c6) !important;
+}
+
+html.dark .bg-primary-50,
+html.dark .bg-emerald-50,
+html.dark .bg-green-50 {
+  background-color: color-mix(in srgb, var(--color-emerald-500, #5ba8a6) 18%, transparent) !important;
+  color: var(--color-emerald-300, #88c8c6) !important;
+}
+
+html.dark .border-emerald-100,
+html.dark .border-emerald-200,
+html.dark .border-green-100 {
+  border-color: color-mix(in srgb, var(--color-emerald-500, #5ba8a6) 30%, transparent) !important;
+}
+
+/* Pastel Tint Box Adaptations (Indigo, Red, Rose, Amber, Blue, Violet, Teal) */
+html.dark .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+}
+html.dark .bg-indigo-100 {
+  background-color: rgba(99, 102, 241, 0.25) !important;
+}
+html.dark .text-indigo-900,
+html.dark .text-indigo-800,
+html.dark .text-indigo-700 {
+  color: #818cf8 !important;
+}
+html.dark .border-indigo-100,
+html.dark .border-indigo-200 {
+  border-color: rgba(99, 102, 241, 0.3) !important;
+}
+
+html.dark .bg-red-50,
+html.dark .bg-rose-50 {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+}
+html.dark .bg-red-100,
+html.dark .bg-rose-100 {
+  background-color: rgba(244, 63, 94, 0.25) !important;
+}
+html.dark .text-red-900,
+html.dark .text-red-700,
+html.dark .text-red-600,
+html.dark .text-rose-700,
+html.dark .text-rose-600 {
+  color: #fb7185 !important;
+}
+html.dark .border-red-100,
+html.dark .border-red-200,
+html.dark .border-rose-100,
+html.dark .border-rose-200 {
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-yellow-50 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+}
+html.dark .bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.22) !important;
+}
+html.dark .text-amber-700,
+html.dark .text-amber-800,
+html.dark .text-amber-900 {
+  color: #fbbf24 !important;
+}
+
+html.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+html.dark .text-blue-700,
+html.dark .text-blue-800,
+html.dark .text-blue-900 {
+  color: #60a5fa !important;
+}
+
+html.dark .bg-violet-50 {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+}
+html.dark .text-violet-700,
+html.dark .text-violet-800 {
+  color: #a78bfa !important;
+}
+
+html.dark .bg-teal-50 {
+  background-color: rgba(20, 184, 166, 0.15) !important;
+}
+html.dark .text-teal-700,
+html.dark .text-teal-800 {
+  color: #2dd4bf !important;
+}
+
+/* Image & QR Code Blending Fixes */
+html.dark img.mix-blend-multiply,
+html.dark .mix-blend-multiply {
+  mix-blend-mode: normal !important;
+}
+
+/* =========================================================================
+   UNBREAKABLE INVOICE & LIGHT-MODE ISOLATION SYSTEM
+   Ensures Invoice & Keep-White components NEVER invert under html.dark or print!
+   ========================================================================= */
+
+.invoice-root,
+.invoice-paper,
+.keep-white,
+[data-keep-white="true"],
+.invoice-root *,
+.invoice-paper *,
+.keep-white *,
+[data-keep-white="true"] * {
+  color-scheme: light !important;
+}
+
+.invoice-root {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.invoice-paper,
+.keep-white,
+[data-keep-white="true"] {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+/* Enforce light scheme & root container backgrounds under html.dark */
+html.dark .invoice-root,
+html.dark .invoice-root *,
+html.dark .invoice-paper,
+html.dark .invoice-paper *,
+html.dark .keep-white,
+html.dark .keep-white *,
+html.dark [data-keep-white="true"],
+html.dark [data-keep-white="true"] * {
+  color-scheme: light !important;
+}
+
+html.dark .invoice-root {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html.dark .invoice-paper,
+html.dark .keep-white,
+html.dark [data-keep-white="true"] {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+/* 1. Unbreakable Backgrounds inside Invoice & Keep-White containers */
+html.dark .invoice-root .bg-white,
+html.dark .invoice-paper .bg-white,
+html.dark .keep-white .bg-white,
+html.dark [data-keep-white="true"] .bg-white,
+html.dark .invoice-paper.bg-white,
+html.dark .keep-white.bg-white,
+html.dark [data-keep-white="true"].bg-white {
+  background-color: #ffffff !important;
+}
+
+html.dark .invoice-root .bg-slate-50,
+html.dark .invoice-paper .bg-slate-50,
+html.dark .keep-white .bg-slate-50,
+html.dark [data-keep-white="true"] .bg-slate-50,
+html.dark .invoice-root.bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html.dark .invoice-root .bg-slate-100,
+html.dark .invoice-paper .bg-slate-100,
+html.dark .keep-white .bg-slate-100,
+html.dark [data-keep-white="true"] .bg-slate-100,
+html.dark .invoice-root.bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html.dark .invoice-root .bg-slate-200,
+html.dark .invoice-paper .bg-slate-200,
+html.dark .keep-white .bg-slate-200,
+html.dark [data-keep-white="true"] .bg-slate-200 {
+  background-color: #e2e8f0 !important;
+}
+
+html.dark .invoice-root .bg-emerald-50,
+html.dark .invoice-paper .bg-emerald-50,
+html.dark .keep-white .bg-emerald-50,
+html.dark [data-keep-white="true"] .bg-emerald-50,
+html.dark .invoice-root .bg-emerald-50\/50,
+html.dark .invoice-paper .bg-emerald-50\/50,
+html.dark .keep-white .bg-emerald-50\/50,
+html.dark [data-keep-white="true"] .bg-emerald-50\/50,
+html.dark .invoice-root .bg-green-50,
+html.dark .invoice-paper .bg-green-50,
+html.dark .keep-white .bg-green-50,
+html.dark [data-keep-white="true"] .bg-green-50 {
+  background-color: #ecfdf5 !important;
+}
+
+html.dark .invoice-root .bg-indigo-50,
+html.dark .invoice-paper .bg-indigo-50,
+html.dark .keep-white .bg-indigo-50,
+html.dark [data-keep-white="true"] .bg-indigo-50 {
+  background-color: #eef2ff !important;
+}
+
+html.dark .invoice-root .bg-rose-50,
+html.dark .invoice-paper .bg-rose-50,
+html.dark .keep-white .bg-rose-50,
+html.dark [data-keep-white="true"] .bg-rose-50,
+html.dark .invoice-root .bg-red-50,
+html.dark .invoice-paper .bg-red-50,
+html.dark .keep-white .bg-red-50,
+html.dark [data-keep-white="true"] .bg-red-50 {
+  background-color: #fff1f2 !important;
+}
+
+/* 2. Unbreakable Text Colors inside Invoice & Keep-White containers */
+html.dark .invoice-root .text-black,
+html.dark .invoice-paper .text-black,
+html.dark .keep-white .text-black,
+html.dark [data-keep-white="true"] .text-black {
+  color: #000000 !important;
+}
+
+html.dark .invoice-root .text-slate-900,
+html.dark .invoice-paper .text-slate-900,
+html.dark .keep-white .text-slate-900,
+html.dark [data-keep-white="true"] .text-slate-900,
+html.dark .invoice-root .text-gray-900,
+html.dark .invoice-paper .text-gray-900,
+html.dark .keep-white .text-gray-900,
+html.dark [data-keep-white="true"] .text-gray-900 {
+  color: #0f172a !important;
+}
+
+html.dark .invoice-root .text-slate-800,
+html.dark .invoice-paper .text-slate-800,
+html.dark .keep-white .text-slate-800,
+html.dark [data-keep-white="true"] .text-slate-800,
+html.dark .invoice-root .text-gray-800,
+html.dark .invoice-paper .text-gray-800,
+html.dark .keep-white .text-gray-800,
+html.dark [data-keep-white="true"] .text-gray-800 {
+  color: #1e293b !important;
+}
+
+html.dark .invoice-root .text-slate-700,
+html.dark .invoice-paper .text-slate-700,
+html.dark .keep-white .text-slate-700,
+html.dark [data-keep-white="true"] .text-slate-700,
+html.dark .invoice-root .text-gray-700,
+html.dark .invoice-paper .text-gray-700,
+html.dark .keep-white .text-gray-700,
+html.dark [data-keep-white="true"] .text-gray-700 {
+  color: #334155 !important;
+}
+
+html.dark .invoice-root .text-slate-600,
+html.dark .invoice-paper .text-slate-600,
+html.dark .keep-white .text-slate-600,
+html.dark [data-keep-white="true"] .text-slate-600,
+html.dark .invoice-root .text-gray-600,
+html.dark .invoice-paper .text-gray-600,
+html.dark .keep-white .text-gray-600,
+html.dark [data-keep-white="true"] .text-gray-600 {
+  color: #475569 !important;
+}
+
+html.dark .invoice-root .text-slate-500,
+html.dark .invoice-paper .text-slate-500,
+html.dark .keep-white .text-slate-500,
+html.dark [data-keep-white="true"] .text-slate-500,
+html.dark .invoice-root .text-gray-500,
+html.dark .invoice-paper .text-gray-500,
+html.dark .keep-white .text-gray-500,
+html.dark [data-keep-white="true"] .text-gray-500 {
+  color: #64748b !important;
+}
+
+html.dark .invoice-root .text-slate-400,
+html.dark .invoice-paper .text-slate-400,
+html.dark .keep-white .text-slate-400,
+html.dark [data-keep-white="true"] .text-slate-400,
+html.dark .invoice-root .text-gray-400,
+html.dark .invoice-paper .text-gray-400,
+html.dark .keep-white .text-gray-400,
+html.dark [data-keep-white="true"] .text-gray-400 {
+  color: #94a3b8 !important;
+}
+
+html.dark .invoice-root .text-slate-300,
+html.dark .invoice-paper .text-slate-300,
+html.dark .keep-white .text-slate-300,
+html.dark [data-keep-white="true"] .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .invoice-root .text-slate-200,
+html.dark .invoice-paper .text-slate-200,
+html.dark .keep-white .text-slate-200,
+html.dark [data-keep-white="true"] .text-slate-200 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .invoice-root .text-emerald-950,
+html.dark .invoice-paper .text-emerald-950,
+html.dark .keep-white .text-emerald-950,
+html.dark [data-keep-white="true"] .text-emerald-950 {
+  color: #022c22 !important;
+}
+
+html.dark .invoice-root .text-emerald-900,
+html.dark .invoice-paper .text-emerald-900,
+html.dark .keep-white .text-emerald-900,
+html.dark [data-keep-white="true"] .text-emerald-900 {
+  color: #064e3b !important;
+}
+
+html.dark .invoice-root .text-emerald-800,
+html.dark .invoice-paper .text-emerald-800,
+html.dark .keep-white .text-emerald-800,
+html.dark [data-keep-white="true"] .text-emerald-800,
+html.dark .invoice-root .text-emerald-700,
+html.dark .invoice-paper .text-emerald-700,
+html.dark .keep-white .text-emerald-700,
+html.dark [data-keep-white="true"] .text-emerald-700 {
+  color: #047857 !important;
+}
+
+html.dark .invoice-root .text-emerald-600,
+html.dark .invoice-paper .text-emerald-600,
+html.dark .keep-white .text-emerald-600,
+html.dark [data-keep-white="true"] .text-emerald-600,
+html.dark .invoice-root .text-primary-600,
+html.dark .invoice-paper .text-primary-600,
+html.dark .keep-white .text-primary-600,
+html.dark [data-keep-white="true"] .text-primary-600 {
+  color: #16a34a !important;
+}
+
+html.dark .invoice-root .text-indigo-600,
+html.dark .invoice-paper .text-indigo-600,
+html.dark .keep-white .text-indigo-600,
+html.dark [data-keep-white="true"] .text-indigo-600 {
+  color: #4f46e5 !important;
+}
+
+html.dark .invoice-root .text-indigo-700,
+html.dark .invoice-paper .text-indigo-700,
+html.dark .keep-white .text-indigo-700,
+html.dark [data-keep-white="true"] .text-indigo-700 {
+  color: #4338ca !important;
+}
+
+html.dark .invoice-root .text-red-600,
+html.dark .invoice-paper .text-red-600,
+html.dark .keep-white .text-red-600,
+html.dark [data-keep-white="true"] .text-red-600,
+html.dark .invoice-root .text-rose-600,
+html.dark .invoice-paper .text-rose-600,
+html.dark .keep-white .text-rose-600,
+html.dark [data-keep-white="true"] .text-rose-600 {
+  color: #dc2626 !important;
+}
+
+/* 3. Unbreakable Borders inside Invoice & Keep-White containers */
+html.dark .invoice-root .border-slate-100,
+html.dark .invoice-paper .border-slate-100,
+html.dark .keep-white .border-slate-100,
+html.dark [data-keep-white="true"] .border-slate-100 {
+  border-color: #f1f5f9 !important;
+}
+
+html.dark .invoice-root .border-slate-200,
+html.dark .invoice-paper .border-slate-200,
+html.dark .keep-white .border-slate-200,
+html.dark [data-keep-white="true"] .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html.dark .invoice-root .border-slate-300,
+html.dark .invoice-paper .border-slate-300,
+html.dark .keep-white .border-slate-300,
+html.dark [data-keep-white="true"] .border-slate-300 {
+  border-color: #cbd5e1 !important;
+}
+
+html.dark .invoice-root .border-slate-400,
+html.dark .invoice-paper .border-slate-400,
+html.dark .keep-white .border-slate-400,
+html.dark [data-keep-white="true"] .border-slate-400 {
+  border-color: #94a3b8 !important;
+}
+
+html.dark .invoice-root .border-emerald-200,
+html.dark .invoice-paper .border-emerald-200,
+html.dark .keep-white .border-emerald-200,
+html.dark [data-keep-white="true"] .border-emerald-200,
+html.dark .invoice-root .border-emerald-100,
+html.dark .invoice-paper .border-emerald-100,
+html.dark .keep-white .border-emerald-100,
+html.dark [data-keep-white="true"] .border-emerald-100 {
+  border-color: #a7f3d0 !important;
+}
+
+html.dark .invoice-root .border-emerald-900,
+html.dark .invoice-paper .border-emerald-900,
+html.dark .keep-white .border-emerald-900,
+html.dark [data-keep-white="true"] .border-emerald-900 {
+  border-color: #064e3b !important;
+}
+
+html.dark .invoice-root .border-indigo-200,
+html.dark .invoice-paper .border-indigo-200,
+html.dark .keep-white .border-indigo-200,
+html.dark [data-keep-white="true"] .border-indigo-200 {
+  border-color: #c7d2fe !important;
+}
+
+html.dark .invoice-root .border-rose-200,
+html.dark .invoice-paper .border-rose-200,
+html.dark .keep-white .border-rose-200,
+html.dark [data-keep-white="true"] .border-rose-200,
+html.dark .invoice-root .border-red-200,
+html.dark .invoice-paper .border-red-200,
+html.dark .keep-white .border-red-200,
+html.dark [data-keep-white="true"] .border-red-200 {
+  border-color: #fecdd3 !important;
+}
+
+html.dark .invoice-root .border-red-600,
+html.dark .invoice-paper .border-red-600,
+html.dark .keep-white .border-red-600,
+html.dark [data-keep-white="true"] .border-red-600 {
+  border-color: #dc2626 !important;
+}
+
+html.dark .invoice-root .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+html.dark .invoice-paper .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+html.dark .keep-white .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+html.dark [data-keep-white="true"] .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+/* Maintain proper blend mode on white invoice canvas */
+html.dark .invoice-root .mix-blend-multiply,
+html.dark .invoice-paper .mix-blend-multiply,
+html.dark .keep-white .mix-blend-multiply,
+html.dark [data-keep-white="true"] .mix-blend-multiply {
+  mix-blend-mode: multiply !important;
+}
+
+/* Unbreakable Table Elements inside Invoice Paper */
+html.dark .invoice-paper th,
+html.dark [data-invoice-paper="true"] th,
+.invoice-paper th {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.dark .invoice-paper td,
+html.dark [data-invoice-paper="true"] td,
+.invoice-paper td {
+  border-color: #e2e8f0 !important;
+}
+
+html.dark .invoice-paper tr:hover td,
+html.dark [data-invoice-paper="true"] tr:hover td,
+.invoice-paper tr:hover td {
+  background-color: transparent !important;
+}
+
+/* 4. Strict Print Media Isolation */
+@media print {
+  html,
+  html.dark,
+  body,
+  html.dark body,
+  .invoice-root,
+  .invoice-paper,
+  .keep-white,
+  [data-keep-white="true"],
+  html.dark .invoice-root,
+  html.dark .invoice-paper,
+  html.dark .keep-white,
+  html.dark [data-keep-white="true"] {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    color-scheme: light !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .invoice-root {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .invoice-paper,
+  .keep-white,
+  [data-keep-white="true"] {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    background-color: #ffffff !important;
+  }
+
+  .invoice-root *,
+  .invoice-paper *,
+  .keep-white *,
+  [data-keep-white="true"] * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Form Inputs, Selects, and Textareas */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark select,
+html.dark textarea {
+  background-color: #162032 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #f8fafc !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: var(--color-emerald-500, #5ba8a6) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-emerald-500, #5ba8a6) 25%, transparent) !important;
+}
+
+/* High-contrast text support for primary buttons */
+button.bg-emerald-600,
+button.bg-primary-600,
+a.bg-emerald-600,
+a.bg-primary-600 {
+  color: var(--color-primary-contrast, #ffffff);
+}
+
+/* Popups, Menus, Modals & Dropdown Autocomplete */
+html.dark .shadow-sm,
+html.dark .shadow,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Hover States */
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover,
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #1a2438 !important;
+}
+
+/* Table Headers & Cells in Owner Portal (Excluding Invoice Paper) */
+html.dark th:not(.invoice-paper th):not([data-keep-white="true"] th):not([data-invoice-paper="true"] th) {
+  background-color: #162032 !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark td:not(.invoice-paper td):not([data-keep-white="true"] td):not([data-invoice-paper="true"] td) {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+html.dark tr:hover td:not(.invoice-paper td):not([data-keep-white="true"] td):not([data-invoice-paper="true"] td) {
+  background-color: #162032 !important;
+}
+
+/* Google Translate Clean Styling */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+}
+body {
+  top: 0px !important;
+  position: static !important;
+}
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+}
+.goog-text-highlight {
+  background: none !important;
+  box-shadow: none !important;
+}
+.skiptranslate iframe {
+  display: none !important;
+}
+#google_translate_element {
+  display: none !important;
+}
+
