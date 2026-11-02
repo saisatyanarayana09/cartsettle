@@ -114,7 +114,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'delivery_otp', 'assigned_at', 'dispatched_at', 'delivered_at',
             'paypal_order_id', 'paypal_authorization_id', 'paypal_capture_id',
             'authorized_amount', 'captured_amount', 'released_amount',
-            'margin_guarded', 'ai_settlement_notes'
+            'margin_guarded', 'ai_settlement_notes', 'paypal_invoice_id', 'paypal_invoice_url', 'paypal_tracking_number', 'shipping_carrier', 'dispute_id', 'dispute_status', 'packing_photo'
         ]
         read_only_fields = [
             'id', 'customer', 'customer_name', 'customer_email', 'customer_phone', 'status', 'total_amount',
@@ -130,7 +130,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'delivery_otp', 'assigned_at', 'dispatched_at', 'delivered_at',
             'paypal_order_id', 'paypal_authorization_id', 'paypal_capture_id',
             'authorized_amount', 'captured_amount', 'released_amount',
-            'margin_guarded', 'ai_settlement_notes'
+            'margin_guarded', 'ai_settlement_notes', 'paypal_invoice_id', 'paypal_invoice_url', 'paypal_tracking_number', 'shipping_carrier', 'dispute_id', 'dispute_status', 'packing_photo'
         ]
 
 

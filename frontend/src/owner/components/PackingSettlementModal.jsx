@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   X, 
   Check, 
@@ -10,7 +10,13 @@ import {
   Minus, 
   Plus, 
   DollarSign, 
-  CheckCircle2 
+  CheckCircle2,
+  Camera,
+  FileText,
+  ExternalLink,
+  UploadCloud,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -33,11 +39,16 @@ export default function PackingSettlementModal({
       ordered_qty: item.quantity,
       packed_qty: item.packed_quantity || item.quantity,
       is_accepted: item.status !== 'REJECTED' && item.is_packed !== false,
+      ai_verified: false,
+      ai_notes: ''
     }));
   });
 
   const [loading, setLoading] = useState(false);
+  const [visionScanning, setVisionScanning] = useState(false);
+  const [visionResult, setVisionResult] = useState(null);
   const [settlementReceipt, setSettlementReceipt] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Toggle item accepted / rejected
   const toggleItem = (index) => {
@@ -61,6 +72,58 @@ export default function PackingSettlementModal({
       target.is_accepted = newQty > 0;
       return updated;
     });
+  };
+
+  // AI Multimodal Vision Scan Handler
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setVisionScanning(true);
+      const token = localStorage.getItem('access_token');
+      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await axios.post(
+        `${apiBase}/orders/${order.id}/vision_pack/`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        }
+      );
+
+      const vr = res.data.vision_result;
+      setVisionResult(vr);
+      toast.success(vr.summary || 'AI Vision scan complete!');
+
+      // Automatically update itemsState based on AI detections
+      if (vr.verified_items && Array.isArray(vr.verified_items)) {
+        setItemsState(prev => prev.map(item => {
+          const match = vr.verified_items.find(v => v.id === item.id || v.name?.toLowerCase().includes(item.name.toLowerCase()));
+          if (match) {
+            return {
+              ...item,
+              is_accepted: match.detected,
+              packed_qty: match.detected ? (match.detected_quantity || item.ordered_qty) : 0,
+              ai_verified: true,
+              ai_notes: match.notes || (match.detected ? 'Verified by AI Camera' : 'Missing in bag')
+            };
+          }
+          return item;
+        }));
+      }
+    } catch (err) {
+      console.error('Vision scan failed:', err);
+      toast.error('AI scan error. Using standard manual checklist.');
+    } finally {
+      setVisionScanning(false);
+    }
   };
 
   // Compute live totals
@@ -106,11 +169,17 @@ export default function PackingSettlementModal({
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
 
-      setSettlementReceipt(res.data.settlement || res.data);
+      const data = res.data;
+      setSettlementReceipt({
+        ...data.settlement,
+        invoice_receipt: data.invoice_receipt,
+        order: data.order
+      });
+
       toast.success(`Order #${order.id} settled! $${finalTotal.toFixed(2)} captured via PayPal.`);
 
       if (onSettled) {
-        onSettled(res.data.order || res.data);
+        onSettled(data.order || data);
       }
     } catch (err) {
       console.error('Settlement error:', err);
@@ -145,7 +214,7 @@ export default function PackingSettlementModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -155,7 +224,7 @@ export default function PackingSettlementModal({
         <div className="p-5 overflow-y-auto flex-1 space-y-4">
           {settlementReceipt ? (
             /* Success State Receipt */
-            <div className="text-center py-6 space-y-4">
+            <div className="text-center py-4 space-y-4">
               <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto border-2 border-emerald-400">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
@@ -164,7 +233,7 @@ export default function PackingSettlementModal({
                   PayPal Dynamic Capture Complete!
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  The order was successfully packed and settled at the register.
+                  Settled with dynamic partial capture (final_capture=true).
                 </p>
               </div>
 
@@ -185,22 +254,99 @@ export default function PackingSettlementModal({
                 )}
                 <div className="flex justify-between py-1 text-slate-400 font-mono text-[11px]">
                   <span>PayPal Capture ID:</span>
-                  <span>{settlementReceipt.paypal_capture_id || 'CAP-SIMULATED-OK'}</span>
+                  <span>{settlementReceipt.paypal_capture_id || 'CAP-OK'}</span>
                 </div>
               </div>
 
-              <button
-                onClick={onClose}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md"
-              >
-                Done
-              </button>
+              {/* PayPal Invoicing v2 Quick Link */}
+              {(settlementReceipt.invoice_receipt?.invoice_url || order.paypal_invoice_url) && (
+                <div className="pt-2">
+                  <a
+                    href={settlementReceipt.invoice_receipt?.invoice_url || order.paypal_invoice_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Open Official PayPal Tax Invoice (Invoicing v2)
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  onClick={onClose}
+                  className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md cursor-pointer"
+                >
+                  Return to Orders
+                </button>
+              </div>
             </div>
           ) : (
-            /* Items Verification List */
+            /* Items Verification List & AI Scanner */
             <>
-              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
-                <span>Verify items as you pack into the delivery bag:</span>
+              {/* AI Vision Scanner Header Strip */}
+              <div className="p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
+                      Gemini 3.5 Flash Multimodal Vision Scanner
+                    </div>
+                    <div className="text-[11px] text-indigo-700 dark:text-indigo-300">
+                      Snap photo of packed bag for automated optical checklist
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    ref={fileInputRef}
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={visionScanning}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {visionScanning ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Analyzing Bag...
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        📸 Scan Bag Photo
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Vision Scan Result Banner */}
+              {visionResult && (
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-medium">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span>{visionResult.summary}</span>
+                  </div>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
+                    {visionResult.fulfillment_percentage || 100}% Present
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 pt-1">
+                <span>Items checklist:</span>
                 <span className="font-medium text-indigo-600 dark:text-indigo-400">
                   {itemsState.filter(i => i.is_accepted).length}/{itemsState.length} Items Packed
                 </span>
@@ -221,7 +367,7 @@ export default function PackingSettlementModal({
                       <button
                         type="button"
                         onClick={() => toggleItem(index)}
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
                           item.is_accepted
                             ? 'bg-emerald-500 text-white shadow-xs'
                             : 'border-2 border-slate-300 dark:border-slate-700 hover:border-emerald-500'
@@ -231,13 +377,23 @@ export default function PackingSettlementModal({
                       </button>
 
                       <div className="truncate">
-                        <div className={`text-xs font-semibold truncate ${item.is_accepted ? 'text-slate-900 dark:text-slate-100' : 'line-through text-slate-400'}`}>
-                          {item.name}
+                        <div className="flex items-center gap-2 truncate">
+                          <span className={`text-xs font-semibold truncate ${item.is_accepted ? 'text-slate-900 dark:text-slate-100' : 'line-through text-slate-400'}`}>
+                            {item.name}
+                          </span>
+                          {item.ai_verified && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                              AI Checked
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-slate-500 flex items-center gap-2">
                           <span>{item.unit}</span>
                           <span>•</span>
                           <span>${item.price.toFixed(2)}/ea</span>
+                          {item.ai_notes && (
+                            <span className="text-indigo-500 italic truncate max-w-xs">({item.ai_notes})</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -249,7 +405,7 @@ export default function PackingSettlementModal({
                           type="button"
                           onClick={() => updateQty(index, -1)}
                           disabled={item.packed_qty <= 0}
-                          className="w-6 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 disabled:opacity-30"
+                          className="w-6 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 disabled:opacity-30 cursor-pointer"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
@@ -260,7 +416,7 @@ export default function PackingSettlementModal({
                           type="button"
                           onClick={() => updateQty(index, 1)}
                           disabled={item.packed_qty >= item.ordered_qty}
-                          className="w-6 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 disabled:opacity-30"
+                          className="w-6 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 disabled:opacity-30 cursor-pointer"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
@@ -306,13 +462,13 @@ export default function PackingSettlementModal({
 
             <button
               onClick={handleSettle}
-              disabled={loading}
+              disabled={loading || visionScanning}
               className="w-full py-3 bg-linear-to-r from-amber-500 via-indigo-600 to-indigo-700 hover:from-amber-600 hover:to-indigo-800 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
             >
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Executing PayPal Dynamic Capture (final_capture=true)...
+                  Executing PayPal Dynamic Capture & Invoicing v2...
                 </>
               ) : (
                 <>

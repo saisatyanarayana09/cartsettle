@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/mcp-server-config.json",
+  "name": "cartsettle-paypal-agentic-mcp",
+  "version": "1.8.1",
+  "description": "CartSettle Model Context Protocol (MCP) server for autonomous PayPal commerce, dynamic pre-authorizations, dynamic partial captures, Invoicing v2, Shipping v1 tracking, and wholesale payouts.",
+  "mcpServers": {
+    "paypal-commerce": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@paypal/mcp@1.8.1"
+      ],
+      "env": {
+        "PAYPAL_ENVIRONMENT": "sandbox",
+        "PAYPAL_CLIENT_ID": "ASkjGQlH18H3ZtMpjKjAubYqkm1GlNbWbuiy2pYJTew6DnUgEcwNSamjCBokeZ3SrPwwc625VgtLMAB6",
+        "PAYPAL_CLIENT_SECRET": "${PAYPAL_CLIENT_SECRET}"
+      }
+    },
+    "cartsettle-margin-guard": {
+      "command": "python",
+      "args": [
+        "S:\\Hackathon\\cartsettle\\backend\\manage.py",
+        "run_mcp_agent"
+      ]
+    }
+  }
+}

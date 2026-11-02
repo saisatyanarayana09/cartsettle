@@ -1067,11 +1067,217 @@ class OrderViewSet(ModelViewSet):
                 )
             )
 
+        # Auto-generate PayPal Invoicing v2 receipt if captured
+        invoice_receipt = None
+        if order.paypal_capture_id:
+            try:
+                invoice_receipt = paypal_service.create_and_send_invoice(order)
+                order.refresh_from_db()
+            except Exception as ie:
+                logger.warning("PayPal invoice auto-creation notice: %s", ie)
+
         return Response({
             'order': OrderSerializer(order, context=self.get_serializer_context()).data,
             'settlement': settlement_info,
-            'capture_receipt': capture_receipt
+            'capture_receipt': capture_receipt,
+            'invoice_receipt': invoice_receipt
         })
+
+    @action(detail=True, methods=['post'], permission_classes=[IsOwnerUser])
+    def generate_invoice(self, request, pk=None):
+        """
+        Creates and sends an official PayPal Tax Invoice (Invoicing v2 API)
+        for this order, returning the live payer-view invoice URL.
+        """
+        order = self.get_object()
+        try:
+            invoice_res = paypal_service.create_and_send_invoice(order)
+            order.refresh_from_db()
+            broadcast_settlement_update(order.id, {
+                'paypal_invoice_id': order.paypal_invoice_id,
+                'paypal_invoice_url': order.paypal_invoice_url
+            })
+            return Response({
+                'invoice': invoice_res,
+                'order': OrderSerializer(order, context=self.get_serializer_context()).data
+            })
+        except Exception as e:
+            logger.error("Failed to generate PayPal invoice: %s", e)
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsOwnerUser])
+    def dispatch_tracking(self, request, pk=None):
+        """
+        Attaches shipment tracking info directly to the PayPal transaction (Shipping v1 API)
+        and transitions the order to OUT_FOR_DELIVERY.
+        """
+        order = self.get_object()
+        tracking_number = request.data.get('tracking_number')
+        carrier = request.data.get('carrier', 'LOCAL_EXPRESS')
+        
+        try:
+            track_res = paypal_service.add_tracking_info(order, tracking_number=tracking_number, carrier_name=carrier)
+            if order.status in [Order.Status.READY, Order.Status.ACCEPTED, Order.Status.PREPARING]:
+                order.status = Order.Status.OUT_FOR_DELIVERY
+                order.dispatched_at = timezone.now()
+                order.save(update_fields=['status', 'dispatched_at', 'paypal_tracking_number', 'shipping_carrier'])
+                
+                from .ws_broadcast import broadcast_order_status
+                broadcast_order_status(order.id, order.status, order.delivery_otp)
+
+            return Response({
+                'tracking': track_res,
+                'order': OrderSerializer(order, context=self.get_serializer_context()).data
+            })
+        except Exception as e:
+            logger.error("Failed to add tracking info: %s", e)
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsOwnerUser])
+    def vision_pack(self, request, pk=None):
+        """
+        Multimodal Gemini Vision Scanner:
+        Store packer uploads or snaps a photo of the packed grocery tote/bag.
+        Gemini 3.5 Flash identifies all items, detects missing/damaged goods,
+        and returns auto-checked packing recommendations.
+        """
+        import base64
+        order = self.get_object()
+        
+        image_b64 = ""
+        mime_type = "image/jpeg"
+
+        if 'image' in request.FILES:
+            uploaded = request.FILES['image']
+            image_bytes = uploaded.read()
+            image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+            mime_type = uploaded.content_type or "image/jpeg"
+            try:
+                order.packing_photo = uploaded
+                order.save(update_fields=['packing_photo'])
+            except Exception:
+                pass
+        elif 'image' in request.data:
+            raw_data = request.data.get('image', '')
+            if ',' in raw_data:
+                header, raw_data = raw_data.split(',', 1)
+                if 'image/png' in header:
+                    mime_type = 'image/png'
+                elif 'image/webp' in header:
+                    mime_type = 'image/webp'
+            image_b64 = raw_data
+
+        if not image_b64:
+            return Response({'detail': 'No image provided for vision verification.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        expected_items = [
+            {
+                "id": it.id,
+                "name": it.product_name_snapshot,
+                "quantity": it.quantity,
+                "unit": it.unit_snapshot,
+                "price": float(it.price_snapshot)
+            }
+            for it in order.items.all()
+        ]
+
+        from services.agent_service import agent_service
+        vision_result = agent_service.verify_packing_photo(
+            image_base64=image_b64,
+            mime_type=mime_type,
+            expected_items=expected_items,
+            session_id=str(order.id)
+        )
+
+        return Response({
+            'order_id': order.id,
+            'vision_result': vision_result
+        })
+
+    @action(detail=False, methods=['get'], permission_classes=[IsOwnerUser])
+    def disputes(self, request):
+        """
+        Lists customer disputes from PayPal Disputes API v1 for store management.
+        """
+        try:
+            disputes_res = paypal_service.list_disputes(page_size=15)
+            return Response(disputes_res)
+        except Exception as e:
+            return Response({'items': [], 'notice': str(e)})
+
+    @action(detail=False, methods=['post'], permission_classes=[IsOwnerUser])
+    def provide_dispute_evidence(self, request):
+        """
+        Submits packing audit proof and settlement logs to PayPal for dispute resolution.
+        """
+        dispute_id = request.data.get('dispute_id')
+        notes = request.data.get('notes', 'CartSettle packing verified via dynamic settlement audit.')
+        if not dispute_id:
+            return Response({'detail': 'dispute_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            res = paypal_service.provide_dispute_evidence(dispute_id, notes)
+            return Response(res)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[])
+    def paypal_webhook(self, request):
+        """
+        Ingests real-time PayPal Webhook Events:
+        - CHECKOUT.ORDER.APPROVED
+        - PAYMENT.AUTHORIZATION.CREATED
+        - PAYMENT.CAPTURE.COMPLETED
+        - INVOICING.INVOICE.PAID
+        - CUSTOMER.DISPUTE.CREATED
+        """
+        event = request.data
+        event_type = event.get('event_type', '')
+        resource = event.get('resource', {})
+        logger.info("Received PayPal Webhook Event: %s", event_type)
+
+        try:
+            # Handle Payment Capture Completed
+            if event_type == 'PAYMENT.CAPTURE.COMPLETED':
+                capture_id = resource.get('id')
+                custom_id = resource.get('custom_id')
+                amount = resource.get('amount', {}).get('value')
+                
+                order = None
+                if custom_id:
+                    order = Order.objects.filter(id=custom_id).first()
+                if not order and capture_id:
+                    order = Order.objects.filter(paypal_capture_id=capture_id).first()
+                
+                if order:
+                    order.status = Order.Status.READY
+                    broadcast_settlement_update(order.id, {
+                        'status': order.status,
+                        'paypal_capture_id': capture_id,
+                        'captured_amount': amount
+                    })
+
+            # Handle Customer Dispute
+            elif event_type in ['CUSTOMER.DISPUTE.CREATED', 'CUSTOMER.DISPUTE.UPDATED']:
+                dispute_id = resource.get('dispute_id')
+                dispute_status = resource.get('status')
+                disputed_transactions = resource.get('disputed_transactions', [])
+                
+                for dt in disputed_transactions:
+                    seller_txn_id = dt.get('seller_transaction_id')
+                    order = Order.objects.filter(paypal_capture_id=seller_txn_id).first() or Order.objects.filter(paypal_authorization_id=seller_txn_id).first()
+                    if order:
+                        order.dispute_id = dispute_id
+                        order.dispute_status = dispute_status
+                        order.save(update_fields=['dispute_id', 'dispute_status'])
+                        broadcast_settlement_update(order.id, {
+                            'dispute_id': dispute_id,
+                            'dispute_status': dispute_status
+                        })
+
+            return Response({'status': 'SUCCESS', 'event_type': event_type}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error("Error processing PayPal webhook: %s", e)
+            return Response({'status': 'ERROR', 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def analytics(self, request):
         from django.core.cache import cache

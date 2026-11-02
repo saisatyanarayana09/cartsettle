@@ -58,6 +58,15 @@ class Order(models.Model):
     released_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     margin_guarded = models.BooleanField(default=False)
     ai_settlement_notes = models.TextField(blank=True, default="")
+    
+    # PayPal Invoicing v2, Shipping Tracking & Disputes
+    paypal_invoice_id = models.CharField(max_length=100, blank=True, default="")
+    paypal_invoice_url = models.URLField(blank=True, default="")
+    paypal_tracking_number = models.CharField(max_length=100, blank=True, default="")
+    shipping_carrier = models.CharField(max_length=50, blank=True, default="LOCAL_EXPRESS")
+    dispute_id = models.CharField(max_length=100, blank=True, default="")
+    dispute_status = models.CharField(max_length=50, blank=True, default="")
+    packing_photo = models.ImageField(upload_to="packing_verifications/", null=True, blank=True)
     cashback_credited = models.BooleanField(default=False)
     
     # Delivery Partner & Dispatch Tracking
