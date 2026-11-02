@@ -1,7 +1,8 @@
 import { optimizeImage } from './utils/image';
 import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { Home, Search, ShoppingBasket, ShoppingCart, User, X, Heart, Bell, LayoutGrid, Trash2, ShoppingBag, Leaf, Coffee, Package, Mic, Volume2, Megaphone, Sparkles, Clock, Wrench, AlertTriangle, Loader2, SearchX, ArrowUpRight } from 'lucide-react'
+import { Home, Search, ShoppingBasket, ShoppingCart, User, X, Heart, Bell, LayoutGrid, Trash2, ShoppingBag, Leaf, Coffee, Package, Mic, Volume2, Megaphone, Sparkles, Clock, Wrench, AlertTriangle, Loader2, SearchX, ArrowUpRight, Bot } from 'lucide-react'
+import ShopperAgentDrawer from './components/ShopperAgentDrawer'
 import { useCart } from './cart-context'
 import { useLanguage } from './context/LanguageContext'
 import { useSpeechRecognition, useTextToSpeech } from './hooks/useVoice'
@@ -900,6 +901,7 @@ export function CustomerLayout({ children }) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [isMobileSearchHidden, setIsMobileSearchHidden] = useState(false)
   const [isSearchActive, setIsSearchActive] = useState(false)
+  const [isShopperAgentOpen, setIsShopperAgentOpen] = useState(false)
   const location = useLocation();
 
   useEffect(() => {
@@ -1147,6 +1149,24 @@ export function CustomerLayout({ children }) {
           <span>Cart</span>
         </Link>
       </nav>
+
+      {/* Floating CartSettle Shopper AI Launcher */}
+      <button
+        onClick={() => setIsShopperAgentOpen(true)}
+        className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-linear-to-r from-emerald-600 via-teal-700 to-indigo-900 text-white font-bold text-xs shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/20 backdrop-blur-md"
+        title="Ask CartSettle Shopper AI Concierge"
+      >
+        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+          <Bot className="w-3.5 h-3.5 text-emerald-300" />
+        </div>
+        <span>Ask AI Shopper</span>
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+      </button>
+
+      <ShopperAgentDrawer
+        isOpen={isShopperAgentOpen}
+        onClose={() => setIsShopperAgentOpen(false)}
+      />
     </div>
   );
 }

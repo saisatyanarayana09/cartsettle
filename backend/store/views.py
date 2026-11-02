@@ -513,8 +513,17 @@ class AgentChatView(views.APIView):
         if not prompt:
             return response.Response({'detail': 'Prompt is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Determine persona: explicit parameter, portal header, or user role
+        persona = request.data.get('persona')
+        if not persona:
+            portal = str(request.headers.get('X-Portal-Context', '')).lower()
+            if portal == 'owner' or getattr(request.user, 'is_owner', False) or getattr(request.user, 'is_staff', False):
+                persona = 'owner'
+            else:
+                persona = 'shopper'
+
         from services.agent_service import agent_service
-        result = agent_service.chat(prompt=prompt, session_id=session_id, history=history)
+        result = agent_service.chat(prompt=prompt, session_id=session_id, history=history, persona=persona)
         return response.Response(result, status=status.HTTP_200_OK)
 
 

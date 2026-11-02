@@ -107,6 +107,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
       const res = await api.post('/store/agent/chat/', {
         prompt: prompt,
         session_id: 'owner_copilot_session',
+        persona: 'owner',
         history: newMessages.map(m => ({ role: m.role, content: m.content }))
       });
 
@@ -236,20 +237,32 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
       {/* Quick Prompt Chips */}
       <div className="px-3 py-1.5 bg-slate-100/70 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex gap-1.5 overflow-x-auto scrollbar-none">
         <button
+          onClick={() => handleSend('Check low stock items')}
+          className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-indigo-500 transition-all shrink-0 cursor-pointer font-medium"
+        >
+          📊 Inventory Health
+        </button>
+        <button
+          onClick={() => handleSend('Check pending orders')}
+          className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-indigo-500 transition-all shrink-0 cursor-pointer font-medium"
+        >
+          📦 Pending Orders
+        </button>
+        <button
           onClick={() => handleSend('Check profit margins on Ashirvad Atta')}
-          className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-indigo-500 transition-all shrink-0 cursor-pointer"
+          className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-indigo-500 transition-all shrink-0 cursor-pointer font-medium"
         >
           🏷️ Check Atta Margin
         </button>
         <button
           onClick={() => handleSend('A customer wants a 20% discount on Atta. Can we offer it?')}
-          className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-indigo-500 transition-all shrink-0 cursor-pointer"
+          className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-indigo-500 transition-all shrink-0 cursor-pointer font-medium"
         >
           🛡️ Evaluate 20% Discount
         </button>
         <button
           onClick={() => handleSend('Restock 10 units of Rice from supplier wholesale@kirana.com via PayPal Payout')}
-          className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-indigo-500 transition-all shrink-0 cursor-pointer"
+          className="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-indigo-500 transition-all shrink-0 cursor-pointer font-medium"
         >
           💰 Restock via PayPal Payout
         </button>
