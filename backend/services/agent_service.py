@@ -212,6 +212,46 @@ class AgentTools:
                     },
                     "required": ["order_id"]
                 }
+            },
+            {
+                "name": "update_order_status",
+                "description": "Updates an order's operational status (ACCEPTED, PREPARING, READY, OUT_FOR_DELIVERY, DELIVERED, REJECTED).",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "order_id": {
+                            "type": "STRING",
+                            "description": "The order ID (e.g. ORD202600002)."
+                        },
+                        "new_status": {
+                            "type": "STRING",
+                            "description": "Target status: ACCEPTED, PREPARING, READY, OUT_FOR_DELIVERY, DELIVERED, or REJECTED."
+                        }
+                    },
+                    "required": ["order_id", "new_status"]
+                }
+            },
+            {
+                "name": "update_product_inventory",
+                "description": "Updates a product's selling price or stock quantity in the live store database.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "product_name": {
+                            "type": "STRING",
+                            "description": "Name or keyword of the product to update."
+                        },
+                        "new_price": {
+                            "type": "NUMBER",
+                            "description": "Optional new selling price in USD."
+                        },
+                        "new_stock": {
+                            "type": "INTEGER",
+                            "description": "Optional new exact stock quantity."
+                        }
+                    },
+                    "required": ["product_name"]
+                }
             }
         ]
         return owner_tools
@@ -606,6 +646,85 @@ class AgentTools:
                 "message": f"Order #{order.id}: Authorized ${auth_amount:.2f} | Packed ${packed_sum:.2f} | Auto-Released ${released:.2f}."
             }
 
+        elif name == "update_order_status":
+            order_id = (args.get("order_id") or "").strip().upper()
+            new_status = (args.get("new_status") or "ACCEPTED").strip().upper()
+            order = Order.objects.filter(id=order_id).first()
+            if not order:
+                order = Order.objects.order_by("-created_at").first()
+            if not order:
+                return {"status": "error", "message": f"Order {order_id} not found."}
+
+            valid_statuses = ["NEW", "ACCEPTED", "PREPARING", "READY", "OUT_FOR_DELIVERY", "DELIVERED", "REJECTED"]
+            if new_status not in valid_statuses:
+                new_status = "ACCEPTED"
+
+            order.status = new_status
+            if new_status == "OUT_FOR_DELIVERY" and not order.paypal_tracking_number:
+                order.paypal_tracking_number = f"CS-TRK-{str(order.id)[-6:]}"
+                order.shipping_carrier = "LOCAL_EXPRESS"
+            order.save()
+            cache.clear()
+            broadcast_settlement_update(order.id, {"id": order.id, "status": order.status})
+            return {
+                "status": "SUCCESS",
+                "order_id": str(order.id),
+                "new_status": order.status,
+                "customer": order.customer.get_full_name() or order.customer.username,
+                "total": float(order.total_amount),
+                "message": f"Updated Order #{order.id} status to {order.status}."
+            }
+
+        elif name == "update_product_inventory":
+            prod_name = (args.get("product_name") or "").strip()
+            new_price = args.get("new_price")
+            new_stock = args.get("new_stock")
+            add_stock = args.get("add_stock")
+
+            prod = Product.objects.filter(name__icontains=prod_name, is_active=True).first()
+            if not prod:
+                for w in prod_name.split():
+                    if len(w) >= 3:
+                        prod = Product.objects.filter(name__icontains=w, is_active=True).first()
+                        if prod:
+                            break
+            if not prod:
+                return {"status": "error", "message": f"Product '{prod_name}' not found."}
+
+            changes = []
+            if new_price is not None:
+                req_price = Decimal(str(new_price)).quantize(Decimal("0.01"))
+                cost = prod.cost_price or (req_price * Decimal("0.80")).quantize(Decimal("0.01"))
+                min_safe = (cost / (Decimal("1.0") - (MIN_PROFIT_MARGIN_PCT / Decimal("100.0")))).quantize(Decimal("0.01"))
+                if req_price < min_safe:
+                    prod.offer_price = min_safe
+                    changes.append(f"price set to ${float(min_safe):.2f} (12% margin floor protected)")
+                else:
+                    prod.offer_price = req_price
+                    if req_price > prod.regular_price:
+                        prod.regular_price = req_price
+                    changes.append(f"price updated to ${float(req_price):.2f}")
+
+            if new_stock is not None:
+                prod.stock_quantity = max(0, int(new_stock))
+                prod.is_in_stock = prod.stock_quantity > 0
+                changes.append(f"stock set to {prod.stock_quantity} units")
+            elif add_stock is not None:
+                prod.stock_quantity = max(0, prod.stock_quantity + int(add_stock))
+                prod.is_in_stock = prod.stock_quantity > 0
+                changes.append(f"stock increased to {prod.stock_quantity} units")
+
+            prod.save()
+            cache.clear()
+            return {
+                "status": "SUCCESS",
+                "product_id": prod.id,
+                "name": prod.name,
+                "price": float(prod.offer_price or prod.regular_price),
+                "stock": prod.stock_quantity,
+                "message": f"Updated {prod.name}: {', '.join(changes) or 'saved'}."
+            }
+
         return {"status": "error", "message": f"Unknown tool: {name}"}
 
 
@@ -785,9 +904,16 @@ class AgentService:
                 "parts": [{"text": resolved_prompt}]
             })
 
+        tools_spec = [
+            {
+                "function_declarations": AgentTools.get_tool_definitions(persona=persona)
+            }
+        ]
+
         payload = {
             "system_instruction": {"parts": [{"text": system_instruction}]},
             "contents": contents,
+            "tools": tools_spec,
             "generationConfig": {
                 "temperature": 0.2,
                 "maxOutputTokens": 300
@@ -795,7 +921,7 @@ class AgentService:
         }
 
         try:
-            res = requests.post(url, json=payload, timeout=15)
+            res = requests.post(url, json=payload, timeout=12)
             if res.status_code != 200:
                 logger.warning("Gemini API status %s, using fast fallback", res.status_code)
                 fb = self._fallback_chat(resolved_prompt, session_id, persona)
@@ -807,6 +933,38 @@ class AgentService:
             data = res.json()
             candidate = data.get("candidates", [{}])[0]
             parts = candidate.get("content", {}).get("parts", [])
+
+            # Check if Gemini invoked a function call
+            function_calls = [p.get("functionCall") for p in parts if "functionCall" in p]
+            if function_calls:
+                fc = function_calls[0]
+                fn_name = fc.get("name")
+                fn_args = fc.get("args", {})
+                fn_result = AgentTools.execute_tool(fn_name, fn_args, session_id)
+                final_reply = self._synthesize_tool_response(fn_name, fn_result, persona)
+                actions = self._extract_frontend_actions(fn_name, fn_result)
+
+                out = {
+                    "reply": final_reply,
+                    "tools_used": [{"name": fn_name, "args": fn_args}],
+                    "actions": actions,
+                    "tool_result": fn_result,
+                    "latency_ms": max(1, int((time.perf_counter() - t0) * 1000))
+                }
+                self._save_session_turn(session_id, persona, prompt, out)
+                mem = self.get_session_memory(session_id, persona)
+                out["follow_ups"] = self._build_follow_ups(persona, actions, mem)
+                if mem.get("messages"):
+                    mem["messages"][-1]["follow_ups"] = out["follow_ups"]
+                    _SESSION_MEMORY[self._mem_key(session_id, persona)] = mem
+                    cache.set(self._mem_key(session_id, persona), mem, timeout=86400)
+
+                broadcast_agent_thought(session_id, {
+                    "status": "complete",
+                    "response": final_reply,
+                    "actions": actions
+                })
+                return out
 
             text_parts = [p.get("text", "") for p in parts if "text" in p]
             raw_reply = "".join(text_parts).strip() or "Ready! How can I help you?"
@@ -896,13 +1054,120 @@ class AgentService:
         """Sub-50ms instant execution with minimalist, simple, actionable responses."""
         lower = prompt.lower().strip()
 
-        # --- 0. AUTO-SETTLE SPECIFIC ORDER ("Settle order ORD...") ---
-        if ("settle" in lower or "capture" in lower) and re.search(r"\b(ord\d+\w*)\b", lower):
-            target_id = re.search(r"\b(ord\d+\w*)\b", lower).group(1).upper()
-            res = AgentTools.execute_tool("auto_settle_order_packing", {"order_id": target_id}, session_id)
-            reply = self._synthesize_tool_response("auto_settle_order_packing", res, persona)
-            actions = self._extract_frontend_actions("auto_settle_order_packing", res)
-            return {"reply": reply, "tools_used": [{"name": "auto_settle_order_packing", "args": {"order_id": target_id}}], "actions": actions, "tool_result": res}
+        # --- A. AUTONOMOUS PORTAL NAVIGATION ("open orders", "go to products", "go to cart", "checkout") ---
+        if any(lower.startswith(prefix) for prefix in ["open ", "go to ", "navigate to ", "take me to ", "show me "]) or lower in ["checkout", "go to checkout", "view cart", "open cart"]:
+            ord_nav = re.search(r"\b(ord\d+\w*)\b", lower)
+            if ord_nav and persona == "owner":
+                oid = ord_nav.group(1).upper()
+                return {
+                    "reply": f"Opening Order #{oid}.",
+                    "tools_used": [{"name": "navigate_portal", "args": {"path": f"/owner/orders/{oid}"}}],
+                    "actions": [{"type": "NAVIGATE", "path": f"/owner/orders/{oid}"}],
+                    "tool_result": {"navigated_to": f"/owner/orders/{oid}"}
+                }
+
+            nav_map_owner = [
+                (["order", "packing"], "/owner/orders", "Orders Portal"),
+                (["product", "inventory", "catalog"], "/owner/products", "Products Catalog"),
+                (["categor"], "/owner/categories", "Categories"),
+                (["invoice", "receipt"], "/owner/invoices", "Invoices"),
+                (["sale", "analytic", "revenue"], "/owner/sales", "Sales Analytics"),
+                (["offer", "promo", "coupon"], "/owner/offers", "Offers & Discounts"),
+                (["customer", "buyer"], "/owner/customers", "Customers"),
+                (["delivery", "fleet", "partner"], "/owner/delivery-partners", "Delivery Fleet"),
+                (["setting"], "/owner/settings", "Store Settings"),
+                (["dashboard", "home"], "/owner", "Owner Dashboard"),
+            ]
+            nav_map_shopper = [
+                (["checkout", "pay"], "/checkout", "PayPal Checkout"),
+                (["cart", "bag", "basket"], "/cart", "Shopping Cart"),
+                (["order"], "/profile/orders", "My Orders"),
+                (["wallet"], "/profile/wallet", "My Wallet"),
+                (["offer", "deal"], "/profile/offers", "Offers & Deals"),
+                (["product", "shop", "store"], "/products", "Store Catalog"),
+            ]
+            target_map = nav_map_owner if persona == "owner" else nav_map_shopper
+            for kws, route_path, label in target_map:
+                if any(k in lower for k in kws):
+                    return {
+                        "reply": f"Navigating to {label}.",
+                        "tools_used": [{"name": "navigate_portal", "args": {"path": route_path}}],
+                        "actions": [{"type": "NAVIGATE", "path": route_path}],
+                        "tool_result": {"navigated_to": route_path}
+                    }
+
+        # --- B. AUTO-SETTLE ORDER ("Settle order ORD...", "Settle pending order", "Settle latest order") ---
+        if any(w in lower for w in ["settle", "capture", "pack order", "pack and settle"]):
+            ord_match = re.search(r"\b(ord\d+\w*)\b", lower)
+            if ord_match:
+                target_id = ord_match.group(1).upper()
+            else:
+                pending_ord = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).order_by("-created_at").first() or Order.objects.order_by("-created_at").first()
+                target_id = str(pending_ord.id) if pending_ord else ""
+            if target_id:
+                res = AgentTools.execute_tool("auto_settle_order_packing", {"order_id": target_id}, session_id)
+                reply = self._synthesize_tool_response("auto_settle_order_packing", res, persona)
+                actions = self._extract_frontend_actions("auto_settle_order_packing", res) + [{"type": "REFRESH_DATA"}]
+                return {"reply": reply, "tools_used": [{"name": "auto_settle_order_packing", "args": {"order_id": target_id}}], "actions": actions, "tool_result": res}
+
+        # --- C. OWNER ORDER STATUS ACTIONS ("Accept order...", "Dispatch order...", "Deliver order...", "Cancel order...") ---
+        if persona == "owner" and any(w in lower for w in ["accept order", "prepare order", "dispatch order", "deliver order", "reject order", "cancel order", "mark order"]):
+            ord_match = re.search(r"\b(ord\d+\w*)\b", lower)
+            target_ord = Order.objects.filter(id=ord_match.group(1).upper()).first() if ord_match else Order.objects.order_by("-created_at").first()
+            if target_ord:
+                new_st = "ACCEPTED"
+                if "prepar" in lower:
+                    new_st = "PREPARING"
+                elif "dispatch" in lower or "out for delivery" in lower or "ship" in lower:
+                    new_st = "OUT_FOR_DELIVERY"
+                elif "deliver" in lower:
+                    new_st = "DELIVERED"
+                elif "reject" in lower or "cancel" in lower:
+                    new_st = "REJECTED"
+                res = AgentTools.execute_tool("update_order_status", {"order_id": str(target_ord.id), "new_status": new_st}, session_id)
+                actions = [
+                    {
+                        "type": "ORDER_CARD",
+                        "order": {
+                            "id": str(target_ord.id),
+                            "customer": res.get("customer", "Customer"),
+                            "status": new_st,
+                            "total": res.get("total", float(target_ord.total_amount)),
+                            "authorized": float(target_ord.authorized_amount or target_ord.total_amount),
+                            "captured": float(target_ord.captured_amount or target_ord.total_amount),
+                            "released": float(target_ord.released_amount or 0),
+                            "can_settle": new_st in ("NEW", "ACCEPTED", "PREPARING")
+                        }
+                    },
+                    {"type": "REFRESH_DATA"}
+                ]
+                return {
+                    "reply": res.get("message", f"Order #{target_ord.id} marked as {new_st}."),
+                    "tools_used": [{"name": "update_order_status", "args": {"order_id": str(target_ord.id), "new_status": new_st}}],
+                    "actions": actions,
+                    "tool_result": res
+                }
+
+        # --- D. OWNER PRODUCT PRICE / STOCK UPDATE ACTIONS ("update price of...", "update stock of...", "set stock...") ---
+        if persona == "owner" and any(w in lower for w in ["update price", "change price", "set price", "update stock", "change stock", "set stock", "add stock"]):
+            keywords = ["milk", "bread", "pasta", "sauce", "marinara", "cheese", "parmesan", "strawberries", "eggs", "avocado", "yogurt", "atta"]
+            matched_kw = next((kw for kw in keywords if kw in lower), "Milk")
+            num_match = re.findall(r"(\d+(?:\.\d+)?)", lower)
+            val = float(num_match[-1]) if num_match else 25.0
+            args = {"product_name": matched_kw}
+            if "price" in lower:
+                args["new_price"] = val
+            elif "add stock" in lower:
+                args["add_stock"] = int(val)
+            else:
+                args["new_stock"] = int(val)
+            res = AgentTools.execute_tool("update_product_inventory", args, session_id)
+            return {
+                "reply": res.get("message", "Product updated."),
+                "tools_used": [{"name": "update_product_inventory", "args": args}],
+                "actions": [{"type": "PRODUCT_UPDATED", "product": res}, {"type": "REFRESH_DATA"}],
+                "tool_result": res
+            }
 
         # --- 1. RECENT / LATEST ORDER & SPECIFIC ORDER ID FAST-PATH (< 10ms) ---
         ord_id_match = re.search(r"\b(ord\d+\w*)\b", lower)
@@ -1061,14 +1326,23 @@ class AgentService:
 
         # --- SHOPPER FAST-PATHS ---
         if persona == "shopper":
-            # 1. Autonomous Add to Cart ("Add X to my cart")
-            if ("add " in lower or "put " in lower) and ("cart" in lower or "bag" in lower or "basket" in lower):
+            # 0. Clear Cart ("clear my cart", "empty cart")
+            if any(k in lower for k in ["clear cart", "clear my cart", "empty cart", "empty my cart"]):
+                return {
+                    "reply": "Cleared all items from your shopping cart.",
+                    "tools_used": [{"name": "clear_shopper_cart", "args": {}}],
+                    "actions": [{"type": "CLEAR_CART"}],
+                    "tool_result": {"status": "cleared"}
+                }
+
+            # 1. Autonomous Add to Cart ("Add X to my cart", "Add 2 Milk", "Buy Bread", "Get me Eggs")
+            if any(w in lower for w in ["add ", "put ", "buy ", "get me ", "i want ", "order "]):
                 qty_match = re.search(r"\b(\d+)\b", lower)
                 qty = int(qty_match.group(1)) if qty_match else 1
                 keywords = ["milk", "bread", "pasta", "sauce", "marinara", "cheese", "parmesan", "strawberries", "eggs", "avocado", "yogurt", "atta"]
-                matched_kw = next((kw for kw in keywords if kw in lower), "Milk")
-                prod = Product.objects.filter(name__icontains=matched_kw, is_active=True).first() or Product.objects.filter(is_active=True).first()
-                if prod:
+                matched_kw = next((kw for kw in keywords if kw in lower), None)
+                prod = Product.objects.filter(name__icontains=(matched_kw or "Milk"), is_active=True).first()
+                if prod and (matched_kw or "cart" in lower or "bag" in lower):
                     res = AgentTools.execute_tool("add_to_shopper_cart", {"product_id": prod.id, "quantity": qty}, session_id)
                     actions = self._extract_frontend_actions("add_to_shopper_cart", res)
                     reply = f"Added {qty}x {prod.name} (${float(prod.offer_price or prod.regular_price):.2f}) to your cart."
@@ -1140,6 +1414,12 @@ class AgentService:
                 return f"Paid ${res.get('amount_paid', 0):.2f} to {res.get('supplier')} for {res.get('quantity')}x {res.get('product')}."
             return f"Payout notice: {msg}"
 
+        elif fn_name == "update_order_status":
+            return res.get("message", f"Order #{res.get('order_id')} updated to {res.get('new_status')}.")
+
+        elif fn_name == "update_product_inventory":
+            return res.get("message", f"Updated {res.get('name')}.")
+
         return re.sub(r"[*`#]+", "", msg) or "Action completed."
 
     def _extract_frontend_actions(self, fn_name: str, res: dict) -> list:
@@ -1153,6 +1433,21 @@ class AgentService:
             actions.append({"type": "SEARCH_RESULTS", "items": res.get("products", [])})
         elif fn_name == "auto_settle_order_packing" and res.get("status") == "SUCCESS":
             actions.append({"type": "ORDER_SETTLED", "order_id": res.get("order_id"), "captured": res.get("captured_amount"), "released": res.get("released_amount")})
+            actions.append({"type": "REFRESH_DATA"})
+        elif fn_name == "execute_supplier_restock_payout" and res.get("status") == "SUCCESS":
+            actions.append({"type": "PAYOUT_RECEIPT", "receipt": res})
+            actions.append({"type": "REFRESH_DATA"})
+        elif fn_name == "update_order_status" and res.get("status") == "SUCCESS":
+            actions.append({"type": "REFRESH_DATA"})
+        elif fn_name == "update_product_inventory" and res.get("status") == "SUCCESS":
+            actions.append({"type": "PRODUCT_UPDATED", "product": res})
+            actions.append({"type": "REFRESH_DATA"})
+        elif fn_name == "inspect_margin" and res.get("products"):
+            actions.append({"type": "MARGIN_LIST", "products": res.get("products", [])[:4]})
+        elif fn_name == "get_inventory_health" and res.get("items"):
+            actions.append({"type": "LOW_STOCK_LIST", "items": res.get("items", [])[:4]})
+        elif fn_name == "get_pending_packing_orders" and res.get("orders"):
+            actions.append({"type": "PENDING_ORDERS", "orders": res.get("orders", [])[:4]})
         return actions
 
     def _fallback_chat(self, prompt: str, session_id: str, persona: str) -> dict:

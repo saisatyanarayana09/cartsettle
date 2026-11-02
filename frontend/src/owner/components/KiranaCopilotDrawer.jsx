@@ -18,7 +18,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import api, { invalidateCache } from '../../services/api';
 import toast from 'react-hot-toast';
 
 const STORAGE_KEY_MSGS = 'cartsettle_owner_agent_chat_v2';
@@ -145,7 +145,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
     }
   };
 
-  const handleResetChat = async () => {
+  const clearAllChatHistory = () => {
     const freshMsg = {
       ...INITIAL_MESSAGE,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -156,12 +156,17 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
     ]);
     localStorage.removeItem(STORAGE_KEY_MSGS);
     localStorage.removeItem(STORAGE_KEY_LOGS);
-    try {
-      await api.delete(`/store/agent/chat/?session_id=${SESSION_ID}&persona=owner`);
-    } catch (e) {
-      // ignore
-    }
-    toast.success('Started a fresh AI session');
+    api.delete(`/store/agent/chat/?session_id=${SESSION_ID}&persona=owner`).catch(() => {});
+  };
+
+  const handleResetChat = () => {
+    clearAllChatHistory();
+    toast.success('Cleared previous conversation');
+  };
+
+  const handleCloseAndClear = () => {
+    clearAllChatHistory();
+    onClose();
   };
 
   const cleanText = (str) => (str || '').replace(/[*`#]/g, '').trim();
@@ -220,6 +225,26 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
+
+      // Execute autonomous UI actions immediately
+      if (actions.length > 0) {
+        for (const act of actions) {
+          if (act.type === 'NAVIGATE' && act.path) {
+            navigate(act.path);
+            toast.success(reply);
+          } else if (['REFRESH_DATA', 'ORDER_SETTLED', 'PRODUCT_UPDATED', 'PAYOUT_RECEIPT'].includes(act.type)) {
+            try {
+              invalidateCache();
+              window.dispatchEvent(new Event('focus'));
+            } catch (e) {
+              // ignore
+            }
+            if (act.type === 'ORDER_SETTLED' || act.type === 'PRODUCT_UPDATED' || act.type === 'PAYOUT_RECEIPT') {
+              toast.success(reply);
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error('Co-Pilot error:', err);
       setMessages(prev => [
@@ -236,7 +261,6 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
   };
 
   const openRoute = (path) => {
-    onClose();
     navigate(path);
   };
 
@@ -280,8 +304,9 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
             {showThoughtStream ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
           <button
-            onClick={onClose}
+            onClick={handleCloseAndClear}
             className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-all cursor-pointer"
+            title="Close & Clear Conversation"
           >
             <X className="w-4 h-4" />
           </button>
@@ -562,6 +587,24 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
                           className="px-2 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-semibold cursor-pointer"
                         >
                           View Receipt
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  if (act.type === 'PRODUCT_UPDATED' && act.product) {
+                    const p = act.product;
+                    return (
+                      <div key={aIdx} className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">{p.name} Updated</div>
+                          <div className="text-[10px] text-slate-500">Price: ${Number(p.price || 0).toFixed(2)} • Stock: {p.stock} units</div>
+                        </div>
+                        <button
+                          onClick={() => openRoute('/owner/products')}
+                          className="px-2 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-semibold cursor-pointer shrink-0"
+                        >
+                          View Catalog
                         </button>
                       </div>
                     );

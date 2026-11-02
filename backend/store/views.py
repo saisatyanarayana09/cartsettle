@@ -506,14 +506,13 @@ class AgentChatView(views.APIView):
     permission_classes = [AllowAny]
 
     def _resolve_persona(self, request):
-        persona = request.data.get('persona') or request.query_params.get('persona')
-        if not persona:
-            portal = str(request.headers.get('X-Portal-Context', '')).lower()
-            if portal == 'owner' or getattr(request.user, 'is_owner', False) or getattr(request.user, 'is_staff', False):
-                persona = 'owner'
-            else:
-                persona = 'shopper'
-        return persona
+        persona = request.data.get('persona') or request.data.get('role') or request.query_params.get('persona') or request.query_params.get('role')
+        if persona:
+            return str(persona).strip().lower()
+        portal = str(request.headers.get('X-Portal-Context', '')).lower()
+        if portal == 'owner' or getattr(request.user, 'is_owner', False) or getattr(request.user, 'is_staff', False):
+            return 'owner'
+        return 'shopper'
 
     def get(self, request):
         from services.agent_service import agent_service
@@ -530,7 +529,7 @@ class AgentChatView(views.APIView):
         return response.Response({'status': 'cleared'}, status=status.HTTP_200_OK)
 
     def post(self, request):
-        prompt = request.data.get('prompt', '').strip()
+        prompt = (request.data.get('prompt') or request.data.get('message') or '').strip()
         session_id = request.data.get('session_id', 'kirana_copilot')
         history = request.data.get('history', [])
 

@@ -34,7 +34,7 @@ const INITIAL_SHOPPER_MSG = {
 };
 
 export default function ShopperAgentDrawer({ isOpen, onClose }) {
-  const { add } = useCart() || {};
+  const { add, clearCart } = useCart() || {};
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState(() => {
@@ -120,18 +120,24 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     }
   };
 
-  const handleResetChat = async () => {
+  const clearShopperHistory = () => {
     setMessages([{
       ...INITIAL_SHOPPER_MSG,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }]);
+    setAddedItems({});
     localStorage.removeItem(STORAGE_KEY_SHOPPER);
-    try {
-      await api.delete(`/store/agent/chat/?session_id=${SESSION_ID}&persona=shopper`);
-    } catch (e) {
-      // ignore
-    }
-    toast.success('Started a fresh shopping session');
+    api.delete(`/store/agent/chat/?session_id=${SESSION_ID}&persona=shopper`).catch(() => {});
+  };
+
+  const handleResetChat = () => {
+    clearShopperHistory();
+    toast.success('Cleared previous conversation');
+  };
+
+  const handleCloseAndClear = () => {
+    clearShopperHistory();
+    onClose();
   };
 
   const handleSend = async (textToSend) => {
@@ -177,6 +183,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         for (const act of actions) {
           if (act.type === 'ADD_TO_CART' || act.action === 'ADD_TO_CART') {
             handleAddToCart(act.item || act);
+          } else if (act.type === 'CLEAR_CART') {
+            clearCart?.();
+            toast.success('Cleared your shopping cart!');
+          } else if (act.type === 'NAVIGATE' && act.path) {
+            navigate(act.path);
+            toast.success(reply);
           }
         }
       }
@@ -258,8 +270,9 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             <RotateCcw className="w-4 h-4" />
           </button>
           <button
-            onClick={onClose}
+            onClick={handleCloseAndClear}
             className="p-1.5 text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-all cursor-pointer"
+            title="Close & Clear Conversation"
           >
             <X className="w-4 h-4" />
           </button>
@@ -442,20 +455,14 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              onClose();
-              navigate('/cart');
-            }}
+            onClick={() => navigate('/cart')}
             className="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
           >
             <ShoppingBag className="w-3.5 h-3.5 text-emerald-500" />
             <span>View Active Cart</span>
           </button>
           <button
-            onClick={() => {
-              onClose();
-              navigate('/checkout');
-            }}
+            onClick={() => navigate('/checkout')}
             className="flex-1 py-1.5 px-2.5 rounded-xl bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
