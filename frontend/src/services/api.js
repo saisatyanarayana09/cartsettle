@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { handleLovableAgentFallback } from './lovableAgentFallback';
 
 export const getBaseURL = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
@@ -95,6 +96,18 @@ api.interceptors.response.use(
     const originalRequest = error?.config;
     if (!originalRequest) {
       return Promise.reject(error);
+    }
+
+    // Autonomous client-side Agent fallback when hosted in Lovable.dev cloud preview without local Django backend
+    if ((originalRequest.url || '').includes('/store/agent/')) {
+      const fallbackData = handleLovableAgentFallback(originalRequest);
+      return Promise.resolve({
+        data: fallbackData,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: originalRequest,
+      });
     }
 
     // Auto-retry cold start timeouts (Render spins down after 15m), transient network errors, and 502/503/504 gateway errors
