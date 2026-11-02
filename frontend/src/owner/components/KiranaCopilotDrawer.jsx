@@ -213,7 +213,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
             className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed ${
+              className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed whitespace-pre-wrap ${
                 m.role === 'user'
                   ? 'bg-indigo-600 text-white rounded-tr-xs shadow-sm'
                   : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-xs shadow-xs'

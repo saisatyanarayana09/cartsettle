@@ -116,8 +116,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       // If single item add action returned
       if (res.data?.actions) {
         for (const act of res.data.actions) {
-          if (act.action === 'ADD_TO_CART' || act.id) {
-            handleAddToCart(act);
+          if (act.type === 'ADD_TO_CART' || act.action === 'ADD_TO_CART') {
+            handleAddToCart(act.item || act);
           }
         }
       }
@@ -208,6 +208,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       {/* Quick Action Chips */}
       <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
         <button
+          onClick={() => handleSend('Add 1 Organic Milk to my cart')}
+          className="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all whitespace-nowrap cursor-pointer shrink-0"
+        >
+          🛒 Add Milk to Cart
+        </button>
+        <button
           onClick={() => handleSend('Suggest a dinner recipe basket under $20')}
           className="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all whitespace-nowrap cursor-pointer shrink-0"
         >
@@ -267,6 +273,50 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                       <Plus className="w-3.5 h-3.5" />
                       Add All Ingredients to Cart
                     </button>
+                  </div>
+                )}
+
+                {/* Interactive Search Results Card */}
+                {msg.actions && msg.actions.some(a => a.type === 'SEARCH_RESULTS') && (
+                  <div className="mt-3 space-y-2">
+                    {msg.actions.find(a => a.type === 'SEARCH_RESULTS')?.items?.slice(0, 3).map((it, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 text-slate-900 dark:text-white flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-bold text-[11px] truncate">{it.name}</div>
+                          <div className="text-[10px] text-slate-500">
+                            ${it.price?.toFixed(2)} • {it.unit}
+                            {it.best_deal_price && it.best_deal_price < it.price && (
+                              <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                                (Deal: ${it.best_deal_price.toFixed(2)})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAddToCart(it)}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] flex items-center gap-1 shrink-0 transition-all cursor-pointer ${
+                            addedItems[it.id]
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                          }`}
+                        >
+                          {addedItems[it.id] ? (
+                            <>
+                              <Check className="w-3 h-3" />
+                              Added
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3 h-3" />
+                              Add
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
