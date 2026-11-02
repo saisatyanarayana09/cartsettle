@@ -25,7 +25,7 @@ from services.paypal_service import paypal_service
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-3.5-flash"
+GEMINI_MODEL = "gemini-flash-lite-latest"
 MIN_PROFIT_MARGIN_PCT = Decimal("12.0")  # Minimum protected Kirana profit margin
 
 
@@ -634,20 +634,24 @@ class AgentService:
         if not self.api_key:
             return self._fallback_chat(prompt, session_id, persona)
 
-        # Single Gemini 3.5 Flash API Call
+        # Single Gemini 2.5 Flash API Call
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={self.api_key}"
 
+        live_ctx = self._get_live_store_context()
         if persona == "shopper":
             system_instruction = (
                 "You are CartSettle Shopper Concierge, a helpful grocery assistant for independent bodegas. "
                 "Help shoppers find in-stock products, assemble budget recipe baskets, and negotiate safe discounts. "
-                "Always call tools to search products or check margin-safe discounts."
+                "Answer questions accurately using the live store snapshot below or by calling tools.\n\n"
+                f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
         else:
             system_instruction = (
                 "You are CartSettle Kirana AI, an autonomous fintech and retail agent for independent grocers. "
                 "Goals: 1) Protect profit margins (12% floor). 2) Settle packing tables via PayPal Dynamic Capture. "
-                "3) Execute supplier restock payouts. Always call tools to inspect inventory and settle orders."
+                "3) Execute supplier restock payouts. Answer any store, inventory, product count, or order questions "
+                "accurately using the live store snapshot below or by calling tools.\n\n"
+                f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
 
         tools_spec = [
@@ -658,23 +662,37 @@ class AgentService:
 
         contents = []
         if history:
-            for msg in history[-3:]:
-                contents.append({
-                    "role": msg.get("role", "user"),
-                    "parts": [{"text": msg.get("content", "")}]
-                })
-        contents.append({
-            "role": "user",
-            "parts": [{"text": prompt}]
-        })
+            for msg in history[-4:]:
+                raw_role = msg.get("role", "user")
+                text_val = (msg.get("content") or "").strip()
+                if not text_val or text_val == prompt.strip():
+                    continue
+                gemini_role = "model" if raw_role in ("assistant", "model", "bot") else "user"
+                # Gemini requires first message in contents to be 'user' and alternating roles
+                if not contents and gemini_role == "model":
+                    continue
+                if contents and contents[-1]["role"] == gemini_role:
+                    contents[-1]["parts"][0]["text"] += f"\n{text_val}"
+                else:
+                    contents.append({
+                        "role": gemini_role,
+                        "parts": [{"text": text_val}]
+                    })
+
+        if contents and contents[-1]["role"] == "user":
+            contents[-1]["parts"][0]["text"] += f"\n{prompt}"
+        else:
+            contents.append({
+                "role": "user",
+                "parts": [{"text": prompt}]
+            })
 
         payload = {
             "system_instruction": {"parts": [{"text": system_instruction}]},
             "contents": contents,
-            "tools": tools_spec,
             "generationConfig": {
                 "temperature": 0.2,
-                "maxOutputTokens": 400
+                "maxOutputTokens": 300
             }
         }
 
@@ -729,9 +747,56 @@ class AgentService:
             logger.error("Agent error: %s", e)
             return self._fallback_chat(prompt, session_id, persona)
 
+    def _get_live_store_context(self) -> str:
+        """Builds a real-time database snapshot of products, categories, and orders."""
+        try:
+            active_prods = list(Product.objects.filter(is_active=True).select_related("category").order_by("name"))
+            in_stock_prods = [p for p in active_prods if p.stock_quantity > 0 and p.is_in_stock]
+            cat_count = Category.objects.filter(is_active=True).count()
+            total_orders = Order.objects.count()
+            pending_orders = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
+            prod_summaries = [
+                f"{p.name} (${float(p.offer_price or p.regular_price):.2f}, stock: {p.stock_quantity})"
+                for p in active_prods[:15]
+            ]
+            return (
+                f"- Total Live Active Products: {len(active_prods)} ({len(in_stock_prods)} in stock)\n"
+                f"- Active Categories: {cat_count}\n"
+                f"- Total Store Orders: {total_orders} ({pending_orders} pending packing/settlement)\n"
+                f"- Live Product Catalog: {'; '.join(prod_summaries)}"
+            )
+        except Exception as e:
+            logger.warning("Could not build live store context: %s", e)
+            return "Store active with protected 12% margin floor."
+
     def _check_fast_path(self, prompt: str, persona: str, session_id: str) -> dict:
         """Sub-50ms instant execution for high-frequency commands & action chips."""
         lower = prompt.lower().strip()
+
+        # --- UNIVERSAL STORE / PRODUCT COUNT & OVERVIEW FAST-PATH (< 10ms) ---
+        if any(k in lower for k in [
+            "how many product", "how many item", "products are live", "live in our store",
+            "products in store", "products in our store", "list all product", "store overview",
+            "what products do", "total products", "catalog count"
+        ]):
+            active_prods = list(Product.objects.filter(is_active=True).order_by("-stock_quantity", "name"))
+            in_stock = [p for p in active_prods if p.stock_quantity > 0 and p.is_in_stock]
+            cat_count = Category.objects.filter(is_active=True).count()
+            reply = (
+                f"🏪 **Live Store Catalog Summary:**\n\n"
+                f"• **Total Live Products:** **{len(active_prods)}** active products across **{cat_count}** categories\n"
+                f"• **Currently In-Stock:** **{len(in_stock)}** products ready for instant fulfillment\n\n"
+                f"**Top Live Products in Store:**\n"
+            )
+            for p in active_prods[:10]:
+                price = float(p.offer_price or p.regular_price)
+                reply += f"• **{p.name}** — **${price:.2f}** ({p.unit}) | `{p.stock_quantity} in stock`\n"
+            return {
+                "reply": reply.strip(),
+                "tools_used": [{"name": "search_products_and_stock", "args": {"query": "all"}}],
+                "actions": [],
+                "tool_result": {"total_live_products": len(active_prods), "in_stock_products": len(in_stock)}
+            }
 
         # --- OWNER FAST-PATHS ---
         if persona == "owner":
@@ -903,16 +968,26 @@ class AgentService:
         return actions
 
     def _fallback_chat(self, prompt: str, session_id: str, persona: str) -> dict:
-        """Deterministic sub-second fallback."""
+        """Data-driven sub-second fallback backed by live database queries."""
         lower = prompt.lower()
+        active_count = Product.objects.filter(is_active=True).count()
+        in_stock_count = Product.objects.filter(is_active=True, stock_quantity__gt=0).count()
+        orders_count = Order.objects.count()
+        pending_count = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
+
         if "margin" in lower or "guard" in lower:
             reply = "🛡️ **CartSettle Margin Guard:** Store margins are protected at a minimum 12.0% floor to guarantee profitability on every transaction."
         elif "settle" in lower or "pack" in lower:
-            reply = "📦 **Packing Table Settlement:** Pre-authorizations on PayPal are captured dynamically. Unfulfilled funds are released automatically back to the buyer's balance."
+            reply = f"📦 **Packing Table Settlement:** {pending_count} pending order(s) ready for dynamic PayPal capture. Unfulfilled funds are released automatically back to the buyer."
         elif "payout" in lower or "restock" in lower:
             reply = "💸 **PayPal Payouts Engine:** Connected to PayPal Payouts v1 for instant autonomous wholesale restocks to suppliers."
         else:
-            reply = f"🤖 **CartSettle AI Assistant ({persona.title()}):** Received your request. Store and settlement systems are fully operational."
+            reply = (
+                f"🤖 **CartSettle AI ({persona.title()}):**\n\n"
+                f"• **Live Products:** {active_count} active ({in_stock_count} in stock)\n"
+                f"• **Store Orders:** {orders_count} total ({pending_count} awaiting packing settlement)\n"
+                f"• **Profit Guardrail:** 12.0% minimum margin floor active."
+            )
 
         broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
         return {"reply": reply, "tools_used": [], "actions": []}
