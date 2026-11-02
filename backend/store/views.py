@@ -501,9 +501,33 @@ class StoreBackupExportView(views.APIView):
 
 class AgentChatView(views.APIView):
     """
-    CartSettle AI Co-Pilot endpoint powered by Gemini 3.5 Flash & PayPal Agentic Commerce.
+    CartSettle AI Co-Pilot endpoint with persistent session memory.
     """
     permission_classes = [AllowAny]
+
+    def _resolve_persona(self, request):
+        persona = request.data.get('persona') or request.query_params.get('persona')
+        if not persona:
+            portal = str(request.headers.get('X-Portal-Context', '')).lower()
+            if portal == 'owner' or getattr(request.user, 'is_owner', False) or getattr(request.user, 'is_staff', False):
+                persona = 'owner'
+            else:
+                persona = 'shopper'
+        return persona
+
+    def get(self, request):
+        from services.agent_service import agent_service
+        session_id = request.query_params.get('session_id', 'kirana_copilot')
+        persona = self._resolve_persona(request)
+        mem = agent_service.get_session_memory(session_id=session_id, persona=persona)
+        return response.Response(mem, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        from services.agent_service import agent_service
+        session_id = request.query_params.get('session_id') or request.data.get('session_id') or 'kirana_copilot'
+        persona = self._resolve_persona(request)
+        agent_service.clear_session_memory(session_id=session_id, persona=persona)
+        return response.Response({'status': 'cleared'}, status=status.HTTP_200_OK)
 
     def post(self, request):
         prompt = request.data.get('prompt', '').strip()
@@ -513,15 +537,7 @@ class AgentChatView(views.APIView):
         if not prompt:
             return response.Response({'detail': 'Prompt is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Determine persona: explicit parameter, portal header, or user role
-        persona = request.data.get('persona')
-        if not persona:
-            portal = str(request.headers.get('X-Portal-Context', '')).lower()
-            if portal == 'owner' or getattr(request.user, 'is_owner', False) or getattr(request.user, 'is_staff', False):
-                persona = 'owner'
-            else:
-                persona = 'shopper'
-
+        persona = self._resolve_persona(request)
         from services.agent_service import agent_service
         result = agent_service.chat(prompt=prompt, session_id=session_id, history=history, persona=persona)
         return response.Response(result, status=status.HTTP_200_OK)

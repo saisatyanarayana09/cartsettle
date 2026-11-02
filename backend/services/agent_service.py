@@ -14,9 +14,11 @@ import os
 import json
 import logging
 import re
+import time
 from decimal import Decimal
 import requests
 from django.conf import settings
+from django.core.cache import cache
 from django.db.models import Q
 from products.models import Product, Category
 from orders.models import Order, OrderItem
@@ -27,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 GEMINI_MODEL = "gemini-flash-lite-latest"
 MIN_PROFIT_MARGIN_PCT = Decimal("12.0")  # Minimum protected Kirana profit margin
+
+# In-process persistent memory store backed by Django cache
+_SESSION_MEMORY = {}
 
 
 class AgentTools:
@@ -608,22 +613,113 @@ class AgentService:
     def __init__(self):
         self.api_key = os.environ.get("GEMINI_API_KEY", "").strip()
 
+    def _mem_key(self, session_id: str, persona: str) -> str:
+        return f"cartsettle_agent_mem_{persona}_{session_id}"
+
+    def get_session_memory(self, session_id: str, persona: str) -> dict:
+        key = self._mem_key(session_id, persona)
+        mem = cache.get(key) or _SESSION_MEMORY.get(key)
+        if not mem:
+            mem = {"messages": [], "last_order_id": None, "last_product": None}
+        return mem
+
+    def clear_session_memory(self, session_id: str, persona: str):
+        key = self._mem_key(session_id, persona)
+        _SESSION_MEMORY.pop(key, None)
+        cache.delete(key)
+
+    def _save_session_turn(self, session_id: str, persona: str, prompt: str, result: dict):
+        key = self._mem_key(session_id, persona)
+        mem = self.get_session_memory(session_id, persona)
+        msgs = mem.get("messages", [])
+
+        # Extract any referenced order ID or product to track conversational context
+        reply_text = result.get("reply", "")
+        combined = f"{prompt} {reply_text} {json.dumps(result.get('tool_result') or {})}"
+        ord_matches = re.findall(r"\b(ORD\d+\w*)\b", combined, flags=re.IGNORECASE)
+        if ord_matches:
+            mem["last_order_id"] = ord_matches[-1].upper()
+
+        for kw in ["Milk", "Bread", "Pasta", "Sauce", "Cheese", "Strawberries", "Eggs", "Avocado", "Yogurt", "Atta"]:
+            if kw.lower() in combined.lower():
+                mem["last_product"] = kw
+
+        ts = time.strftime("%I:%M %p")
+        msgs.append({"role": "user", "content": prompt, "timestamp": ts})
+        msgs.append({
+            "role": "assistant",
+            "content": reply_text,
+            "actions": result.get("actions", []),
+            "tools_used": result.get("tools_used", []),
+            "follow_ups": result.get("follow_ups", []),
+            "latency_ms": result.get("latency_ms", 12),
+            "timestamp": ts
+        })
+        mem["messages"] = msgs[-30:]
+        _SESSION_MEMORY[key] = mem
+        cache.set(key, mem, timeout=86400)
+
+    def _build_follow_ups(self, persona: str, actions: list, mem: dict) -> list:
+        """Generates 2-3 smart contextual next-step chips based on current action."""
+        act_types = [a.get("type") for a in (actions or [])]
+        last_ord = mem.get("last_order_id") or "ORD202600002"
+        if persona == "owner":
+            if "ORDER_CARD" in act_types:
+                return [f"Audit order {last_ord}", "Check pending orders", "Check low stock items"]
+            if "PENDING_ORDERS" in act_types:
+                return [f"Settle order {last_ord}", "Generate the most recent order number", "Check low stock items"]
+            if "LOW_STOCK_LIST" in act_types:
+                return ["Restock 10 units of Strawberries via PayPal Payout", "Check profit margins on Atta", "Currently how many products are live in our store"]
+            if "CATALOG_SUMMARY" in act_types:
+                return ["Check low stock items", "Check profit margins on Atta", "Generate the most recent order number"]
+            return ["Generate the most recent order number", "Check pending orders", "Check low stock items"]
+        else:
+            if "RECOMMEND_BASKET" in act_types:
+                return ["Find organic milk and check for the best deal", "Add 1 Sourdough Bread to my cart", "Suggest healthy breakfast ingredients"]
+            if "SEARCH_RESULTS" in act_types:
+                return ["Add 1 Organic Milk to my cart", "Suggest a dinner recipe basket under $20", "Suggest healthy breakfast ingredients"]
+            return ["Suggest a dinner recipe basket under $20", "Find organic milk and check for the best deal", "Add 1 Organic Milk to my cart"]
+
     def chat(self, prompt: str, session_id: str = "default_session", history: list = None, persona: str = "owner") -> dict:
         """
-        Ultra-Fast Single-Trip Agent Execution (< 2.0s):
-        1. Fast-Path Intent Router for pre-set chips & common commands (< 50ms)
-        2. Single Gemini 3.5 Flash Tool Loop without redundant 2nd call
-        3. Direct Tool Result Synthesis
+        Persistent Multi-Turn Agentic AI Execution:
+        1. Syncs with server-side session memory & resolves contextual pronouns ("it", "that order")
+        2. Sub-50ms Fast-Path Intent Router with structured UI action cards
+        3. Single-Trip Gemini LLM with full multi-turn conversation history & live store snapshot
         """
+        t0 = time.perf_counter()
+        mem = self.get_session_memory(session_id, persona)
+        stored_msgs = mem.get("messages", [])
+
+        # Merge stored backend history with frontend history if backend was empty
+        effective_history = stored_msgs if stored_msgs else (history or [])
+
+        # Resolve contextual pronouns ("settle it", "audit that order", "what about 10% discount")
+        resolved_prompt = prompt
+        lower_p = prompt.lower()
+        if mem.get("last_order_id") and any(w in lower_p for w in ["that order", "this order", "settle it", "audit it", "capture it"]):
+            if not re.search(r"\b(ord\d+\w*)\b", lower_p):
+                resolved_prompt = f"{prompt} ({mem['last_order_id']})"
+
         broadcast_agent_thought(session_id, {
             "status": "thinking",
-            "prompt": prompt,
+            "prompt": resolved_prompt,
             "persona": persona
         })
 
         # --- Fast-Path Intent Router (< 50ms) ---
-        fast_reply = self._check_fast_path(prompt, persona, session_id)
+        fast_reply = self._check_fast_path(resolved_prompt, persona, session_id)
         if fast_reply:
+            fast_reply["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
+            self._save_session_turn(session_id, persona, prompt, fast_reply)
+            mem = self.get_session_memory(session_id, persona)
+            fast_reply["follow_ups"] = self._build_follow_ups(persona, fast_reply.get("actions", []), mem)
+            # Update last assistant message with follow_ups
+            if mem.get("messages"):
+                mem["messages"][-1]["follow_ups"] = fast_reply["follow_ups"]
+                _SESSION_MEMORY[self._mem_key(session_id, persona)] = mem
+                cache.set(self._mem_key(session_id, persona), mem, timeout=86400)
+
             broadcast_agent_thought(session_id, {
                 "status": "complete",
                 "response": fast_reply["reply"]
@@ -632,42 +728,45 @@ class AgentService:
 
         # Offline / fallback mode if no API key
         if not self.api_key:
-            return self._fallback_chat(prompt, session_id, persona)
+            fb = self._fallback_chat(resolved_prompt, session_id, persona)
+            fb["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
+            fb["follow_ups"] = self._build_follow_ups(persona, [], mem)
+            self._save_session_turn(session_id, persona, prompt, fb)
+            return fb
 
-        # Single Gemini 2.5 Flash API Call
+        # Single Gemini API Call with Persistent Multi-Turn Memory
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={self.api_key}"
 
         live_ctx = self._get_live_store_context()
+        recent_context_note = ""
+        if mem.get("last_order_id") or mem.get("last_product"):
+            recent_context_note = f"\nACTIVE SESSION CONTEXT: Last discussed Order ID={mem.get('last_order_id')}, Last discussed Product={mem.get('last_product')}.\n"
+
         if persona == "shopper":
             system_instruction = (
                 "You are CartSettle Shopper Concierge. "
                 "Keep your response minimalist, simple, and easy to read (1 to 3 short lines max). "
-                "NEVER use markdown symbols like ** or ` or #. Use clean plain text only.\n\n"
+                "NEVER use markdown symbols like ** or ` or #. Use clean plain text only."
+                f"{recent_context_note}\n"
                 f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
         else:
             system_instruction = (
                 "You are CartSettle Kirana AI for store owners. "
                 "Keep your response minimalist, simple, and easy to read (1 to 3 short lines max). "
-                "NEVER use markdown symbols like ** or ` or #. Use clean plain text only.\n\n"
+                "NEVER use markdown symbols like ** or ` or #. Use clean plain text only."
+                f"{recent_context_note}\n"
                 f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
 
-        tools_spec = [
-            {
-                "function_declarations": AgentTools.get_tool_definitions(persona=persona)
-            }
-        ]
-
         contents = []
-        if history:
-            for msg in history[-4:]:
+        if effective_history:
+            for msg in effective_history[-8:]:
                 raw_role = msg.get("role", "user")
                 text_val = (msg.get("content") or "").strip()
                 if not text_val or text_val == prompt.strip():
                     continue
                 gemini_role = "model" if raw_role in ("assistant", "model", "bot") else "user"
-                # Gemini requires first message in contents to be 'user' and alternating roles
                 if not contents and gemini_role == "model":
                     continue
                 if contents and contents[-1]["role"] == gemini_role:
@@ -679,11 +778,11 @@ class AgentService:
                     })
 
         if contents and contents[-1]["role"] == "user":
-            contents[-1]["parts"][0]["text"] += f"\n{prompt}"
+            contents[-1]["parts"][0]["text"] += f"\n{resolved_prompt}"
         else:
             contents.append({
                 "role": "user",
-                "parts": [{"text": prompt}]
+                "parts": [{"text": resolved_prompt}]
             })
 
         payload = {
@@ -699,53 +798,47 @@ class AgentService:
             res = requests.post(url, json=payload, timeout=15)
             if res.status_code != 200:
                 logger.warning("Gemini API status %s, using fast fallback", res.status_code)
-                return self._fallback_chat(prompt, session_id, persona)
+                fb = self._fallback_chat(resolved_prompt, session_id, persona)
+                fb["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
+                fb["follow_ups"] = self._build_follow_ups(persona, [], mem)
+                self._save_session_turn(session_id, persona, prompt, fb)
+                return fb
 
             data = res.json()
             candidate = data.get("candidates", [{}])[0]
             parts = candidate.get("content", {}).get("parts", [])
 
-            # Check if Gemini invoked a function call
-            function_calls = [p.get("functionCall") for p in parts if "functionCall" in p]
-            if function_calls:
-                fc = function_calls[0]
-                fn_name = fc.get("name")
-                fn_args = fc.get("args", {})
-
-                # Execute tool directly in 6ms
-                fn_result = AgentTools.execute_tool(fn_name, fn_args, session_id)
-
-                # Direct Synthesis: synthesize reply immediately from tool result without 2nd network round-trip!
-                final_reply = self._synthesize_tool_response(fn_name, fn_result, persona)
-                actions = self._extract_frontend_actions(fn_name, fn_result)
-
-                broadcast_agent_thought(session_id, {
-                    "status": "complete",
-                    "response": final_reply,
-                    "actions": actions
-                })
-
-                return {
-                    "reply": final_reply,
-                    "tools_used": [{"name": fn_name, "args": fn_args}],
-                    "actions": actions,
-                    "tool_result": fn_result
-                }
-
-            # Plain text response: gather text across all parts and strip markdown symbols
             text_parts = [p.get("text", "") for p in parts if "text" in p]
             raw_reply = "".join(text_parts).strip() or "Ready! How can I help you?"
             final_reply = re.sub(r"[*`#]+", "", raw_reply).strip()
+
+            out = {
+                "reply": final_reply,
+                "tools_used": [{"name": "live_store_memory", "args": {}}],
+                "actions": [],
+                "latency_ms": max(1, int((time.perf_counter() - t0) * 1000))
+            }
+            self._save_session_turn(session_id, persona, prompt, out)
+            mem = self.get_session_memory(session_id, persona)
+            out["follow_ups"] = self._build_follow_ups(persona, [], mem)
+            if mem.get("messages"):
+                mem["messages"][-1]["follow_ups"] = out["follow_ups"]
+                _SESSION_MEMORY[self._mem_key(session_id, persona)] = mem
+                cache.set(self._mem_key(session_id, persona), mem, timeout=86400)
 
             broadcast_agent_thought(session_id, {
                 "status": "complete",
                 "response": final_reply
             })
-            return {"reply": final_reply, "tools_used": [], "actions": []}
+            return out
 
         except Exception as e:
             logger.error("Agent error: %s", e)
-            return self._fallback_chat(prompt, session_id, persona)
+            fb = self._fallback_chat(resolved_prompt, session_id, persona)
+            fb["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
+            fb["follow_ups"] = self._build_follow_ups(persona, [], mem)
+            self._save_session_turn(session_id, persona, prompt, fb)
+            return fb
 
     def _get_live_store_context(self) -> str:
         """Builds a comprehensive real-time database snapshot of products, categories, orders, and financials."""
