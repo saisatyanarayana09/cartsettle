@@ -748,22 +748,52 @@ class AgentService:
             return self._fallback_chat(prompt, session_id, persona)
 
     def _get_live_store_context(self) -> str:
-        """Builds a real-time database snapshot of products, categories, and orders."""
+        """Builds a comprehensive real-time database snapshot of products, categories, orders, and financials."""
         try:
+            from django.db.models import Sum
             active_prods = list(Product.objects.filter(is_active=True).select_related("category").order_by("name"))
             in_stock_prods = [p for p in active_prods if p.stock_quantity > 0 and p.is_in_stock]
             cat_count = Category.objects.filter(is_active=True).count()
             total_orders = Order.objects.count()
             pending_orders = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
+            recent_orders = list(Order.objects.select_related("customer").prefetch_related("items").order_by("-created_at")[:10])
+
+            agg = Order.objects.aggregate(
+                total_rev=Sum("total_amount"),
+                total_cap=Sum("captured_amount"),
+                total_rel=Sum("released_amount")
+            )
+            total_rev = float(agg["total_rev"] or 0.0)
+            total_cap = float(agg["total_cap"] or 0.0)
+            total_rel = float(agg["total_rel"] or 0.0)
+
             prod_summaries = [
-                f"{p.name} (${float(p.offer_price or p.regular_price):.2f}, stock: {p.stock_quantity})"
-                for p in active_prods[:15]
+                f"{p.name} (ID:{p.id}, sell:${float(p.offer_price or p.regular_price):.2f}, cost:${float(p.cost_price or 0):.2f}, stock:{p.stock_quantity})"
+                for p in active_prods
             ]
+
+            order_summaries = []
+            for o in recent_orders:
+                cust = o.customer.get_full_name() or o.customer.username
+                auth_amt = float(o.authorized_amount or o.total_amount or 0)
+                cap_amt = float(o.captured_amount or 0)
+                rel_amt = float(o.released_amount or 0)
+                order_summaries.append(
+                    f"#{o.id} (Customer:{cust}, Status:{o.status}, Total:${float(o.total_amount):.2f}, "
+                    f"Authorized:${auth_amt:.2f}, Captured:${cap_amt:.2f}, Released:${rel_amt:.2f}, "
+                    f"Created:{o.created_at.strftime('%Y-%m-%d %H:%M')})"
+                )
+
+            most_recent_str = order_summaries[0] if order_summaries else "None"
+
             return (
                 f"- Total Live Active Products: {len(active_prods)} ({len(in_stock_prods)} in stock)\n"
                 f"- Active Categories: {cat_count}\n"
                 f"- Total Store Orders: {total_orders} ({pending_orders} pending packing/settlement)\n"
-                f"- Live Product Catalog: {'; '.join(prod_summaries)}"
+                f"- Total Store Order Volume: ${total_rev:.2f} | PayPal Captured: ${total_cap:.2f} | Auto-Released to Buyers: ${total_rel:.2f}\n"
+                f"- MOST RECENT ORDER: {most_recent_str}\n"
+                f"- 10 Most Recent Orders (Newest First): {'; '.join(order_summaries)}\n"
+                f"- Complete Live Product Catalog: {'; '.join(prod_summaries)}"
             )
         except Exception as e:
             logger.warning("Could not build live store context: %s", e)
@@ -772,6 +802,60 @@ class AgentService:
     def _check_fast_path(self, prompt: str, persona: str, session_id: str) -> dict:
         """Sub-50ms instant execution for high-frequency commands & action chips."""
         lower = prompt.lower().strip()
+
+        # --- UNIVERSAL RECENT / LATEST ORDER & SPECIFIC ORDER ID FAST-PATH (< 10ms) ---
+        ord_id_match = re.search(r"\b(ord\w+)\b", lower)
+        if ord_id_match or any(k in lower for k in [
+            "recent order", "latest order", "last order", "newest order",
+            "order number", "order id", "how many order", "total order"
+        ]):
+            recent_orders = list(Order.objects.select_related("customer").prefetch_related("items").order_by("-created_at")[:5])
+            total_orders = Order.objects.count()
+            pending_count = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
+
+            if ord_id_match:
+                target_id = ord_id_match.group(1).upper()
+                res = AgentTools.execute_tool("audit_order_settlement", {"order_id": target_id}, session_id)
+                if res.get("order_id"):
+                    reply = (
+                        f"🧾 **Order Audit — #{res['order_id']}**\n\n"
+                        f"• **Customer:** {res['customer']}\n"
+                        f"• **Status:** `{res['current_status']}`\n"
+                        f"• **PayPal Authorized Hold:** **${res['authorized_amount']:.2f}**\n"
+                        f"• **Packed & Captured Total:** **${res['packed_total']:.2f}**\n"
+                        f"• **Auto-Released to Buyer:** **${res['auto_release_amount']:.2f}**\n"
+                        f"• **PayPal Capture ID:** `{res.get('paypal_capture_id') or 'Pending Packing'}`"
+                    )
+                    return {"reply": reply, "tools_used": [{"name": "audit_order_settlement", "args": {"order_id": target_id}}], "actions": [], "tool_result": res}
+
+            if recent_orders:
+                latest = recent_orders[0]
+                cust = latest.customer.get_full_name() or latest.customer.username
+                auth_amt = float(latest.authorized_amount or latest.total_amount or 0)
+                cap_amt = float(latest.captured_amount or 0)
+                rel_amt = float(latest.released_amount or 0)
+                items_str = ", ".join(f"{it.quantity}x {it.product_name_snapshot}" for it in latest.items.all()[:4]) or "Grocery Bundle"
+
+                reply = (
+                    f"🧾 **Most Recent Order: `#{latest.id}`**\n\n"
+                    f"• **Order Number:** **`#{latest.id}`**\n"
+                    f"• **Customer:** {cust}\n"
+                    f"• **Status:** `{latest.status}`\n"
+                    f"• **Items:** {items_str}\n"
+                    f"• **Order Total:** **${float(latest.total_amount):.2f}** (PayPal Auth: **${auth_amt:.2f}** | Captured: **${cap_amt:.2f}** | Auto-Released: **${rel_amt:.2f}**)\n"
+                    f"• **Timestamp:** {latest.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+                    f"📊 **Recent Orders Summary ({total_orders} Total | {pending_count} Pending Packing):**\n"
+                )
+                for o in recent_orders[:5]:
+                    o_cust = o.customer.get_full_name() or o.customer.username
+                    reply += f"• **`#{o.id}`** — {o_cust} | `{o.status}` | **${float(o.total_amount):.2f}**\n"
+
+                return {
+                    "reply": reply.strip(),
+                    "tools_used": [{"name": "audit_order_settlement", "args": {"order_id": str(latest.id)}}],
+                    "actions": [],
+                    "tool_result": {"most_recent_order_id": str(latest.id), "total_orders": total_orders}
+                }
 
         # --- UNIVERSAL STORE / PRODUCT COUNT & OVERVIEW FAST-PATH (< 10ms) ---
         if any(k in lower for k in [
