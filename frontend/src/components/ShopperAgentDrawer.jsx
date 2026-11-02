@@ -26,7 +26,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Hi! I am your CartSettle Shopping Concierge 🛒✨. Tell me what you need, ask for recipe baskets, or ask me to find the best deals within your budget! How can I help you today?'
+      content: 'Hi! Tell me what groceries you need, ask for a recipe basket, or check our best deals.'
     }
   ]);
   const [input, setInput] = useState('');
@@ -249,7 +249,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 rounded-bl-xs'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                <div className="whitespace-pre-wrap font-medium">{(msg.content || '').replace(/[*`#]/g, '').trim()}</div>
 
                 {/* Interactive Recipe Basket Card */}
                 {msg.actions && msg.actions.some(a => a.type === 'RECOMMEND_BASKET') && (

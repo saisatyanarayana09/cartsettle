@@ -640,17 +640,16 @@ class AgentService:
         live_ctx = self._get_live_store_context()
         if persona == "shopper":
             system_instruction = (
-                "You are CartSettle Shopper Concierge, a helpful grocery assistant for independent bodegas. "
-                "Help shoppers find in-stock products, assemble budget recipe baskets, and negotiate safe discounts. "
-                "Answer questions accurately using the live store snapshot below or by calling tools.\n\n"
+                "You are CartSettle Shopper Concierge. "
+                "Keep your response minimalist, simple, and easy to read (1 to 3 short lines max). "
+                "NEVER use markdown symbols like ** or ` or #. Use clean plain text only.\n\n"
                 f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
         else:
             system_instruction = (
-                "You are CartSettle Kirana AI, an autonomous fintech and retail agent for independent grocers. "
-                "Goals: 1) Protect profit margins (12% floor). 2) Settle packing tables via PayPal Dynamic Capture. "
-                "3) Execute supplier restock payouts. Answer any store, inventory, product count, or order questions "
-                "accurately using the live store snapshot below or by calling tools.\n\n"
+                "You are CartSettle Kirana AI for store owners. "
+                "Keep your response minimalist, simple, and easy to read (1 to 3 short lines max). "
+                "NEVER use markdown symbols like ** or ` or #. Use clean plain text only.\n\n"
                 f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
 
@@ -733,9 +732,10 @@ class AgentService:
                     "tool_result": fn_result
                 }
 
-            # Plain text response: gather text across all parts
+            # Plain text response: gather text across all parts and strip markdown symbols
             text_parts = [p.get("text", "") for p in parts if "text" in p]
-            final_reply = "".join(text_parts).strip() or "Understood! How else can CartSettle assist you today?"
+            raw_reply = "".join(text_parts).strip() or "Ready! How can I help you?"
+            final_reply = re.sub(r"[*`#]+", "", raw_reply).strip()
 
             broadcast_agent_thought(session_id, {
                 "status": "complete",
@@ -800,11 +800,19 @@ class AgentService:
             return "Store active with protected 12% margin floor."
 
     def _check_fast_path(self, prompt: str, persona: str, session_id: str) -> dict:
-        """Sub-50ms instant execution for high-frequency commands & action chips."""
+        """Sub-50ms instant execution with minimalist, simple, actionable responses."""
         lower = prompt.lower().strip()
 
-        # --- UNIVERSAL RECENT / LATEST ORDER & SPECIFIC ORDER ID FAST-PATH (< 10ms) ---
-        ord_id_match = re.search(r"\b(ord\w+)\b", lower)
+        # --- 0. AUTO-SETTLE SPECIFIC ORDER ("Settle order ORD...") ---
+        if ("settle" in lower or "capture" in lower) and re.search(r"\b(ord\d+\w*)\b", lower):
+            target_id = re.search(r"\b(ord\d+\w*)\b", lower).group(1).upper()
+            res = AgentTools.execute_tool("auto_settle_order_packing", {"order_id": target_id}, session_id)
+            reply = self._synthesize_tool_response("auto_settle_order_packing", res, persona)
+            actions = self._extract_frontend_actions("auto_settle_order_packing", res)
+            return {"reply": reply, "tools_used": [{"name": "auto_settle_order_packing", "args": {"order_id": target_id}}], "actions": actions, "tool_result": res}
+
+        # --- 1. RECENT / LATEST ORDER & SPECIFIC ORDER ID FAST-PATH (< 10ms) ---
+        ord_id_match = re.search(r"\b(ord\d+\w*)\b", lower)
         if ord_id_match or any(k in lower for k in [
             "recent order", "latest order", "last order", "newest order",
             "order number", "order id", "how many order", "total order"
@@ -817,47 +825,60 @@ class AgentService:
                 target_id = ord_id_match.group(1).upper()
                 res = AgentTools.execute_tool("audit_order_settlement", {"order_id": target_id}, session_id)
                 if res.get("order_id"):
-                    reply = (
-                        f"🧾 **Order Audit — #{res['order_id']}**\n\n"
-                        f"• **Customer:** {res['customer']}\n"
-                        f"• **Status:** `{res['current_status']}`\n"
-                        f"• **PayPal Authorized Hold:** **${res['authorized_amount']:.2f}**\n"
-                        f"• **Packed & Captured Total:** **${res['packed_total']:.2f}**\n"
-                        f"• **Auto-Released to Buyer:** **${res['auto_release_amount']:.2f}**\n"
-                        f"• **PayPal Capture ID:** `{res.get('paypal_capture_id') or 'Pending Packing'}`"
-                    )
-                    return {"reply": reply, "tools_used": [{"name": "audit_order_settlement", "args": {"order_id": target_id}}], "actions": [], "tool_result": res}
+                    reply = f"Order #{res['order_id']} ({res['customer']}) is {res['current_status']}."
+                    actions = [{
+                        "type": "ORDER_CARD",
+                        "order": {
+                            "id": res["order_id"],
+                            "customer": res["customer"],
+                            "status": res["current_status"],
+                            "authorized": res["authorized_amount"],
+                            "captured": res["packed_total"],
+                            "released": res["auto_release_amount"],
+                            "can_settle": res["current_status"] in ("NEW", "ACCEPTED", "PREPARING")
+                        }
+                    }]
+                    return {"reply": reply, "tools_used": [{"name": "audit_order_settlement", "args": {"order_id": target_id}}], "actions": actions, "tool_result": res}
 
             if recent_orders:
                 latest = recent_orders[0]
                 cust = latest.customer.get_full_name() or latest.customer.username
                 auth_amt = float(latest.authorized_amount or latest.total_amount or 0)
-                cap_amt = float(latest.captured_amount or 0)
+                cap_amt = float(latest.captured_amount or latest.total_amount or 0)
                 rel_amt = float(latest.released_amount or 0)
-                items_str = ", ".join(f"{it.quantity}x {it.product_name_snapshot}" for it in latest.items.all()[:4]) or "Grocery Bundle"
 
-                reply = (
-                    f"🧾 **Most Recent Order: `#{latest.id}`**\n\n"
-                    f"• **Order Number:** **`#{latest.id}`**\n"
-                    f"• **Customer:** {cust}\n"
-                    f"• **Status:** `{latest.status}`\n"
-                    f"• **Items:** {items_str}\n"
-                    f"• **Order Total:** **${float(latest.total_amount):.2f}** (PayPal Auth: **${auth_amt:.2f}** | Captured: **${cap_amt:.2f}** | Auto-Released: **${rel_amt:.2f}**)\n"
-                    f"• **Timestamp:** {latest.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
-                    f"📊 **Recent Orders Summary ({total_orders} Total | {pending_count} Pending Packing):**\n"
-                )
-                for o in recent_orders[:5]:
-                    o_cust = o.customer.get_full_name() or o.customer.username
-                    reply += f"• **`#{o.id}`** — {o_cust} | `{o.status}` | **${float(o.total_amount):.2f}**\n"
-
+                reply = f"Most recent order is #{latest.id} ({total_orders} total orders, {pending_count} pending)."
+                actions = [{
+                    "type": "ORDER_CARD",
+                    "order": {
+                        "id": str(latest.id),
+                        "customer": cust,
+                        "status": latest.status,
+                        "total": float(latest.total_amount),
+                        "authorized": auth_amt,
+                        "captured": cap_amt,
+                        "released": rel_amt,
+                        "can_settle": latest.status in ("NEW", "ACCEPTED", "PREPARING"),
+                        "recent_list": [
+                            {
+                                "id": str(o.id),
+                                "customer": o.customer.get_full_name() or o.customer.username,
+                                "status": o.status,
+                                "total": float(o.total_amount),
+                                "can_settle": o.status in ("NEW", "ACCEPTED", "PREPARING")
+                            }
+                            for o in recent_orders[:4]
+                        ]
+                    }
+                }]
                 return {
-                    "reply": reply.strip(),
+                    "reply": reply,
                     "tools_used": [{"name": "audit_order_settlement", "args": {"order_id": str(latest.id)}}],
-                    "actions": [],
+                    "actions": actions,
                     "tool_result": {"most_recent_order_id": str(latest.id), "total_orders": total_orders}
                 }
 
-        # --- UNIVERSAL STORE / PRODUCT COUNT & OVERVIEW FAST-PATH (< 10ms) ---
+        # --- 2. STORE / PRODUCT COUNT & OVERVIEW FAST-PATH (< 10ms) ---
         if any(k in lower for k in [
             "how many product", "how many item", "products are live", "live in our store",
             "products in store", "products in our store", "list all product", "store overview",
@@ -866,19 +887,27 @@ class AgentService:
             active_prods = list(Product.objects.filter(is_active=True).order_by("-stock_quantity", "name"))
             in_stock = [p for p in active_prods if p.stock_quantity > 0 and p.is_in_stock]
             cat_count = Category.objects.filter(is_active=True).count()
-            reply = (
-                f"🏪 **Live Store Catalog Summary:**\n\n"
-                f"• **Total Live Products:** **{len(active_prods)}** active products across **{cat_count}** categories\n"
-                f"• **Currently In-Stock:** **{len(in_stock)}** products ready for instant fulfillment\n\n"
-                f"**Top Live Products in Store:**\n"
-            )
-            for p in active_prods[:10]:
-                price = float(p.offer_price or p.regular_price)
-                reply += f"• **{p.name}** — **${price:.2f}** ({p.unit}) | `{p.stock_quantity} in stock`\n"
+            reply = f"Store has {len(active_prods)} live products ({len(in_stock)} in stock) across {cat_count} categories."
+            actions = [{
+                "type": "CATALOG_SUMMARY",
+                "total": len(active_prods),
+                "in_stock": len(in_stock),
+                "categories": cat_count,
+                "items": [
+                    {
+                        "id": p.id,
+                        "name": p.name,
+                        "price": float(p.offer_price or p.regular_price),
+                        "stock": p.stock_quantity,
+                        "unit": p.unit
+                    }
+                    for p in active_prods[:6]
+                ]
+            }]
             return {
-                "reply": reply.strip(),
+                "reply": reply,
                 "tools_used": [{"name": "search_products_and_stock", "args": {"query": "all"}}],
-                "actions": [],
+                "actions": actions,
                 "tool_result": {"total_live_products": len(active_prods), "in_stock_products": len(in_stock)}
             }
 
@@ -887,37 +916,31 @@ class AgentService:
             # 1. Low stock / Inventory health
             if any(k in lower for k in ["low stock", "inventory health", "check stock", "stock health"]):
                 res = AgentTools.execute_tool("get_inventory_health", {"threshold": 10}, session_id)
-                reply = f"📊 **Inventory Health Audit:** {res.get('message')}\n"
-                for it in res.get("items", [])[:4]:
-                    reply += f"\n• **{it['name']}**: `{it['stock']} left` (Recommended Reorder: {it['recommended_reorder']} units @ ${it['unit_cost']:.2f}/ea = **${it['estimated_cost']:.2f}**)"
-                return {"reply": reply, "tools_used": [{"name": "get_inventory_health", "args": {}}], "actions": [], "tool_result": res}
+                items = res.get("items", [])
+                reply = f"{len(items)} items are low on stock and ready for instant restock."
+                actions = [{"type": "LOW_STOCK_LIST", "items": items[:4]}]
+                return {"reply": reply, "tools_used": [{"name": "get_inventory_health", "args": {}}], "actions": actions, "tool_result": res}
 
             # 2. Pending packing orders
             if any(k in lower for k in ["pending order", "orders to pack", "orders pending", "audit order", "summarize order"]):
                 res = AgentTools.execute_tool("get_pending_packing_orders", {}, session_id)
                 orders = res.get("orders", [])
                 if not orders:
-                    reply = "✅ **All caught up!** There are no pending orders awaiting packing settlement."
+                    reply = "All caught up! No pending orders waiting for packing."
+                    actions = []
                 else:
-                    reply = f"📦 **Pending Orders Awaiting Packing ({len(orders)}):**\n"
-                    for o in orders[:4]:
-                        reply += f"\n• **#{o['id']}** ({o['customer']}): Authorized Hold **${o['authorized_amount']:.2f}** ({o['items_count']} items)"
-                    reply += "\n\n🛡️ *All store items maintain >12.0% protected profit margins.*"
-                return {"reply": reply, "tools_used": [{"name": "get_pending_packing_orders", "args": {}}], "actions": [], "tool_result": res}
+                    reply = f"{len(orders)} orders are waiting for packing & PayPal settlement."
+                    actions = [{"type": "PENDING_ORDERS", "orders": orders[:4]}]
+                return {"reply": reply, "tools_used": [{"name": "get_pending_packing_orders", "args": {}}], "actions": actions, "tool_result": res}
 
             # 3. Inspect Margin
             if any(k in lower for k in ["check profit margin", "inspect margin", "margins on", "margin on"]):
                 query_term = "Atta" if "atta" in lower else ("Milk" if "milk" in lower else "all")
                 res = AgentTools.execute_tool("inspect_margin", {"query": query_term}, session_id)
                 prods = res.get("products", [])
-                reply = "🏷️ **Store Profit Margin Audit (12% Protected Floor):**\n"
-                for p in prods:
-                    reply += (
-                        f"\n• **{p['name']}**: Selling **${p['selling_price']:.2f}** | "
-                        f"Wholesale Cost **${p['cost_price']:.2f}** | "
-                        f"Net Margin: **{p['margin_pct']}%** (Max Safe Discount: {p['max_safe_discount_pct']}%)"
-                    )
-                return {"reply": reply, "tools_used": [{"name": "inspect_margin", "args": {"query": query_term}}], "actions": [], "tool_result": res}
+                reply = "Store margins are protected above the 12% minimum floor."
+                actions = [{"type": "MARGIN_LIST", "products": prods[:4]}]
+                return {"reply": reply, "tools_used": [{"name": "inspect_margin", "args": {"query": query_term}}], "actions": actions, "tool_result": res}
 
             # 4. Evaluate Discount
             if "discount" in lower:
@@ -926,7 +949,8 @@ class AgentService:
                 target_prod = Product.objects.filter(name__icontains="Atta").first() or Product.objects.filter(is_active=True).first()
                 res = AgentTools.execute_tool("bargain_and_guard_margin", {"product_id": target_prod.id, "requested_discount_pct": req_pct}, session_id)
                 reply = self._synthesize_tool_response("bargain_and_guard_margin", res, persona)
-                return {"reply": reply, "tools_used": [{"name": "bargain_and_guard_margin", "args": {"product_id": target_prod.id, "requested_discount_pct": req_pct}}], "actions": [], "tool_result": res}
+                actions = [{"type": "MARGIN_DECISION", "decision": res}]
+                return {"reply": reply, "tools_used": [{"name": "bargain_and_guard_margin", "args": {"product_id": target_prod.id, "requested_discount_pct": req_pct}}], "actions": actions, "tool_result": res}
 
             # 5. Restock via PayPal Payout
             if "restock" in lower or "payout" in lower:
@@ -939,7 +963,8 @@ class AgentService:
                 args = {"supplier_email": email, "product_name": prod_kw, "quantity": qty, "unit_cost": 3.60}
                 res = AgentTools.execute_tool("execute_supplier_restock_payout", args, session_id)
                 reply = self._synthesize_tool_response("execute_supplier_restock_payout", res, persona)
-                return {"reply": reply, "tools_used": [{"name": "execute_supplier_restock_payout", "args": args}], "actions": [], "tool_result": res}
+                actions = [{"type": "PAYOUT_RECEIPT", "receipt": res}]
+                return {"reply": reply, "tools_used": [{"name": "execute_supplier_restock_payout", "args": args}], "actions": actions, "tool_result": res}
 
         # --- SHOPPER FAST-PATHS ---
         if persona == "shopper":
@@ -953,7 +978,7 @@ class AgentService:
                 if prod:
                     res = AgentTools.execute_tool("add_to_shopper_cart", {"product_id": prod.id, "quantity": qty}, session_id)
                     actions = self._extract_frontend_actions("add_to_shopper_cart", res)
-                    reply = f"✅ **Task Executed!**\n\nI automatically added **{qty}x {prod.name}** (${float(prod.offer_price or prod.regular_price):.2f}) directly into your active cart!"
+                    reply = f"Added {qty}x {prod.name} (${float(prod.offer_price or prod.regular_price):.2f}) to your cart."
                     return {"reply": reply, "tools_used": [{"name": "add_to_shopper_cart", "args": {"product_id": prod.id, "quantity": qty}}], "actions": actions, "tool_result": res}
 
             # 2. Recipe Basket Recommendations
@@ -973,10 +998,7 @@ class AgentService:
 
                 res = AgentTools.execute_tool("recommend_recipe_basket", {"recipe_name": recipe_name, "budget": budget}, session_id)
                 items = res.get("items", [])
-                reply = f"🍳 **{recipe_name} Basket (Total: ${res.get('total_price', 0):.2f})**\n\nI curated these fresh in-stock ingredients within your ${budget:.0f} budget:\n"
-                for it in items:
-                    reply += f"• **{it['name']}** — **${it['price']:.2f}** ({it['unit']})\n"
-                reply += "\nClick **Add All Ingredients to Cart** below to load your basket!"
+                reply = f"{recipe_name} Basket ready (${res.get('total_price', 0):.2f} total for {len(items)} items)."
                 actions = [{"type": "RECOMMEND_BASKET", "items": items, "recipe": recipe_name}]
                 return {"reply": reply, "tools_used": [{"name": "recommend_recipe_basket", "args": {"recipe_name": recipe_name, "budget": budget}}], "actions": actions, "tool_result": res}
 
@@ -988,55 +1010,44 @@ class AgentService:
                 prods = res.get("products", [])
                 if prods:
                     top = prods[0]
-                    reply = (
-                        f"🥛 **Found {len(prods)} In-Stock Match(es) for '{search_q.title()}':**\n\n"
-                        f"• **{top['name']}** ({top['unit']}) — **${top['price']:.2f}** ({top['stock']} in stock)\n"
-                        f"🏷️ **AI Margin-Safe Deal:** Up to **{top['max_safe_discount_pct']}% OFF** available (Best Price: **${top['best_deal_price']:.2f}** while protecting our 12% store margin floor)!\n\n"
-                        f"Click **+ Add to Cart** below to grab it immediately:"
-                    )
+                    reply = f"Found {top['name']} at ${top['price']:.2f} (Safe Deal: ${top['best_deal_price']:.2f}, {top['max_safe_discount_pct']}% off)."
                     actions = [{"type": "SEARCH_RESULTS", "items": prods}]
                     return {"reply": reply, "tools_used": [{"name": "search_products_and_stock", "args": {"query": search_q}}], "actions": actions, "tool_result": res}
 
         return None
 
     def _synthesize_tool_response(self, fn_name: str, res: dict, persona: str) -> str:
-        """Instant Natural Language Synthesis from tool result without 2nd LLM round-trip."""
+        """Minimalist, clean plain-text synthesis from tool result."""
         msg = res.get("message", "")
         if fn_name == "bargain_and_guard_margin":
             if res.get("status") == "APPROVED":
-                return f"🎉 **Deal Approved!**\n\n{msg}\n• Product: **{res.get('product')}**\n• Final Price: **${res.get('final_price'):.2f}** (Discount: {res.get('discount_approved_pct')}%)"
+                return f"Approved {res.get('discount_approved_pct')}% off on {res.get('product')} (Final: ${res.get('final_price'):.2f})."
             else:
-                return f"🛡️ **Margin Guard Counter-Offer:**\n\n{msg}\n• Maximum safe discount: **{res.get('counter_discount_pct')}%** (Final Price: **${res.get('counter_price'):.2f}**)"
+                return f"Rejected {res.get('requested_discount_pct', 20)}% off to protect 12% margin. Max safe discount: {res.get('counter_discount_pct')}% (${res.get('counter_price'):.2f})."
 
         elif fn_name == "search_products_and_stock":
             prods = res.get("products", [])
             if not prods:
-                return "🔍 No exact match found. Try searching for Milk, Sourdough Bread, Pasta, Eggs, or Strawberries!"
-            reply = f"🛒 **Found {len(prods)} in-stock item(s):**\n"
-            for p in prods[:4]:
-                reply += f"\n• **{p['name']}** — **${p['price']:.2f}** ({p['stock']} in stock)"
-            return reply
+                return "No exact match found. Try Milk, Bread, Pasta, Eggs, or Strawberries."
+            return f"Found {len(prods)} in-stock item(s)."
 
         elif fn_name == "recommend_recipe_basket":
             items = res.get("items", [])
             recipe_name = res.get("recipe", "Meal")
-            reply = f"🍳 **{recipe_name} (Total: ${res.get('total_price', 0):.2f})**\n\n"
-            for it in items:
-                reply += f"• **{it['name']}** — **${it['price']:.2f}**\n"
-            return reply
+            return f"{recipe_name} Basket ready (${res.get('total_price', 0):.2f} for {len(items)} items)."
 
         elif fn_name == "add_to_shopper_cart":
-            return f"✅ **Added to Cart!**\n\n{msg}"
+            return msg
 
         elif fn_name == "auto_settle_order_packing":
-            return f"⚡ **Dynamic Packing Settlement Executed!**\n\n{msg}\n• PayPal Capture ID: `{res.get('paypal_capture_id')}`\n• Captured: **${res.get('captured_amount', 0):.2f}**\n• Unfulfilled Refund Auto-Released: **${res.get('released_amount', 0):.2f}**"
+            return f"Settled Order #{res.get('order_id')}: Captured ${res.get('captured_amount', 0):.2f}, Released ${res.get('released_amount', 0):.2f}."
 
         elif fn_name == "execute_supplier_restock_payout":
             if res.get("status") == "SUCCESS":
-                return f"💸 **PayPal Payout Sent!**\n\n{msg}\n• Batch ID: `{res.get('payout_batch_id')}`"
-            return f"⚠️ **Payout Notice:** {msg}"
+                return f"Paid ${res.get('amount_paid', 0):.2f} to {res.get('supplier')} for {res.get('quantity')}x {res.get('product')}."
+            return f"Payout notice: {msg}"
 
-        return msg or f"Tool '{fn_name}' executed successfully."
+        return re.sub(r"[*`#]+", "", msg) or "Action completed."
 
     def _extract_frontend_actions(self, fn_name: str, res: dict) -> list:
         """Extracts actionable triggers for the React UI to execute in real-time."""
@@ -1048,31 +1059,16 @@ class AgentService:
         elif fn_name == "search_products_and_stock" and res.get("status") == "success" and res.get("products"):
             actions.append({"type": "SEARCH_RESULTS", "items": res.get("products", [])})
         elif fn_name == "auto_settle_order_packing" and res.get("status") == "SUCCESS":
-            actions.append({"type": "ORDER_SETTLED", "order_id": res.get("order_id")})
+            actions.append({"type": "ORDER_SETTLED", "order_id": res.get("order_id"), "captured": res.get("captured_amount"), "released": res.get("released_amount")})
         return actions
 
     def _fallback_chat(self, prompt: str, session_id: str, persona: str) -> dict:
-        """Data-driven sub-second fallback backed by live database queries."""
-        lower = prompt.lower()
+        """Minimalist data-driven fallback."""
         active_count = Product.objects.filter(is_active=True).count()
         in_stock_count = Product.objects.filter(is_active=True, stock_quantity__gt=0).count()
         orders_count = Order.objects.count()
         pending_count = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
-
-        if "margin" in lower or "guard" in lower:
-            reply = "🛡️ **CartSettle Margin Guard:** Store margins are protected at a minimum 12.0% floor to guarantee profitability on every transaction."
-        elif "settle" in lower or "pack" in lower:
-            reply = f"📦 **Packing Table Settlement:** {pending_count} pending order(s) ready for dynamic PayPal capture. Unfulfilled funds are released automatically back to the buyer."
-        elif "payout" in lower or "restock" in lower:
-            reply = "💸 **PayPal Payouts Engine:** Connected to PayPal Payouts v1 for instant autonomous wholesale restocks to suppliers."
-        else:
-            reply = (
-                f"🤖 **CartSettle AI ({persona.title()}):**\n\n"
-                f"• **Live Products:** {active_count} active ({in_stock_count} in stock)\n"
-                f"• **Store Orders:** {orders_count} total ({pending_count} awaiting packing settlement)\n"
-                f"• **Profit Guardrail:** 12.0% minimum margin floor active."
-            )
-
+        reply = f"{active_count} live products ({in_stock_count} in stock) • {orders_count} orders ({pending_count} pending)."
         broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
         return {"reply": reply, "tools_used": [], "actions": []}
 
