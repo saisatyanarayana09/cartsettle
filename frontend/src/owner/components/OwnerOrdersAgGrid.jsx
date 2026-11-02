@@ -18,7 +18,7 @@ import {
   Truck,
   Send
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 // Register AG Grid Community Modules
@@ -56,14 +56,7 @@ export default function OwnerOrdersAgGrid({
   const handleGenerateInvoice = async (orderId) => {
     try {
       setActionLoadingId(orderId);
-      const token = localStorage.getItem('access_token');
-      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
-
-      const res = await axios.post(
-        `${apiBase}/orders/${orderId}/generate_invoice/`,
-        {},
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
+      const res = await api.post(`/orders/${orderId}/generate_invoice/`, {});
 
       toast.success(`PayPal Invoicing v2 invoice created!`);
       if (gridRef.current && gridRef.current.api) {
@@ -85,14 +78,7 @@ export default function OwnerOrdersAgGrid({
   const handleDispatchTracking = async (orderId) => {
     try {
       setActionLoadingId(orderId);
-      const token = localStorage.getItem('access_token');
-      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
-
-      const res = await axios.post(
-        `${apiBase}/orders/${orderId}/dispatch_tracking/`,
-        { carrier: 'CartSettle Express' },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
+      const res = await api.post(`/orders/${orderId}/dispatch_tracking/`, { carrier: 'CartSettle Express' });
 
       toast.success(`Order #${orderId} dispatched with PayPal tracking!`);
       if (gridRef.current && gridRef.current.api) {
@@ -460,6 +446,7 @@ export default function OwnerOrdersAgGrid({
         <AgGridReact
           ref={gridRef}
           rowData={filteredData}
+          getRowId={(params) => String(params.data?.id || '')}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           quickFilterText={quickFilterText}

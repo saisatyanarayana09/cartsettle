@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Search, Printer, AlertTriangle, Loader2, Table, LayoutGrid, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -12,6 +12,7 @@ import { ShieldAlert } from 'lucide-react';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
 const Orders = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL'); // ALL, NEW, PREPARING, READY, COMPLETED
@@ -181,7 +182,7 @@ const Orders = () => {
           onRefresh={() => fetchOrders(false)}
           onOpenSettlement={(order) => setSettlementOrder(order)}
           onViewDetails={(order) => {
-            window.location.href = `/owner/orders/${order.id}`;
+            navigate(`/owner/orders/${order.id}`);
           }}
         />
       ) : (

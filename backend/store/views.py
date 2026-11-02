@@ -519,7 +519,7 @@ class AgentChatView(views.APIView):
 
 class AgentToolsView(views.APIView):
     """
-    Lists available Agentic Commerce tools and descriptions.
+    Lists available Agentic Commerce tools and allows executing tools directly.
     """
     permission_classes = [AllowAny]
 
@@ -528,6 +528,19 @@ class AgentToolsView(views.APIView):
         return response.Response({
             'tools': AgentTools.get_tool_definitions()
         })
+
+    def post(self, request):
+        tool_name = request.data.get('tool')
+        args = request.data.get('arguments', {})
+        session_id = request.data.get('session_id', 'agent_tool_exec')
+        if not tool_name:
+            return response.Response({'detail': 'tool is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        from services.agent_service import AgentTools
+        try:
+            result = AgentTools.execute_tool(tool_name, args, session_id=session_id)
+            return response.Response({'status': 'SUCCESS', 'result': result})
+        except Exception as e:
+            return response.Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class SupplierPayoutView(views.APIView):

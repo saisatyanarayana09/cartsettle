@@ -887,8 +887,7 @@ class OrderViewSet(ModelViewSet):
                 
         return Response(OrderSerializer(order, context=self.get_serializer_context()).data)
 
-    @action(detail=False, methods=['get'], permission_classes=[IsOwnerUser])
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['post'], permission_classes=[])
     def create_paypal_order(self, request):
         """
         Initializes a PayPal Orders v2 with intent="AUTHORIZE".
@@ -900,18 +899,22 @@ class OrderViewSet(ModelViewSet):
         description = request.data.get('description', 'CartSettle Grocery Order')
         
         if not amount:
-            try:
-                cart = Cart.objects.get(customer=request.user)
-                amount = cart.total_price
-            except Cart.DoesNotExist:
-                return Response({'detail': 'Amount or active Cart is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            if request.user.is_authenticated:
+                try:
+                    cart = Cart.objects.get(customer=request.user)
+                    amount = cart.total_price
+                except Cart.DoesNotExist:
+                    pass
+        if not amount:
+            return Response({'detail': 'Amount is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             amount_val = Decimal(str(amount))
+            user_part = f"USER_{request.user.id}" if request.user.is_authenticated else "GUEST"
             paypal_data = paypal_service.create_order(
                 amount=amount_val,
                 currency=currency,
-                custom_id=f"USER_{request.user.id}_{int(time.time())}",
+                custom_id=f"{user_part}_{int(time.time())}",
                 description=description
             )
             return Response(paypal_data, status=status.HTTP_201_CREATED)

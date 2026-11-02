@@ -28,7 +28,9 @@ urlpatterns = [
     path('backup/stats/', StoreBackupStatsView.as_view(), name='store-backup-stats'),
     path('backup/export/', StoreBackupExportView.as_view(), name='store-backup-export'),
     path('agent/chat/', AgentChatView.as_view(), name='agent-chat'),
+    path('agent_chat/', AgentChatView.as_view(), name='agent-chat-alt'),
     path('agent/tools/', AgentToolsView.as_view(), name='agent-tools'),
+    path('agent_tools/', AgentToolsView.as_view(), name='agent-tools-alt'),
     path('payouts/create/', SupplierPayoutView.as_view(), name='supplier-payout'),
 
     path('', include(router.urls)),

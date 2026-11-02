@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, ShieldCheck, X, Check, ArrowRight, DollarSign, Percent, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function BargainModal({ isOpen, onClose, product, onDiscountApplied }) {
@@ -15,9 +15,6 @@ export default function BargainModal({ isOpen, onClose, product, onDiscountAppli
   const handleEvaluateBargain = async (pct) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
-      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
-
       const payload = {
         tool: 'bargain_and_guard_margin',
         arguments: {
@@ -26,9 +23,7 @@ export default function BargainModal({ isOpen, onClose, product, onDiscountAppli
         }
       };
 
-      const res = await axios.post(`${apiBase}/store/agent_tools/`, payload, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const res = await api.post('/store/agent/tools/', payload);
 
       setBargainResponse(res.data.result);
       if (res.data.result?.status === 'APPROVED') {

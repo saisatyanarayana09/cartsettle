@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, ShieldAlert, CheckCircle, FileText, Send, AlertTriangle, RefreshCw } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function DisputesModal({ isOpen, onClose }) {
@@ -19,11 +19,7 @@ export default function DisputesModal({ isOpen, onClose }) {
   const fetchDisputes = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
-      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
-      const res = await axios.get(`${apiBase}/orders/disputes/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const res = await api.get('/orders/disputes/');
       const items = res.data.items || [];
       // Provide clean simulated item if sandbox disputes is empty
       if (items.length === 0) {
@@ -52,17 +48,10 @@ export default function DisputesModal({ isOpen, onClose }) {
     if (!selectedDispute) return;
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('access_token');
-      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
-
-      await axios.post(
-        `${apiBase}/orders/provide_dispute_evidence/`,
-        {
-          dispute_id: selectedDispute.dispute_id,
-          notes: evidenceNotes || 'CartSettle verified packing via Gemini Vision optical scan. Unpacked missing items were automatically released back to buyer.'
-        },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
+      await api.post('/orders/provide_dispute_evidence/', {
+        dispute_id: selectedDispute.dispute_id,
+        notes: evidenceNotes || 'CartSettle verified packing via Gemini Vision optical scan. Unpacked missing items were automatically released back to buyer.'
+      });
 
       toast.success('Fulfillment evidence submitted to PayPal Disputes API!');
       setSelectedDispute(null);

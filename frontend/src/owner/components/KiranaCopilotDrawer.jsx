@@ -15,7 +15,7 @@ import {
   ArrowRightCircle,
   RefreshCw
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function KiranaCopilotDrawer({ isOpen, onClose }) {
@@ -104,18 +104,11 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
     ]);
 
     try {
-      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
-      const token = localStorage.getItem('access_token');
-
-      const res = await axios.post(
-        `${apiBase}/store/agent/chat/`,
-        {
-          prompt: prompt,
-          session_id: 'owner_copilot_session',
-          history: newMessages.map(m => ({ role: m.role, content: m.content }))
-        },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
+      const res = await api.post('/store/agent/chat/', {
+        prompt: prompt,
+        session_id: 'owner_copilot_session',
+        history: newMessages.map(m => ({ role: m.role, content: m.content }))
+      });
 
       const reply = res.data?.reply || 'Received your request.';
       const toolsUsed = res.data?.tools_used || [];

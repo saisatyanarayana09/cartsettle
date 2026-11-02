@@ -18,7 +18,7 @@ import {
   CheckCircle,
   AlertTriangle
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function PackingSettlementModal({
@@ -81,20 +81,16 @@ export default function PackingSettlementModal({
 
     try {
       setVisionScanning(true);
-      const token = localStorage.getItem('access_token');
-      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
+      
 
       const formData = new FormData();
       formData.append('image', file);
 
-      const res = await axios.post(
-        `${apiBase}/orders/${order.id}/vision_pack/`,
+      const res = await api.post(
+        `/orders/${order.id}/vision_pack/`,
         formData,
         {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            ...(token ? { Authorization: `Bearer ${token}` } : {})
-          }
+          headers: { 'Content-Type': 'multipart/form-data' }
         }
       );
 
@@ -152,9 +148,6 @@ export default function PackingSettlementModal({
   const handleSettle = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
-      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
-
       const payload = {
         items: itemsState.map(i => ({
           id: i.id,
@@ -163,10 +156,9 @@ export default function PackingSettlementModal({
         }))
       };
 
-      const res = await axios.post(
-        `${apiBase}/orders/${order.id}/settle_packing/`,
-        payload,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      const res = await api.post(
+        `/orders/${order.id}/settle_packing/`,
+        payload
       );
 
       const data = res.data;

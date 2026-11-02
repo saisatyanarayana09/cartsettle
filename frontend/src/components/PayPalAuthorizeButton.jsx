@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { ShieldCheck, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'ASkjGQlH18H3ZtMpjKjAubYqkm1GlNbWbuiy2pYJTew6DnUgEcwNSamjCBokeZ3SrPwwc625VgtLMAB6';
@@ -26,14 +26,11 @@ export default function PayPalAuthorizeButton({
   const handleCreateOrder = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
-      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
-      
-      const res = await axios.post(
-        `${apiBase}/orders/create_paypal_order/`,
-        { amount: amount, currency: currency, description: description },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
+      const res = await api.post('/orders/create_paypal_order/', {
+        amount: amount,
+        currency: currency,
+        description: description
+      });
 
       if (res.data && res.data.id) {
         return res.data.id;
