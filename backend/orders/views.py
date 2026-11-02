@@ -1292,6 +1292,7 @@ class OrderViewSet(ModelViewSet):
             logger.error("Error processing PayPal webhook: %s", e)
             return Response({'status': 'ERROR', 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['get'], permission_classes=[IsOwnerUser])
     def analytics(self, request):
         from django.core.cache import cache
         cached = cache.get('owner_analytics')

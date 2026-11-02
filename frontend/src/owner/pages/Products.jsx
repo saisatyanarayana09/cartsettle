@@ -43,7 +43,10 @@ const Products = () => {
  const [prodRes, catRes] = await Promise.all([api.get('/products/'), api.get('/categories/')]);
  setProducts(prodRes.data.results || prodRes.data);
  setCategories(catRes.data.results || catRes.data);
- } catch { toast.error('Failed to load data.'); }
+ } catch (err) {
+   console.error('Failed to load data:', err);
+   toast.error(err.response?.data?.detail || 'Failed to load data.');
+ }
  finally { setLoading(false); }
  };
 

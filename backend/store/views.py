@@ -497,6 +497,7 @@ class StoreBackupExportView(views.APIView):
         filename = f"cartsettle_backup_{timezone.now().strftime('%Y_%m_%d_%H%M%S')}.json"
         res = HttpResponse(data, content_type='application/json')
         res['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return res
 
 class AgentChatView(views.APIView):
     """
