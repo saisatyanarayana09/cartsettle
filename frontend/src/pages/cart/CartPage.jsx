@@ -4,16 +4,27 @@ import { Minus, Plus, Trash2, ShoppingBasket, ArrowLeft, AlertCircle, AlertTrian
 import { CustomerLayout } from '../../customer-layout';
 import { useCart } from '../../cart-context';
 import { checkOperatingHours } from '../../utils/operatingHours';
+import BargainModal from '../../components/BargainModal';
+import { Sparkles } from 'lucide-react';
 
 export function CartPage() {
   const navigate = useNavigate();
   const { cart, isCustomer, storeSettings, update, flushCartSync } = useCart();
   const [error, setError] = useState('');
+  const [bargainProduct, setBargainProduct] = useState(null);
 
 
   const items = cart?.items || [];
 
-  if (!isCustomer) return <CustomerLayout><main className="mx-auto max-w-xl p-6 text-center"><h1 className="text-2xl font-extrabold">Your cart</h1><p className="mt-3 text-slate-600">Sign in to add products and place a pickup order.</p><Link to="/login" className="mt-5 inline-block rounded-xl bg-primary-600 px-5 py-3 font-bold text-white transition-all hover:bg-primary-700 active:scale-[0.98]">Sign in</Link></main></CustomerLayout>;
+  if (!isCustomer) return <CustomerLayout><main className="mx-auto max-w-xl p-6 text-center"><h1 className="text-2xl font-extrabold">Your cart</h1><p className="mt-3 text-slate-600">Sign in to add products and place a pickup order.</p><Link to="/login" className="mt-5 inline-block rounded-xl bg-primary-600 px-5 py-3 font-bold text-white transition-all hover:bg-primary-700 active:scale-[0.98]">Sign in</Link></main>        <BargainModal
+          isOpen={Boolean(bargainProduct)}
+          product={bargainProduct}
+          onClose={() => setBargainProduct(null)}
+          onDiscountApplied={(deal) => {
+            console.log('Applied bargain deal:', deal);
+          }}
+        />
+      </CustomerLayout>;
 
   async function change(item, quantity) {
     try {
@@ -174,6 +185,20 @@ export function CartPage() {
                           Out of Stock · Please remove
                         </span>
                       )}
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setBargainProduct({
+                            id: item.product || item.product_id || item.id,
+                            name: item.product_name,
+                            price: item.unit_price
+                          })}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-all cursor-pointer mt-1"
+                        >
+                          <Sparkles className="w-3 h-3 text-indigo-500" />
+                          Bargain with AI
+                        </button>
+                      </div>
                     </div>
                     <div className={`flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shadow-xs shrink-0 overflow-hidden ${isItemOutOfStock ? 'opacity-50' : ''}`}>
                       <button

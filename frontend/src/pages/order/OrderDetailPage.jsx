@@ -236,6 +236,81 @@ export function OrderDetailPage() {
               </div>
             )}
 
+            {/* PayPal Zero-Risk Settlement Card */}
+            {(order.paypal_authorization_id || order.payment_method === 'PAYPAL') && (
+              <div className="mb-6 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-amber-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/40 p-5 border border-indigo-200 dark:border-indigo-900/60 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-indigo-100 dark:border-indigo-900/40">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm">
+                      P
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        PayPal Zero-Risk Dynamic Settlement
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-mono">
+                        Auth ID: {order.paypal_authorization_id || order.paypal_order_id || 'Active'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                    order.paypal_capture_id 
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' 
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 animate-pulse'
+                  }`}>
+                    {order.paypal_capture_id ? 'Settled & Captured' : 'Pre-Authorization Hold Active'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 pt-3 text-center">
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
+                    <div className="text-[11px] text-slate-500">Card Hold</div>
+                    <div className="text-sm font-bold font-mono text-slate-800 dark:text-slate-200">
+                      ${parseFloat(order.authorized_amount || order.total_amount || 0).toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
+                    <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">Final Charged</div>
+                    <div className="text-sm font-bold font-mono text-indigo-700 dark:text-indigo-300">
+                      ${parseFloat(order.captured_amount || (order.paypal_capture_id ? order.total_amount : 0)).toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                    <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Auto-Released</div>
+                    <div className="text-sm font-bold font-mono text-emerald-700 dark:text-emerald-300">
+                      {parseFloat(order.released_amount || 0) > 0 ? `-$${parseFloat(order.released_amount).toFixed(2)}` : '$0.00'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live PayPal Invoice v2 and Tracking Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 mt-3 border-t border-indigo-100 dark:border-indigo-900/40">
+                  {order.paypal_invoice_url ? (
+                    <a
+                      href={order.paypal_invoice_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                    >
+                      📄 View Official PayPal Invoice (Invoicing v2) ↗
+                    </a>
+                  ) : (
+                    <span className="text-[11px] text-slate-500">
+                      Invoice will be generated when store packs verified items.
+                    </span>
+                  )}
+
+                  {order.paypal_tracking_number && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-mono text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      🚚 {order.shipping_carrier || 'Express'}: {order.paypal_tracking_number}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-xl bg-white dark:bg-slate-900 p-5 shadow-sm border border-slate-100 dark:border-slate-800">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
                 Order Items

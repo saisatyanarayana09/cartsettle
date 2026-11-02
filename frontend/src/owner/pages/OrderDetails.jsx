@@ -614,6 +614,70 @@ const OrderDetails = () => {
               </div>
             </div>
           </div>
+
+          {/* PayPal Dynamic Settlement Details */}
+          {(order.paypal_authorization_id || order.paypal_order_id) && (
+            <div className="bg-white dark:bg-[#0d1322] rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+                    P
+                  </div>
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                    PayPal Settlement
+                  </h3>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  order.paypal_capture_id ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                }`}>
+                  {order.paypal_capture_id ? 'Captured' : 'Hold Active'}
+                </span>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Pre-Auth Hold:</span>
+                  <span className="font-mono font-medium">${parseFloat(order.authorized_amount || order.total_amount).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Captured:</span>
+                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                    ${parseFloat(order.captured_amount || (order.paypal_capture_id ? order.total_amount : 0)).toFixed(2)}
+                  </span>
+                </div>
+                {parseFloat(order.released_amount || 0) > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-semibold">
+                    <span>Auto-Released:</span>
+                    <span className="font-mono font-bold">-${parseFloat(order.released_amount).toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-[11px] text-slate-400 font-mono pt-1 border-t border-slate-100 dark:border-slate-800 truncate">
+                  <span>Auth ID:</span>
+                  <span className="truncate max-w-[140px]">{order.paypal_authorization_id || 'N/A'}</span>
+                </div>
+              </div>
+
+              {order.paypal_invoice_url && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <a
+                    href={order.paypal_invoice_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold text-xs rounded-md border border-emerald-200 dark:border-emerald-800 transition"
+                  >
+                    📄 View PayPal Invoice v2 ↗
+                  </a>
+                </div>
+              )}
+
+              {order.paypal_tracking_number && (
+                <div className="pt-1 text-[11px] text-slate-500 flex items-center justify-between font-mono">
+                  <span>Tracking:</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">{order.paypal_tracking_number}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

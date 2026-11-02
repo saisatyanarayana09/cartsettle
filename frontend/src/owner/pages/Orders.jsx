@@ -7,6 +7,8 @@ import api from '../../services/api';
 import InvoiceModal from '../components/InvoiceModal';
 import OwnerOrdersAgGrid from '../components/OwnerOrdersAgGrid';
 import PackingSettlementModal from '../components/PackingSettlementModal';
+import DisputesModal from '../components/DisputesModal';
+import { ShieldAlert } from 'lucide-react';
 import { useWebSocket } from '../../hooks/useWebSocket';
 
 const Orders = () => {
@@ -21,6 +23,7 @@ const Orders = () => {
   // CartSettle Hackathon Views & Modals
   const [viewMode, setViewMode] = useState('AG_GRID'); // 'AG_GRID' | 'CLASSIC'
   const [settlementOrder, setSettlementOrder] = useState(null);
+  const [isDisputesModalOpen, setIsDisputesModalOpen] = useState(false);
 
   const fetchOrders = async (isPoll = false) => {
     try {
@@ -151,6 +154,15 @@ const Orders = () => {
               Classic View
             </button>
           </div>
+
+          <button
+            onClick={() => setIsDisputesModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold transition-all shadow-2xs cursor-pointer whitespace-nowrap"
+            title="Inspect PayPal Disputes API v1 & submit optical fulfillment evidence"
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+            PayPal Disputes
+          </button>
 
           <button 
             onClick={() => fetchOrders(false)} 
