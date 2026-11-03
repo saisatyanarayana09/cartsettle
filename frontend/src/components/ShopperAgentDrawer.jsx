@@ -1,130 +1,150 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Bot, 
-  X, 
-  Send, 
-  Mic, 
-  MicOff, 
-  ShoppingBag, 
-  Plus, 
-  Check, 
-  Cpu, 
-  ShieldCheck, 
+import React, { useState, useEffect, useRef } from "react";
+import {
+  X,
+  Mic,
+  MicOff,
+  ShoppingBag,
+  Plus,
+  Check,
   UtensilsCrossed,
-  RotateCcw,
-  Zap
-} from 'lucide-react';
-import api from '../services/api';
-import toast from 'react-hot-toast';
-import { useCart } from '../cart-context';
-import { useNavigate } from 'react-router-dom';
+  Trash2,
+  ArrowUp,
+  ArrowUpRight,
+  Search,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import toast from "react-hot-toast";
+import { useCart } from "../cart-context";
+import { GroceryRow } from "./shopper/GroceryRow";
+import { ShopperMark } from "./shopper/ShopperMark";
+import { SHOPPER_HISTORY_KEY, loadShopperHistory } from "./shopper/history";
 
-const STORAGE_KEY_SHOPPER = 'cartsettle_shopper_agent_chat_v2';
-const SESSION_ID = 'shopper_session';
+const STARTERS = [
+  { label: "Find groceries", prompt: "Find organic milk and check for the best deal", icon: Search },
+  { label: "Plan a meal", prompt: "Suggest a pasta dinner basket under $20", icon: UtensilsCrossed },
+  { label: "Explore deals", prompt: "Can I get 15% off Fresh Strawberries?", icon: ShoppingBag },
+];
+
+const STORAGE_KEY_SHOPPER = SHOPPER_HISTORY_KEY;
+const SESSION_ID = "shopper_session";
 
 const INITIAL_SHOPPER_MSG = {
-  role: 'assistant',
-  content: 'Hi! Tell me what groceries you need, ask for a recipe basket, or check our best deals.',
-  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  follow_ups: [
-    'Suggest a dinner recipe basket under $20',
-    'Find organic milk and check for the best deal',
-    'Add 1 Organic Milk to my cart'
-  ]
+  role: "assistant",
+  content: "What’s on your shopping list today?",
+  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  follow_ups: [],
 };
 
+const cleanText = (text = "") =>
+  String(text)
+    .replace(/\*\*/g, "")
+    .replace(/`/g, "")
+    .replace(/^#+\s*/gm, "")
+    .trim();
+
 export default function ShopperAgentDrawer({ isOpen, onClose }) {
-  const { add, clearCart } = useCart() || {};
+  const { add, clearCart, cart, storeSettings } = useCart() || {};
   const navigate = useNavigate();
 
-  const [messages, setMessages] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SHOPPER);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.warn('Could not load shopper chat:', e);
-    }
-    return [INITIAL_SHOPPER_MSG];
-  });
-
-  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState(() =>
+    loadShopperHistory(typeof window !== "undefined" ? localStorage : null, INITIAL_SHOPPER_MSG)
+  );
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [activeThought, setActiveThought] = useState('Persistent Memory Active');
   const [addedItems, setAddedItems] = useState({});
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [openToolIdx, setOpenToolIdx] = useState({});
 
+  const panelRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const sendRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  // Persist shopper chat to localStorage on every update
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_SHOPPER, JSON.stringify(messages.slice(-40)));
-    } catch (e) {
+    } catch {
       // ignore
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Sync with backend session memory if local history only has the greeting
   useEffect(() => {
     if (messages.length <= 1) {
-      api.get(`/store/agent/chat/?session_id=${SESSION_ID}&persona=shopper`)
-        .then(res => {
+      api
+        .get(`/store/agent/chat/?session_id=${SESSION_ID}&persona=shopper`)
+        .then((res) => {
           const serverMsgs = res.data?.messages;
           if (Array.isArray(serverMsgs) && serverMsgs.length > 0) {
-            setMessages([INITIAL_SHOPPER_MSG, ...serverMsgs]);
+            setMessages([
+              INITIAL_SHOPPER_MSG,
+              ...serverMsgs.map((m) => ({
+                ...m,
+                content: cleanText(m.content),
+              })),
+            ]);
           }
         })
         .catch(() => {});
     }
   }, []);
 
-  // Voice Recognition Setup
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      recognition.lang = "en-US";
 
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
         setIsListening(false);
-        handleSend(transcript);
+        sendRef.current?.(transcript);
       };
 
       recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
       recognitionRef.current = recognition;
     }
+    return () => recognitionRef.current?.abort();
   }, []);
 
   const toggleVoice = () => {
     if (!recognitionRef.current) {
-      toast.error('Voice input is not supported in this browser.');
+      toast.error("Voice input is not supported in this browser.");
       return;
     }
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch {
+        return;
+      }
       setIsListening(true);
-      toast('Listening...', { icon: '🎙️' });
+      toast("Listening...", { icon: "🎙️" });
     }
   };
 
   const clearShopperHistory = () => {
-    setMessages([{
-      ...INITIAL_SHOPPER_MSG,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }]);
+    setMessages([
+      {
+        ...INITIAL_SHOPPER_MSG,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
     setAddedItems({});
     localStorage.removeItem(STORAGE_KEY_SHOPPER);
     api.delete(`/store/agent/chat/?session_id=${SESSION_ID}&persona=shopper`).catch(() => {});
@@ -132,79 +152,17 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
 
   const handleResetChat = () => {
     clearShopperHistory();
-    toast.success('Cleared previous conversation');
+    setConfirmClear(false);
+    toast.success("Cleared previous conversation");
   };
 
+  // Clicking 'X' deletes all previous conversations and closes the drawer
   const handleCloseAndClear = () => {
+    recognitionRef.current?.abort();
+    setIsListening(false);
+    setConfirmClear(false);
     clearShopperHistory();
     onClose();
-  };
-
-  const handleSend = async (textToSend) => {
-    const prompt = (textToSend || input).trim();
-    if (!prompt || loading) return;
-
-    setInput('');
-    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const newMessages = [...messages, { role: 'user', content: prompt, timestamp: nowTime }];
-    setMessages(newMessages);
-    setLoading(true);
-    setActiveThought(`Planning: "${prompt.slice(0, 28)}..."`);
-
-    try {
-      const res = await api.post('/store/agent/chat/', {
-        prompt: prompt,
-        session_id: SESSION_ID,
-        persona: 'shopper',
-        history: newMessages.map(m => ({ role: m.role, content: m.content }))
-      });
-
-      const reply = (res.data?.reply || 'Done.').replace(/[*`#]/g, '').trim();
-      const actions = res.data?.actions || [];
-      const toolsUsed = res.data?.tools_used || [];
-      const followUps = res.data?.follow_ups || [];
-      const latencyMs = res.data?.latency_ms || 10;
-
-      setActiveThought(`Completed in ${latencyMs}ms`);
-
-      const newAssistantMsg = {
-        role: 'assistant',
-        content: reply,
-        actions: actions,
-        tools_used: toolsUsed,
-        follow_ups: followUps,
-        latency_ms: latencyMs,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-
-      setMessages(prev => [...prev, newAssistantMsg]);
-
-      if (actions.length > 0) {
-        for (const act of actions) {
-          if (act.type === 'ADD_TO_CART' || act.action === 'ADD_TO_CART') {
-            handleAddToCart(act.item || act);
-          } else if (act.type === 'CLEAR_CART') {
-            clearCart?.();
-            toast.success('Cleared your shopping cart!');
-          } else if (act.type === 'NAVIGATE' && act.path) {
-            navigate(act.path);
-            toast.success(reply);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Shopper agent error:', err);
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: 'I found grocery items matching your request. You can also browse our categories directly!',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleAddToCart = (item) => {
@@ -214,300 +172,453 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       name: item.name,
       regular_price: item.price || item.regular_price,
       offer_price: item.price || item.regular_price,
-      unit: item.unit || '1 unit',
-      stock_quantity: 99
+      unit: item.unit || "1 unit",
+      image: item.image || item.thumbnail,
+      stock_quantity: 99,
     };
     add(prodObj, item.quantity || 1);
-    setAddedItems(prev => ({ ...prev, [item.id]: true }));
+    setAddedItems((prev) => ({ ...prev, [item.id]: true }));
     toast.success(`Added ${item.name} to cart! 🛍️`);
   };
 
   const handleAddAllBasket = (items) => {
     if (!items || !add) return;
-    items.forEach(it => {
-      add({
-        id: it.id,
-        name: it.name,
-        regular_price: it.price,
-        offer_price: it.price,
-        unit: it.unit || '1 unit',
-        stock_quantity: 99
-      }, 1);
-      setAddedItems(prev => ({ ...prev, [it.id]: true }));
+    items.forEach((it) => {
+      add(
+        {
+          id: it.id,
+          name: it.name,
+          regular_price: it.price,
+          offer_price: it.price,
+          unit: it.unit || "1 unit",
+          stock_quantity: 99,
+        },
+        1
+      );
+      setAddedItems((prev) => ({ ...prev, [it.id]: true }));
     });
     toast.success(`Added ${items.length} recipe ingredients to your cart! 🍳`);
   };
 
-  if (!isOpen) return null;
+  const handleSend = async (textToSend) => {
+    const prompt = (textToSend || input).trim();
+    if (!prompt || loading) return;
 
-  const turnCount = Math.max(0, Math.floor((messages.length - 1) / 2));
+    setInput("");
+    const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const newMessages = [...messages, { role: "user", content: prompt, timestamp: nowTime }];
+    setMessages(newMessages);
+    setLoading(true);
+
+    try {
+      const res = await api.post("/store/agent/chat/", {
+        prompt,
+        session_id: SESSION_ID,
+        persona: "shopper",
+        history: newMessages.map((m) => ({ role: m.role, content: m.content })),
+      });
+
+      const reply = cleanText(res.data?.reply || "Done.");
+      const actions = res.data?.actions || [];
+      const toolsUsed = res.data?.tools_used || [];
+      const followUps = res.data?.follow_ups || [];
+      const latencyMs = res.data?.latency_ms || 10;
+
+      const newAssistantMsg = {
+        role: "assistant",
+        content: reply,
+        actions,
+        tools_used: toolsUsed,
+        follow_ups: followUps,
+        latency_ms: latencyMs,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+
+      setMessages((prev) => [...prev, newAssistantMsg]);
+
+      if (actions.length > 0) {
+        for (const act of actions) {
+          if (act.type === "ADD_TO_CART" || act.action === "ADD_TO_CART") {
+            handleAddToCart(act.item || act);
+          } else if (act.type === "CLEAR_CART") {
+            clearCart?.();
+            toast.success("Cleared your shopping cart!");
+          } else if (act.type === "NAVIGATE" && act.path) {
+            navigate(act.path);
+            toast.success(reply);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Shopper agent error:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "I couldn’t complete that request. Please try again.",
+          error: true,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  sendRef.current = handleSend;
+
+  if (!isOpen) return null;
+  const isWelcome = messages.length === 1;
+  const cartCount =
+    cart?.items?.reduce((total, item) => total + Number(item.quantity || 0), 0) || 0;
 
   return (
-    <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[590px] animate-in slide-in-from-bottom-5 duration-200">
+    <section
+      ref={panelRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shopper-title"
+      className="fixed inset-0 md:inset-auto md:right-6 md:bottom-6 z-50 md:w-[430px] md:h-[min(700px,calc(100dvh-48px))] bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 md:border md:border-slate-200 dark:md:border-slate-800 md:rounded-xl shadow-2xl flex flex-col overflow-hidden outline-none"
+    >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-linear-to-r from-emerald-600 via-teal-700 to-indigo-900 text-white flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center border border-white/30 backdrop-blur-md">
-            <Bot className="w-4 h-4 text-emerald-300" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-xs font-bold leading-tight">Shopper AI Concierge</h3>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
-                Memory ({turnCount})
-              </span>
-            </div>
-            <p className="text-[10px] text-emerald-100/80">Persistent List-to-Cart & Deals</p>
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <ShopperMark className="size-10 shrink-0" />
+          <div className="min-w-0">
+            <h2 id="shopper-title" className="text-base font-extrabold leading-snug">
+              Shopper AI <span className="font-normal">Concierge</span>
+            </h2>
+            <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+              {storeSettings?.store_name || "Narendra Kirana"}
+            </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 gap-1">
           <button
-            onClick={handleResetChat}
-            className="p-1.5 text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-all cursor-pointer"
-            title="Start Fresh Chat"
+            type="button"
+            title="Clear conversation"
+            disabled={loading || isWelcome}
+            onClick={() => setConfirmClear(true)}
+            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 cursor-pointer"
           >
-            <RotateCcw className="w-4 h-4" />
+            <Trash2 className="size-4" />
           </button>
           <button
+            type="button"
+            title="Close and clear conversation"
             onClick={handleCloseAndClear}
-            className="p-1.5 text-white/80 hover:text-white rounded-lg hover:bg-white/10 transition-all cursor-pointer"
-            title="Close & Clear Conversation"
+            className="p-2 rounded-lg text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-slate-800 cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Live AI Thought Status Pill */}
-      <div className="bg-slate-950 text-slate-300 px-3 py-1.5 font-mono text-[10px] flex items-center justify-between border-b border-slate-800">
-        <div className="flex items-center gap-1.5 truncate">
-          <Cpu className={`w-3 h-3 text-emerald-400 ${loading ? 'animate-spin' : ''}`} />
-          <span className="text-emerald-400 truncate">{loading ? '⚡ Executing tools...' : activeThought}</span>
+      {confirmClear && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 px-5 py-3 text-xs font-medium"
+        >
+          <span>Clear this conversation?</span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmClear(false)}
+              className="px-2.5 py-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleResetChat}
+              className="px-2.5 py-1 rounded-md bg-rose-600 text-white font-bold hover:bg-rose-700 cursor-pointer"
+            >
+              Clear
+            </button>
+          </div>
         </div>
-        <span className="text-[10px] text-slate-500 shrink-0">CartSettle AI</span>
-      </div>
+      )}
 
-      {/* Quick Action Chips */}
-      <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => handleSend('Add 1 Organic Milk to my cart')}
-          className="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all whitespace-nowrap cursor-pointer shrink-0"
-        >
-          🛒 Add Milk to Cart
-        </button>
-        <button
-          onClick={() => handleSend('Suggest a dinner recipe basket under $20')}
-          className="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all whitespace-nowrap cursor-pointer shrink-0"
-        >
-          🍳 Pasta Dinner Basket
-        </button>
-        <button
-          onClick={() => handleSend('Find organic milk and check for the best deal')}
-          className="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all whitespace-nowrap cursor-pointer shrink-0"
-        >
-          🥛 Find Milk & Deals
-        </button>
-        <button
-          onClick={() => handleSend('Suggest healthy breakfast ingredients')}
-          className="px-2.5 py-1 text-[11px] font-medium rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all whitespace-nowrap cursor-pointer shrink-0"
-        >
-          🥗 Healthy Breakfast
-        </button>
-      </div>
+      {/* Conversation Body */}
+      <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6">
+        {isWelcome && (
+          <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+            <span className="h-px w-6 bg-emerald-600" />
+            Your shopping companion
+          </div>
+        )}
 
-      {/* Conversation Messages */}
-      <div className="flex-1 overflow-y-auto p-3.5 space-y-3 scrollbar-thin">
         {messages.map((msg, index) => {
-          const isUser = msg.role === 'user';
-          const isLastAssistant = !isUser && index === messages.length - 1;
-          const toolName = msg.tools_used?.[0]?.name;
+          const isUser = msg.role === "user";
+          const actions = msg.actions || [];
+          const groceryActions = actions.filter(
+            (a) => a.type === "RECOMMEND_BASKET" || a.type === "SEARCH_RESULTS"
+          );
+          const marginActions = actions.filter((a) => a.type === "MARGIN_DECISION");
 
           return (
             <div
               key={index}
-              className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
+              className={`flex flex-col ${isUser ? "items-end" : "items-start"} space-y-2`}
             >
+              {!isUser && !isWelcome && (
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                  <ShopperMark className="size-5" />
+                  <span>Shopper AI</span>
+                  {msg.latency_ms && (
+                    <span className="text-[10px] font-normal text-slate-400">
+                      • {msg.latency_ms}ms
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div
-                className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+                className={`${
                   isUser
-                    ? 'bg-linear-to-r from-emerald-600 to-teal-700 text-white rounded-br-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 rounded-bl-xs space-y-2'
+                    ? "max-w-[85%] rounded-2xl rounded-br-sm bg-slate-900 dark:bg-emerald-600 text-white px-4 py-2.5 text-sm"
+                    : isWelcome
+                    ? "w-full text-2xl font-bold leading-snug text-slate-900 dark:text-white"
+                    : "w-full text-sm leading-relaxed text-slate-800 dark:text-slate-100"
                 }`}
               >
-                <div className="whitespace-pre-wrap font-medium">{(msg.content || '').replace(/[*`#]/g, '').trim()}</div>
-
-                {/* Interactive Recipe Basket Card */}
-                {msg.actions && msg.actions.some(a => a.type === 'RECOMMEND_BASKET') && (
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 text-slate-900 dark:text-white space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                      <span className="flex items-center gap-1">
-                        <UtensilsCrossed className="w-3 h-3" />
-                        Bundle Ready
-                      </span>
-                    </div>
-                    {msg.actions.find(a => a.type === 'RECOMMEND_BASKET')?.items?.map((it, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-[11px] py-0.5 border-b border-slate-100 dark:border-slate-800">
-                        <span>{it.name}</span>
-                        <span className="font-semibold">${Number(it.price || 0).toFixed(2)}</span>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => handleAddAllBasket(msg.actions.find(a => a.type === 'RECOMMEND_BASKET')?.items)}
-                      className="w-full mt-1 py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add All Ingredients to Cart
-                    </button>
-                  </div>
-                )}
-
-                {/* Interactive Search Results Card */}
-                {msg.actions && msg.actions.some(a => a.type === 'SEARCH_RESULTS') && (
-                  <div className="space-y-1.5">
-                    {msg.actions.find(a => a.type === 'SEARCH_RESULTS')?.items?.slice(0, 3).map((it, idx) => (
-                      <div
-                        key={idx}
-                        className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 text-slate-900 dark:text-white flex items-center justify-between gap-2"
-                      >
-                        <div className="min-w-0">
-                          <div className="font-bold text-[11px] truncate">{it.name}</div>
-                          <div className="text-[10px] text-slate-500">
-                            ${Number(it.price || 0).toFixed(2)} • {it.unit}
-                            {it.best_deal_price && it.best_deal_price < it.price && (
-                              <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                                (Deal: ${Number(it.best_deal_price).toFixed(2)})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleAddToCart(it)}
-                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] flex items-center gap-1 shrink-0 transition-all cursor-pointer ${
-                            addedItems[it.id]
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
-                              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                          }`}
-                        >
-                          {addedItems[it.id] ? (
-                            <>
-                              <Check className="w-3 h-3" />
-                              Added
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="w-3 h-3" />
-                              Add
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Telemetry Footer */}
-                {!isUser && (toolName || msg.timestamp) && (
-                  <div className="pt-1 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between text-[9px] text-slate-400">
-                    {toolName ? (
-                      <span className="flex items-center gap-1 font-mono text-emerald-600 dark:text-emerald-400">
-                        <Zap className="w-2.5 h-2.5" />
-                        {toolName} • {msg.latency_ms || 9}ms
-                      </span>
-                    ) : (
-                      <span>Shopper AI</span>
-                    )}
-                    {msg.timestamp && <span>{msg.timestamp}</span>}
-                  </div>
-                )}
+                {cleanText(msg.content)}
               </div>
 
-              {/* Contextual Follow-Up Chips */}
-              {isLastAssistant && msg.follow_ups?.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap gap-1 max-w-[92%]">
-                  {msg.follow_ups.slice(0, 3).map((fu, fIdx) => (
+              {isWelcome && (
+                <div className="mt-3 flex w-full flex-col gap-2">
+                  {STARTERS.map(({ label, prompt, icon: Icon }) => (
                     <button
-                      key={fIdx}
-                      onClick={() => handleSend(fu)}
-                      className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 hover:bg-emerald-100 transition-all cursor-pointer"
+                      key={label}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => handleSend(prompt)}
+                      className="flex h-12 w-full items-center justify-between rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 px-4 text-sm font-medium transition-colors cursor-pointer"
                     >
-                      ↳ {fu}
+                      <span className="flex items-center gap-3">
+                        <Icon className="size-4 text-emerald-600" />
+                        {label}
+                      </span>
+                      <ArrowUpRight className="size-4 text-slate-400" />
                     </button>
                   ))}
                 </div>
               )}
+
+              {/* Grocery Basket / Search Results Cards */}
+              {groceryActions.map((action, actionIndex) => (
+                <div
+                  key={actionIndex}
+                  className="mt-2 w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 p-3"
+                >
+                  {action.type === "RECOMMEND_BASKET" && (
+                    <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                      <UtensilsCrossed className="size-3.5" />
+                      {action.recipe || "Meal ingredients"}
+                    </h3>
+                  )}
+                  <div className="divide-y divide-slate-200 dark:divide-slate-700/60">
+                    {(action.items || []).map((item, rowIndex) => (
+                      <GroceryRow
+                        key={item.id || rowIndex}
+                        item={item}
+                        currency="USD"
+                        added={addedItems[item.id]}
+                        onAdd={handleAddToCart}
+                      />
+                    ))}
+                  </div>
+                  {action.type === "RECOMMEND_BASKET" && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddAllBasket(action.items)}
+                      className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white transition-colors cursor-pointer"
+                    >
+                      <Plus className="size-3.5" />
+                      Add all ingredients
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              {/* Margin Negotiation Decision Card */}
+              {marginActions.map((act, mIdx) => {
+                const d = act.decision || {};
+                const approved = d.status === "APPROVED";
+                const dealPrice = approved ? d.final_price : d.counter_price;
+                return (
+                  <div
+                    key={mIdx}
+                    className={`w-full rounded-lg border p-3 ${
+                      approved
+                        ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/30"
+                        : "border-amber-200 bg-amber-50/70 dark:border-amber-800 dark:bg-amber-950/30"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span>{d.product}</span>
+                      <span className={approved ? "text-emerald-700" : "text-amber-700"}>
+                        {approved
+                          ? `${d.discount_approved_pct}% OFF APPROVED`
+                          : `MAX DEAL: ${d.counter_discount_pct}% OFF`}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="text-xs text-slate-600 dark:text-slate-300">
+                        Deal Price:{" "}
+                        <span className="font-extrabold text-slate-900 dark:text-white">
+                          ${Number(dealPrice || 0).toFixed(2)}
+                        </span>{" "}
+                        <span className="line-through text-slate-400">
+                          ${Number(d.original_price || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      {d.item && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart({ ...d.item, price: dealPrice })}
+                          className="rounded-md bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white cursor-pointer"
+                        >
+                          Add Deal to Cart
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Expandable Tool Telemetry */}
+              {!isUser &&
+                msg.tools_used?.map((tool, toolIndex) => {
+                  const tKey = `${index}-${toolIndex}`;
+                  const isOpenTool = !!openToolIdx[tKey];
+                  return (
+                    <div
+                      key={toolIndex}
+                      className="w-full rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 text-xs"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenToolIdx((p) => ({ ...p, [tKey]: !p[tKey] }))
+                        }
+                        className="flex w-full items-center justify-between px-3 py-2 text-left text-[11px] font-semibold text-slate-600 dark:text-slate-400 cursor-pointer"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Sparkles className="size-3 text-emerald-600" />
+                          Tool: {tool.name || "shopping_agent"}
+                        </span>
+                        {isOpenTool ? (
+                          <ChevronUp className="size-3.5" />
+                        ) : (
+                          <ChevronDown className="size-3.5" />
+                        )}
+                      </button>
+                      {isOpenTool && (
+                        <pre className="border-t border-slate-200 dark:border-slate-800 px-3 py-2 text-[10px] text-slate-500 overflow-x-auto">
+                          {JSON.stringify(tool.args || {}, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  );
+                })}
+
+              {/* Follow-up suggestions */}
+              {!isWelcome &&
+                !isUser &&
+                index === messages.length - 1 &&
+                !loading &&
+                msg.follow_ups?.length > 0 && (
+                  <div className="flex flex-col items-start gap-1 pt-1">
+                    {msg.follow_ups.slice(0, 2).map((followUp, fIndex) => (
+                      <button
+                        key={fIndex}
+                        type="button"
+                        onClick={() => handleSend(followUp)}
+                        className="flex items-center gap-1.5 text-left text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+                      >
+                        <ArrowUpRight className="size-3.5 shrink-0" />
+                        {followUp}
+                      </button>
+                    ))}
+                  </div>
+                )}
             </div>
           );
         })}
 
         {loading && (
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center">
-              <Bot className="w-3 h-3 animate-spin" />
-            </div>
-            <span>Working...</span>
+          <div role="status" className="flex items-center gap-2 text-sm text-slate-500">
+            <ShopperMark className="size-6 animate-pulse" />
+            <span>Thinking…</span>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Footer CTA & Input */}
-      <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate('/cart')}
-            className="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
-          >
-            <ShoppingBag className="w-3.5 h-3.5 text-emerald-500" />
-            <span>View Active Cart</span>
-          </button>
-          <button
-            onClick={() => navigate('/checkout')}
-            className="flex-1 py-1.5 px-2.5 rounded-xl bg-linear-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer shadow-xs"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>PayPal Pre-Auth</span>
-          </button>
-        </div>
+      {/* Footer */}
+      <footer className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 pt-2 pb-4">
+        <button
+          type="button"
+          onClick={() => {
+            navigate("/cart");
+          }}
+          className="mb-2 flex h-9 w-full items-center justify-between rounded-lg px-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            <ShoppingBag className="size-4 text-emerald-600" />
+            View cart
+          </span>
+          <span className="flex items-center gap-1.5 text-slate-500">
+            {cartCount > 0 && (
+              <span>
+                {cartCount} {cartCount === 1 ? "item" : "items"}
+              </span>
+            )}
+            <ArrowUpRight className="size-3.5" />
+          </span>
+        </button>
 
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleSend();
+            handleSend(input);
           }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2"
         >
+          <input
+            type="text"
+            aria-label="Message Shopper AI"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="What do you need today?"
+            disabled={loading}
+            className="flex-1 bg-transparent text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none"
+          />
           <button
             type="button"
             onClick={toggleVoice}
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              isListening
-                ? 'bg-rose-500 text-white animate-pulse'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-            }`}
-            title="Speech-to-Text"
-          >
-            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-          </button>
-
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask AI for groceries, deals, or recipe baskets..."
-            className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white px-3 py-2 rounded-xl text-xs focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
             disabled={loading}
-          />
-
+            title={isListening ? "Stop listening" : "Use voice input"}
+            className={`p-2 rounded-lg cursor-pointer ${
+              isListening
+                ? "text-rose-600 bg-rose-50"
+                : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            }`}
+          >
+            {isListening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+          </button>
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white transition-all cursor-pointer"
+            aria-label="Send message"
+            className="flex size-9 items-center justify-center rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white transition-colors cursor-pointer"
           >
-            <Send className="w-4 h-4" />
+            <ArrowUp className="size-4" />
           </button>
         </form>
-      </div>
-    </div>
+      </footer>
+    </section>
   );
 }
