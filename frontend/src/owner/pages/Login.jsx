@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import api from '../../services/api';
-import { Eye, EyeOff, Loader2, Store, Mail, User, Lock, ArrowUpRight, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Store, Mail, User, Lock, ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 const OwnerLoginForm = () => {
@@ -13,15 +13,12 @@ const OwnerLoginForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [capsLockActive, setCapsLockActive] = useState(false);
-  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking' | 'online' | 'waking'
 
   const isEmail = identifier.includes('@');
 
-  // Quick backend health check
+  // Gentle background ping to warm backend on load
   useEffect(() => {
-    api.get('/store/settings/')
-      .then(() => setBackendStatus('online'))
-      .catch(() => setBackendStatus('waking'));
+    api.get('/store/settings/').catch(() => {});
   }, []);
 
   const submit = async (event) => {
@@ -120,26 +117,15 @@ const OwnerLoginForm = () => {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-10 lg:p-14">
         <div className="w-full max-w-md">
 
-          {/* Top Status & Switcher Header */}
-          <div className="flex items-center justify-between gap-2 mb-6">
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[11px] font-bold ${
-              backendStatus === 'online'
-                ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                : 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${backendStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-ping'}`} />
-              {backendStatus === 'online' ? 'Render Server Online' : backendStatus === 'waking' ? 'Waking Up Server...' : 'Connecting...'}
-            </div>
-            <a 
-              href={`${import.meta.env.VITE_API_URL || 'https://narendra-kirana.onrender.com'}/`}
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition-colors"
-              title="Access Render Backend Server & Swagger Docs"
+          {/* Back to Storefront Link */}
+          <div className="mb-6">
+            <Link 
+              to="/" 
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
             >
-              <span>Backend Vault</span>
-              <ArrowUpRight size={13} />
-            </a>
+              <ArrowLeft size={13} />
+              <span>Back to Storefront</span>
+            </Link>
           </div>
 
           {/* Brand Header */}
@@ -175,32 +161,23 @@ const OwnerLoginForm = () => {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-950/40 text-sm font-bold text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-              <span className="shrink-0 mt-0.5">⚠️</span>
+            <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-950/40 text-sm font-semibold text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
               <span>{error}</span>
             </div>
           )}
 
           {/* Login Form */}
           <form onSubmit={submit} className="space-y-5">
-            {/* 1-Click Judge Demo Quick Access (Owner) */}
+            {/* Demo Login Button */}
             <div>
               <button
                 type="button"
                 disabled={submitting}
                 onClick={handleOneClickOwnerDemo}
-                className="w-full group relative overflow-hidden flex items-center justify-between gap-3 px-4 py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer"
+                className="w-full h-11 flex items-center justify-center gap-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-xs active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
-                <div className="flex items-center gap-2.5">
-                  <span className="p-1.5 rounded-lg bg-white/20">
-                    <Sparkles className="w-4 h-4 text-white" />
-                  </span>
-                  <div className="text-left">
-                    <div className="text-[10px] uppercase tracking-wider text-emerald-100 font-extrabold">Hackathon Reviewer</div>
-                    <div className="text-sm font-black">⚡ 1-Click Store Owner Demo Login</div>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-white/80 group-hover:translate-x-1 transition-transform" />
+                <span>{submitting ? 'Logging in...' : 'Demo Login'}</span>
+                <ArrowRight size={16} className="text-indigo-200" />
               </button>
             </div>
 
@@ -209,9 +186,9 @@ const OwnerLoginForm = () => {
               <button
                 type="button"
                 onClick={() => handleGoogleLogin()}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-sm transition-all text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer active:scale-[0.99]"
+                className="w-full h-11 flex items-center justify-center gap-2.5 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-xs transition-all text-sm font-semibold text-slate-700 dark:text-slate-200 cursor-pointer active:scale-[0.99]"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                     fill="#4285F4"
@@ -229,13 +206,13 @@ const OwnerLoginForm = () => {
                     fill="#EA4335"
                   />
                 </svg>
-                Sign in with Google
+                <span>Sign in with Google</span>
               </button>
             </div>
 
-            <div className="relative flex items-center justify-center my-5">
-              <span className="absolute bg-white dark:bg-slate-950 px-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                or sign in with password
+            <div className="relative flex items-center justify-center my-4">
+              <span className="absolute bg-white dark:bg-slate-950 px-3 text-xs font-medium text-slate-400">
+                or
               </span>
               <div className="w-full border-t border-slate-200 dark:border-slate-800" />
             </div>
@@ -244,10 +221,10 @@ const OwnerLoginForm = () => {
               {/* Dynamic Email or Username Field */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="owner-identifier" className="block text-sm font-bold text-slate-700 dark:text-slate-200">
+                  <label htmlFor="owner-identifier" className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
                     Email or Username
                   </label>
-                  <span className={`text-[10px] font-black uppercase tracking-wider ${isEmail ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${isEmail ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
                     {isEmail ? '✓ Email' : 'Email or Username'}
                   </span>
                 </div>
@@ -260,10 +237,10 @@ const OwnerLoginForm = () => {
                     autoFocus
                     required
                     type="text"
-                    placeholder="perali.narendra@gmail.com or username"
+                    placeholder="owner@cartsettle.store or username"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 pl-10 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm shadow-sm"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm shadow-2xs"
                   />
                 </div>
               </div>
@@ -271,12 +248,12 @@ const OwnerLoginForm = () => {
               {/* Password Field */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="owner-password" className="block text-sm font-bold text-slate-700 dark:text-slate-200">
+                  <label htmlFor="owner-password" className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
                     Password
                   </label>
                   <Link 
                     to="/owner/forgot-password" 
-                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition-colors"
+                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -292,8 +269,8 @@ const OwnerLoginForm = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyUp={(e) => setCapsLockActive(e.getModifierState('CapsLock'))}
-                    placeholder="Enter owner account password"
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 pl-10 pr-12 py-3.5 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm shadow-sm"
+                    placeholder="••••••••"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 pl-10 pr-12 py-3 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm shadow-2xs"
                   />
                   <button
                     type="button"
@@ -305,8 +282,8 @@ const OwnerLoginForm = () => {
                   </button>
                 </div>
                 {capsLockActive && (
-                  <p className="mt-1 text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                    <span>⚠️</span> Caps Lock is ON
+                  <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    Caps Lock is ON
                   </p>
                 )}
               </div>
@@ -381,7 +358,7 @@ const OwnerLoginForm = () => {
             </div>
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Direct Render Vault Access</span>
+              <span>Real-Time Inventory & POS</span>
             </div>
           </div>
         </div>
