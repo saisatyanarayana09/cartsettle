@@ -58,6 +58,56 @@ api.interceptors.request.use(
   }
 );
 
+// Offline demo login fallback (cloud previews without a reachable Django backend).
+// Only used for the two published judge demo accounts, and only when the backend is unreachable.
+const DEMO_ACCOUNTS = {
+  shopper: { password: 'Shopper@2026', user: { id: 101, username: 'shopper', email: 'shopper@cartsettle.store', first_name: 'Demo', last_name: 'Shopper', is_owner: false, is_staff: false } },
+  owner: { password: 'CartSettle@2026', user: { id: 1, username: 'owner', email: 'owner@cartsettle.store', first_name: 'Store', last_name: 'Owner', is_owner: true, is_staff: true } },
+};
+
+const base64UrlEncode = (obj) =>
+  btoa(unescape(encodeURIComponent(JSON.stringify(obj))))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+// JWT-shaped (unsigned) token so client-side expiry checks in App.jsx accept it.
+// The real Django backend will reject it, which correctly forces a real login once the backend is reachable.
+const buildOfflineDemoToken = (username, type, ttlSeconds) => {
+  const now = Math.floor(Date.now() / 1000);
+  const header = base64UrlEncode({ alg: 'none', typ: 'JWT' });
+  const payload = base64UrlEncode({ token_type: type, username, offline_demo: true, iat: now, exp: now + ttlSeconds });
+  return `${header}.${payload}.offline-demo`;
+};
+
+const isBackendUnreachable = (error) => {
+  if (!error?.response) return true; // network error, CORS block, DNS failure, timeout
+  const status = error.response.status;
+  if ([502, 503, 504].includes(status)) return true;
+  // Vite dev proxy answers 500 with an empty body when Django is not running (ECONNREFUSED)
+  if (status === 500 && (error.response.data === '' || error.response.data == null)) return true;
+  return false;
+};
+
+const tryOfflineDemoLogin = (originalRequest) => {
+  let body = originalRequest.data;
+  try {
+    body = typeof body === 'string' ? JSON.parse(body) : (body || {});
+  } catch {
+    return null;
+  }
+  const username = String(body.username || body.email || '').trim().toLowerCase();
+  const account = DEMO_ACCOUNTS[username];
+  if (!account || body.password !== account.password) return null;
+  console.warn('[Api] Backend unreachable. Using offline demo session for', username);
+  return {
+    access: buildOfflineDemoToken(username, 'access', 60 * 60 * 24),
+    refresh: buildOfflineDemoToken(username, 'refresh', 60 * 60 * 24 * 7),
+    user: account.user,
+    offline_demo: true,
+  };
+};
+
 // Concurrency queue for handling 401s without duplicate refresh calls
 let isRefreshing = false;
 let failedQueue = [];
@@ -108,6 +158,21 @@ api.interceptors.response.use(
         headers: {},
         config: originalRequest,
       });
+    }
+
+    // Offline demo login fallback: only for judge demo accounts when the backend cannot be reached.
+    // Wrong passwords (401) and real server errors still surface normally.
+    if ((originalRequest.url || '').includes('/auth/login/') && isBackendUnreachable(error)) {
+      const demoSession = tryOfflineDemoLogin(originalRequest);
+      if (demoSession) {
+        return Promise.resolve({
+          data: demoSession,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: originalRequest,
+        });
+      }
     }
 
     // Auto-retry cold start timeouts (Render spins down after 15m), transient network errors, and 502/503/504 gateway errors
