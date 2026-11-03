@@ -252,6 +252,124 @@ class AgentTools:
                     },
                     "required": ["product_name"]
                 }
+            },
+            {
+                "name": "create_or_delete_product",
+                "description": "Creates a new product or deletes/toggles an existing product in the store catalog.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "action": {
+                            "type": "STRING",
+                            "description": "'create', 'delete', 'activate', or 'deactivate'."
+                        },
+                        "name": {
+                            "type": "STRING",
+                            "description": "Product name."
+                        },
+                        "price": {
+                            "type": "NUMBER",
+                            "description": "Selling price in USD (for create)."
+                        },
+                        "stock_quantity": {
+                            "type": "INTEGER",
+                            "description": "Initial stock quantity (for create)."
+                        },
+                        "category_name": {
+                            "type": "STRING",
+                            "description": "Category name (e.g. Dairy, Bakery, Produce, Pantry)."
+                        }
+                    },
+                    "required": ["action", "name"]
+                }
+            },
+            {
+                "name": "manage_category",
+                "description": "Lists, creates, or deletes store product categories.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "action": {
+                            "type": "STRING",
+                            "description": "'list', 'create', or 'delete'."
+                        },
+                        "name": {
+                            "type": "STRING",
+                            "description": "Category name for create or delete."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+            {
+                "name": "manage_promo_code",
+                "description": "Lists, creates, or deletes promotional discount codes/offers.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "action": {
+                            "type": "STRING",
+                            "description": "'list', 'create', or 'delete'."
+                        },
+                        "code": {
+                            "type": "STRING",
+                            "description": "Promo code string (e.g. SAVE10)."
+                        },
+                        "discount_value": {
+                            "type": "NUMBER",
+                            "description": "Discount percentage or flat value."
+                        },
+                        "discount_type": {
+                            "type": "STRING",
+                            "description": "'PERCENTAGE' or 'FLAT'."
+                        }
+                    },
+                    "required": ["action"]
+                }
+            },
+            {
+                "name": "get_sales_and_analytics",
+                "description": "Retrieves store revenue, PayPal captured/released totals, order counts, and top products.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {}
+                }
+            },
+            {
+                "name": "manage_customers_and_delivery",
+                "description": "Lists customers, lists delivery partners, or assigns a delivery partner to an order.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "query_type": {
+                            "type": "STRING",
+                            "description": "'customers', 'delivery_partners', or 'assign_partner'."
+                        },
+                        "order_id": {
+                            "type": "STRING",
+                            "description": "Order ID when assigning delivery partner."
+                        }
+                    },
+                    "required": ["query_type"]
+                }
+            },
+            {
+                "name": "send_customer_broadcast",
+                "description": "Sends a promotional or store broadcast notification to all active customers.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "title": {
+                            "type": "STRING",
+                            "description": "Notification title."
+                        },
+                        "message": {
+                            "type": "STRING",
+                            "description": "Broadcast message body."
+                        }
+                    },
+                    "required": ["message"]
+                }
             }
         ]
         return owner_tools
@@ -725,6 +843,288 @@ class AgentTools:
                 "message": f"Updated {prod.name}: {', '.join(changes) or 'saved'}."
             }
 
+        elif name == "create_or_delete_product":
+            action = (args.get("action") or "create").lower().strip()
+            p_name = (args.get("name") or "").strip()
+            if not p_name:
+                return {"status": "error", "message": "Product name is required."}
+
+            if action in ("delete", "remove"):
+                prod = Product.objects.filter(name__icontains=p_name).first()
+                if not prod:
+                    return {"status": "error", "message": f"Product '{p_name}' not found."}
+                deleted_name = prod.name
+                try:
+                    prod.delete()
+                except Exception:
+                    prod.is_active = False
+                    prod.stock_quantity = 0
+                    prod.save()
+                cache.clear()
+                return {
+                    "status": "SUCCESS",
+                    "name": deleted_name,
+                    "message": f"Removed product '{deleted_name}' from the store catalog."
+                }
+
+            if action in ("deactivate", "disable", "hide"):
+                prod = Product.objects.filter(name__icontains=p_name).first()
+                if not prod:
+                    return {"status": "error", "message": f"Product '{p_name}' not found."}
+                prod.is_active = False
+                prod.save(update_fields=["is_active"])
+                cache.clear()
+                return {"status": "SUCCESS", "product_id": prod.id, "name": prod.name, "price": float(prod.regular_price), "stock": prod.stock_quantity, "message": f"Deactivated '{prod.name}'."}
+
+            if action in ("activate", "enable", "show"):
+                prod = Product.objects.filter(name__icontains=p_name).first()
+                if not prod:
+                    return {"status": "error", "message": f"Product '{p_name}' not found."}
+                prod.is_active = True
+                prod.save(update_fields=["is_active"])
+                cache.clear()
+                return {"status": "SUCCESS", "product_id": prod.id, "name": prod.name, "price": float(prod.regular_price), "stock": prod.stock_quantity, "message": f"Activated '{prod.name}'."}
+
+            # Create or update product
+            price = Decimal(str(args.get("price") or 4.99)).quantize(Decimal("0.01"))
+            cost = Decimal(str(args.get("cost_price") or (price * Decimal("0.78")))).quantize(Decimal("0.01"))
+            stock = max(1, int(args.get("stock_quantity") or 25))
+            cat_name = (args.get("category_name") or "Groceries").strip()
+            unit = (args.get("unit") or "1 unit").strip()
+
+            cat = Category.objects.filter(name__icontains=cat_name).first() or Category.objects.filter(is_active=True).first()
+            if not cat:
+                cat = Category.objects.create(name=cat_name.title(), is_active=True)
+
+            prod, created = Product.objects.update_or_create(
+                name__iexact=p_name,
+                defaults={
+                    "name": p_name.title() if p_name.islower() else p_name,
+                    "category": cat,
+                    "regular_price": price,
+                    "offer_price": price,
+                    "cost_price": cost,
+                    "stock_quantity": stock,
+                    "unit": unit,
+                    "is_active": True,
+                    "is_in_stock": stock > 0,
+                }
+            )
+            cache.clear()
+            return {
+                "status": "SUCCESS",
+                "product_id": prod.id,
+                "name": prod.name,
+                "price": float(price),
+                "stock": prod.stock_quantity,
+                "category": cat.name,
+                "message": f"{'Created' if created else 'Updated'} product '{prod.name}' at ${float(price):.2f} ({stock} units in {cat.name})."
+            }
+
+        elif name == "manage_category":
+            action = (args.get("action") or "list").lower().strip()
+            c_name = (args.get("name") or "").strip()
+
+            if action == "create" and c_name:
+                cat, created = Category.objects.get_or_create(
+                    name__iexact=c_name,
+                    defaults={"name": c_name.title(), "is_active": True}
+                )
+                if not cat.is_active:
+                    cat.is_active = True
+                    cat.save(update_fields=["is_active"])
+                cache.clear()
+                return {
+                    "status": "SUCCESS",
+                    "category_id": cat.id,
+                    "name": cat.name,
+                    "message": f"{'Created' if created else 'Activated'} category '{cat.name}'."
+                }
+
+            if action in ("delete", "remove") and c_name:
+                cat = Category.objects.filter(name__icontains=c_name).first()
+                if not cat:
+                    return {"status": "error", "message": f"Category '{c_name}' not found."}
+                deleted_name = cat.name
+                cat.delete()
+                cache.clear()
+                return {"status": "SUCCESS", "name": deleted_name, "message": f"Deleted category '{deleted_name}'."}
+
+            cats = list(Category.objects.filter(is_active=True).order_by("display_order", "name"))
+            cat_list = [
+                {"id": c.id, "name": c.name, "products_count": c.products.filter(is_active=True).count()}
+                for c in cats
+            ]
+            cat_summary = ", ".join(f"{c['name']} ({c['products_count']})" for c in cat_list)
+            return {
+                "status": "SUCCESS",
+                "count": len(cat_list),
+                "categories": cat_list,
+                "message": f"{len(cat_list)} active categories: {cat_summary}."
+            }
+
+        elif name == "manage_promo_code":
+            from offers.models import PromoCode
+            action = (args.get("action") or "list").lower().strip()
+            code = (args.get("code") or "").strip().upper()
+
+            if action == "create" and code:
+                disc_val = Decimal(str(args.get("discount_value") or 10)).quantize(Decimal("0.01"))
+                disc_type = (args.get("discount_type") or "PERCENTAGE").upper()
+                if disc_type not in ("PERCENTAGE", "FLAT"):
+                    disc_type = "PERCENTAGE"
+                min_amt = Decimal(str(args.get("min_order_amount") or 0)).quantize(Decimal("0.01"))
+                promo, created = PromoCode.objects.update_or_create(
+                    code=code,
+                    defaults={
+                        "discount_type": disc_type,
+                        "discount_value": disc_val,
+                        "min_order_amount": min_amt,
+                        "is_active": True,
+                    }
+                )
+                cache.clear()
+                label = f"{float(disc_val):.0f}% off" if disc_type == "PERCENTAGE" else f"${float(disc_val):.2f} off"
+                return {
+                    "status": "SUCCESS",
+                    "code": promo.code,
+                    "discount_type": promo.discount_type,
+                    "discount_value": float(promo.discount_value),
+                    "message": f"{'Created' if created else 'Updated'} promo code {promo.code} ({label})."
+                }
+
+            if action in ("delete", "remove", "deactivate") and code:
+                promo = PromoCode.objects.filter(code__iexact=code).first()
+                if not promo:
+                    return {"status": "error", "message": f"Promo code '{code}' not found."}
+                if action == "deactivate":
+                    promo.is_active = False
+                    promo.save(update_fields=["is_active"])
+                    msg = f"Deactivated promo code {code}."
+                else:
+                    promo.delete()
+                    msg = f"Deleted promo code {code}."
+                cache.clear()
+                return {"status": "SUCCESS", "code": code, "message": msg}
+
+            promos = list(PromoCode.objects.filter(is_active=True).order_by("-created_at")[:8])
+            promo_list = [
+                {
+                    "id": p.id,
+                    "code": p.code,
+                    "discount_type": p.discount_type,
+                    "discount_value": float(p.discount_value),
+                    "min_order_amount": float(p.min_order_amount),
+                }
+                for p in promos
+            ]
+            if not promo_list:
+                return {"status": "SUCCESS", "promos": [], "message": "No active promo codes currently. Ask me to create one (e.g. 'Create promo SAVE10 for 10% off')."}
+            summary = ", ".join(
+                f"{p['code']} ({int(p['discount_value'])}% off)" if p["discount_type"] == "PERCENTAGE" else f"{p['code']} (${p['discount_value']:.2f} off)"
+                for p in promo_list
+            )
+            return {"status": "SUCCESS", "promos": promo_list, "message": f"Active promo codes: {summary}."}
+
+        elif name == "get_sales_and_analytics":
+            from django.db.models import Sum
+            total_orders = Order.objects.count()
+            completed_orders = Order.objects.filter(status__in=["READY", "OUT_FOR_DELIVERY", "COMPLETED"]).count()
+            pending_orders = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
+            agg = Order.objects.aggregate(
+                rev=Sum("total_amount"),
+                cap=Sum("captured_amount"),
+                rel=Sum("released_amount")
+            )
+            rev = float(agg["rev"] or 0.0)
+            cap = float(agg["cap"] or 0.0)
+            rel = float(agg["rel"] or 0.0)
+            aov = (rev / total_orders) if total_orders > 0 else 0.0
+            return {
+                "status": "SUCCESS",
+                "total_orders": total_orders,
+                "completed_orders": completed_orders,
+                "pending_orders": pending_orders,
+                "total_revenue": rev,
+                "paypal_captured": cap,
+                "paypal_released": rel,
+                "avg_order_value": round(aov, 2),
+                "message": f"Sales Summary: ${rev:.2f} total volume across {total_orders} orders (AOV: ${aov:.2f} • PayPal Captured: ${cap:.2f} • Auto-Released: ${rel:.2f})."
+            }
+
+        elif name == "manage_customers_and_delivery":
+            from accounts.models import User
+            q_type = (args.get("query_type") or "customers").lower().strip()
+
+            if q_type == "delivery_partners":
+                partners = list(User.objects.filter(is_delivery_partner=True, is_active=True)[:10])
+                p_list = [{"id": u.id, "name": u.get_full_name() or u.username, "username": u.username} for u in partners]
+                return {
+                    "status": "SUCCESS",
+                    "count": len(p_list),
+                    "partners": p_list,
+                    "message": f"{len(p_list)} active delivery partners ready for dispatch." if p_list else "No active delivery partners registered yet."
+                }
+
+            if q_type == "assign_partner":
+                from django.utils import timezone
+                oid = (args.get("order_id") or "").strip().upper()
+                order = Order.objects.filter(id=oid).first() or Order.objects.order_by("-created_at").first()
+                partner = User.objects.filter(is_delivery_partner=True, is_active=True).first()
+                if not order:
+                    return {"status": "error", "message": "Order not found."}
+                if partner:
+                    order.delivery_partner = partner
+                order.assigned_at = timezone.now()
+                order.status = "OUT_FOR_DELIVERY"
+                order.save()
+                p_name = (partner.get_full_name() or partner.username) if partner else "Express Courier"
+                return {
+                    "status": "SUCCESS",
+                    "order_id": str(order.id),
+                    "partner": p_name,
+                    "message": f"Assigned {p_name} to Order #{order.id} and dispatched for delivery."
+                }
+
+            customers = list(User.objects.filter(is_customer=True, is_active=True).order_by("-date_joined")[:8])
+            total_cust = User.objects.filter(is_customer=True, is_active=True).count()
+            c_list = [
+                {
+                    "id": u.id,
+                    "name": u.get_full_name() or u.username,
+                    "orders_count": u.orders.count(),
+                }
+                for u in customers
+            ]
+            return {
+                "status": "SUCCESS",
+                "total_customers": total_cust,
+                "customers": c_list,
+                "message": f"{total_cust} active store customers."
+            }
+
+        elif name == "send_customer_broadcast":
+            from accounts.models import User
+            from notifications.models import Notification
+            msg_body = (args.get("message") or "").strip()
+            title = (args.get("title") or "Store Update").strip()
+            if not msg_body:
+                return {"status": "error", "message": "Broadcast message is required."}
+            customers = list(User.objects.filter(is_customer=True, is_active=True)[:200])
+            notifs = [
+                Notification(user=u, title=title, message=msg_body, category="PROMO")
+                for u in customers
+            ]
+            if notifs:
+                Notification.objects.bulk_create(notifs)
+            return {
+                "status": "SUCCESS",
+                "recipients": len(notifs),
+                "title": title,
+                "broadcast_message": msg_body,
+                "message": f"Broadcast sent to {len(notifs)} customers: '{msg_body}'."
+            }
+
         return {"status": "error", "message": f"Unknown tool: {name}"}
 
 
@@ -1050,20 +1450,57 @@ class AgentService:
             logger.warning("Could not build live store context: %s", e)
             return "Store active with protected 12% margin floor."
 
+    def _match_product_from_text(self, text: str):
+        """Dynamically matches any product in the database from natural language text."""
+        lower = text.lower()
+        stop_words = {
+            "update", "change", "set", "price", "stock", "add", "buy", "get", "put",
+            "cart", "bag", "order", "find", "search", "check", "best", "deal", "for",
+            "the", "and", "with", "from", "remove", "delete", "create", "product",
+            "item", "units", "unit", "off", "discount", "margin", "restock", "payout",
+            "via", "paypal", "please", "can", "you", "want", "need", "show", "me"
+        }
+        all_prods = list(Product.objects.filter(is_active=True).order_by("id"))
+        # 1. Exact full name substring match
+        for p in all_prods:
+            if p.name.lower() in lower:
+                return p
+        # 2. Match any word (>= 3 chars) in product name
+        for p in all_prods:
+            p_words = [w.lower().strip("(),.") for w in p.name.split() if len(w) >= 3]
+            for pw in p_words:
+                if pw not in stop_words and re.search(rf"\b{re.escape(pw)}s?\b", lower):
+                    return p
+        return None
+
     def _check_fast_path(self, prompt: str, persona: str, session_id: str) -> dict:
-        """Sub-50ms instant execution with minimalist, simple, actionable responses."""
+        """Sub-50ms instant execution for all shop operations while strictly blocking Settings."""
         lower = prompt.lower().strip()
 
-        # --- A. AUTONOMOUS PORTAL NAVIGATION ("open orders", "go to products", "go to cart", "checkout") ---
-        if any(lower.startswith(prefix) for prefix in ["open ", "go to ", "navigate to ", "take me to ", "show me "]) or lower in ["checkout", "go to checkout", "view cart", "open cart"]:
+        # --- 0. STRICT SETTINGS GUARDRAIL (Block all Settings access/modifications) ---
+        if any(k in lower for k in [
+            "setting", "store setting", "advanced setting", "account setting", "app setting",
+            "operating hour", "store hour", "delivery radius", "change store name", "change password",
+            "language setting", "theme setting"
+        ]):
+            return {
+                "reply": "Settings are restricted and cannot be accessed or modified by AI. Please update Settings manually.",
+                "tools_used": [{"name": "settings_guardrail", "args": {"blocked": True}}],
+                "actions": [],
+                "tool_result": {"status": "blocked", "reason": "settings_restricted"}
+            }
+
+        # --- A. AUTONOMOUS PORTAL NAVIGATION (All Shop Pages EXCEPT Settings) ---
+        if any(lower.startswith(prefix) for prefix in ["open ", "go to ", "navigate to ", "take me to ", "visit "]) or lower in ["checkout", "go to checkout", "view cart", "open cart"]:
             ord_nav = re.search(r"\b(ord\d+\w*)\b", lower)
-            if ord_nav and persona == "owner":
+            if ord_nav:
                 oid = ord_nav.group(1).upper()
+                route = f"/owner/orders/{oid}" if persona == "owner" else f"/orders/{oid}"
                 return {
                     "reply": f"Opening Order #{oid}.",
-                    "tools_used": [{"name": "navigate_portal", "args": {"path": f"/owner/orders/{oid}"}}],
-                    "actions": [{"type": "NAVIGATE", "path": f"/owner/orders/{oid}"}],
-                    "tool_result": {"navigated_to": f"/owner/orders/{oid}"}
+                    "tools_used": [{"name": "navigate_portal", "args": {"path": route}}],
+                    "actions": [{"type": "NAVIGATE", "path": route}],
+                    "tool_result": {"navigated_to": route}
                 }
 
             nav_map_owner = [
@@ -1072,10 +1509,13 @@ class AgentService:
                 (["categor"], "/owner/categories", "Categories"),
                 (["invoice", "receipt"], "/owner/invoices", "Invoices"),
                 (["sale", "analytic", "revenue"], "/owner/sales", "Sales Analytics"),
-                (["offer", "promo", "coupon"], "/owner/offers", "Offers & Discounts"),
+                (["offer", "promo", "coupon"], "/owner/offers", "Offers & Promo Codes"),
                 (["customer", "buyer"], "/owner/customers", "Customers"),
                 (["delivery", "fleet", "partner"], "/owner/delivery-partners", "Delivery Fleet"),
-                (["setting"], "/owner/settings", "Store Settings"),
+                (["broadcast", "notification"], "/owner/notifications", "Customer Broadcasts"),
+                (["referral"], "/owner/referrals", "Referrals"),
+                (["showcase", "banner", "homepage"], "/owner/showcase", "Storefront Showcase"),
+                (["feedback", "review"], "/owner/feedback", "Customer Feedback"),
                 (["dashboard", "home"], "/owner", "Owner Dashboard"),
             ]
             nav_map_shopper = [
@@ -1083,7 +1523,9 @@ class AgentService:
                 (["cart", "bag", "basket"], "/cart", "Shopping Cart"),
                 (["order"], "/profile/orders", "My Orders"),
                 (["wallet"], "/profile/wallet", "My Wallet"),
-                (["offer", "deal"], "/profile/offers", "Offers & Deals"),
+                (["offer", "deal", "promo", "coupon"], "/profile/offers", "Offers & Deals"),
+                (["favorite", "wishlist"], "/profile/favorites", "Saved Favorites"),
+                (["categor"], "/categories", "Categories"),
                 (["product", "shop", "store"], "/products", "Store Catalog"),
             ]
             target_map = nav_map_owner if persona == "owner" else nav_map_shopper
@@ -1096,8 +1538,27 @@ class AgentService:
                         "tool_result": {"navigated_to": route_path}
                     }
 
-        # --- B. AUTO-SETTLE ORDER ("Settle order ORD...", "Settle pending order", "Settle latest order") ---
+        # --- B. AUTO-SETTLE ORDER ("Settle order ORD...", "Settle pending order", "Settle all pending orders") ---
         if any(w in lower for w in ["settle", "capture", "pack order", "pack and settle"]):
+            if "all" in lower and persona == "owner":
+                pending_list = list(Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).order_by("-created_at")[:10])
+                if not pending_list:
+                    return {"reply": "All orders are already settled.", "tools_used": [], "actions": [], "tool_result": {}}
+                settled_ids = []
+                total_cap = 0.0
+                for po in pending_list:
+                    r = AgentTools.execute_tool("auto_settle_order_packing", {"order_id": str(po.id)}, session_id)
+                    if r.get("status") == "SUCCESS":
+                        settled_ids.append(str(po.id))
+                        total_cap += float(r.get("captured_amount", 0))
+                reply = f"Settled {len(settled_ids)} pending orders (${total_cap:.2f} total PayPal captured)."
+                return {
+                    "reply": reply,
+                    "tools_used": [{"name": "auto_settle_order_packing", "args": {"batch_count": len(settled_ids)}}],
+                    "actions": [{"type": "REFRESH_DATA"}],
+                    "tool_result": {"settled_orders": settled_ids, "total_captured": total_cap}
+                }
+
             ord_match = re.search(r"\b(ord\d+\w*)\b", lower)
             if ord_match:
                 target_id = ord_match.group(1).upper()
@@ -1107,73 +1568,176 @@ class AgentService:
             if target_id:
                 res = AgentTools.execute_tool("auto_settle_order_packing", {"order_id": target_id}, session_id)
                 reply = self._synthesize_tool_response("auto_settle_order_packing", res, persona)
-                actions = self._extract_frontend_actions("auto_settle_order_packing", res) + [{"type": "REFRESH_DATA"}]
+                actions = self._extract_frontend_actions("auto_settle_order_packing", res)
                 return {"reply": reply, "tools_used": [{"name": "auto_settle_order_packing", "args": {"order_id": target_id}}], "actions": actions, "tool_result": res}
 
-        # --- C. OWNER ORDER STATUS ACTIONS ("Accept order...", "Dispatch order...", "Deliver order...", "Cancel order...") ---
-        if persona == "owner" and any(w in lower for w in ["accept order", "prepare order", "dispatch order", "deliver order", "reject order", "cancel order", "mark order"]):
-            ord_match = re.search(r"\b(ord\d+\w*)\b", lower)
-            target_ord = Order.objects.filter(id=ord_match.group(1).upper()).first() if ord_match else Order.objects.order_by("-created_at").first()
-            if target_ord:
-                new_st = "ACCEPTED"
-                if "prepar" in lower:
-                    new_st = "PREPARING"
-                elif "dispatch" in lower or "out for delivery" in lower or "ship" in lower:
-                    new_st = "OUT_FOR_DELIVERY"
-                elif "deliver" in lower:
-                    new_st = "DELIVERED"
-                elif "reject" in lower or "cancel" in lower:
-                    new_st = "REJECTED"
-                res = AgentTools.execute_tool("update_order_status", {"order_id": str(target_ord.id), "new_status": new_st}, session_id)
-                actions = [
-                    {
-                        "type": "ORDER_CARD",
-                        "order": {
-                            "id": str(target_ord.id),
-                            "customer": res.get("customer", "Customer"),
-                            "status": new_st,
-                            "total": res.get("total", float(target_ord.total_amount)),
-                            "authorized": float(target_ord.authorized_amount or target_ord.total_amount),
-                            "captured": float(target_ord.captured_amount or target_ord.total_amount),
-                            "released": float(target_ord.released_amount or 0),
-                            "can_settle": new_st in ("NEW", "ACCEPTED", "PREPARING")
-                        }
-                    },
-                    {"type": "REFRESH_DATA"}
-                ]
+        # --- C. OWNER ORDER STATUS & DELIVERY PARTNER ASSIGNMENT ---
+        if persona == "owner":
+            if "assign" in lower and ("delivery" in lower or "partner" in lower or "courier" in lower):
+                ord_match = re.search(r"\b(ord\d+\w*)\b", lower)
+                oid = ord_match.group(1).upper() if ord_match else ""
+                res = AgentTools.execute_tool("manage_customers_and_delivery", {"query_type": "assign_partner", "order_id": oid}, session_id)
                 return {
-                    "reply": res.get("message", f"Order #{target_ord.id} marked as {new_st}."),
-                    "tools_used": [{"name": "update_order_status", "args": {"order_id": str(target_ord.id), "new_status": new_st}}],
+                    "reply": res.get("message", "Assigned delivery partner."),
+                    "tools_used": [{"name": "manage_customers_and_delivery", "args": {"query_type": "assign_partner", "order_id": oid}}],
+                    "actions": [{"type": "REFRESH_DATA"}],
+                    "tool_result": res
+                }
+
+            if any(w in lower for w in ["accept order", "prepare order", "ready order", "dispatch order", "deliver order", "complete order", "reject order", "cancel order", "mark order"]):
+                ord_match = re.search(r"\b(ord\d+\w*)\b", lower)
+                target_ord = Order.objects.filter(id=ord_match.group(1).upper()).first() if ord_match else Order.objects.order_by("-created_at").first()
+                if target_ord:
+                    new_st = "ACCEPTED"
+                    if "prepar" in lower:
+                        new_st = "PREPARING"
+                    elif "ready" in lower:
+                        new_st = "READY"
+                    elif "dispatch" in lower or "out for delivery" in lower or "ship" in lower:
+                        new_st = "OUT_FOR_DELIVERY"
+                    elif "deliver" in lower or "complete" in lower:
+                        new_st = "DELIVERED"
+                    elif "reject" in lower or "cancel" in lower:
+                        new_st = "REJECTED"
+                    res = AgentTools.execute_tool("update_order_status", {"order_id": str(target_ord.id), "new_status": new_st}, session_id)
+                    actions = [
+                        {
+                            "type": "ORDER_CARD",
+                            "order": {
+                                "id": str(target_ord.id),
+                                "customer": res.get("customer", "Customer"),
+                                "status": new_st,
+                                "total": res.get("total", float(target_ord.total_amount)),
+                                "authorized": float(target_ord.authorized_amount or target_ord.total_amount),
+                                "captured": float(target_ord.captured_amount or target_ord.total_amount),
+                                "released": float(target_ord.released_amount or 0),
+                                "can_settle": new_st in ("NEW", "ACCEPTED", "PREPARING")
+                            }
+                        },
+                        {"type": "REFRESH_DATA"}
+                    ]
+                    return {
+                        "reply": res.get("message", f"Order #{target_ord.id} marked as {new_st}."),
+                        "tools_used": [{"name": "update_order_status", "args": {"order_id": str(target_ord.id), "new_status": new_st}}],
+                        "actions": actions,
+                        "tool_result": res
+                    }
+
+            # --- D. OWNER CREATE / DELETE / TOGGLE PRODUCT ---
+            if any(w in lower for w in ["create product", "add product", "new product", "delete product", "remove product", "deactivate product", "disable product", "activate product", "enable product"]):
+                if any(w in lower for w in ["delete product", "remove product"]):
+                    p_action = "delete"
+                elif any(w in lower for w in ["deactivate product", "disable product"]):
+                    p_action = "deactivate"
+                elif any(w in lower for w in ["activate product", "enable product"]):
+                    p_action = "activate"
+                else:
+                    p_action = "create"
+
+                matched_prod = self._match_product_from_text(lower)
+                if matched_prod and p_action != "create":
+                    p_name = matched_prod.name
+                else:
+                    cleaned = re.sub(r"^(create|add|new|delete|remove|deactivate|disable|activate|enable)\s+product\s+", "", prompt, flags=re.IGNORECASE)
+                    cleaned = re.split(r"\s+(?:at|for|price|stock|\$)\b", cleaned, flags=re.IGNORECASE)[0].strip(" '\"")
+                    p_name = cleaned or (matched_prod.name if matched_prod else "Organic Honey")
+
+                price_match = re.search(r"\$(\d+(?:\.\d+)?)|price\s+(\d+(?:\.\d+)?)|at\s+(\d+(?:\.\d+)?)", lower)
+                price_val = float(next((g for g in price_match.groups() if g), 4.99)) if price_match else 4.99
+                stock_match = re.search(r"stock\s+(\d+)|(\d+)\s+units", lower)
+                stock_val = int(next((g for g in stock_match.groups() if g), 25)) if stock_match else 25
+
+                args = {"action": p_action, "name": p_name, "price": price_val, "stock_quantity": stock_val}
+                res = AgentTools.execute_tool("create_or_delete_product", args, session_id)
+                actions = [{"type": "REFRESH_DATA"}]
+                if res.get("product_id"):
+                    actions.insert(0, {"type": "PRODUCT_UPDATED", "product": res})
+                return {
+                    "reply": res.get("message", "Catalog updated."),
+                    "tools_used": [{"name": "create_or_delete_product", "args": args}],
                     "actions": actions,
                     "tool_result": res
                 }
 
-        # --- D. OWNER PRODUCT PRICE / STOCK UPDATE ACTIONS ("update price of...", "update stock of...", "set stock...") ---
-        if persona == "owner" and any(w in lower for w in ["update price", "change price", "set price", "update stock", "change stock", "set stock", "add stock"]):
-            keywords = ["milk", "bread", "pasta", "sauce", "marinara", "cheese", "parmesan", "strawberries", "eggs", "avocado", "yogurt", "atta"]
-            matched_kw = next((kw for kw in keywords if kw in lower), "Milk")
-            num_match = re.findall(r"(\d+(?:\.\d+)?)", lower)
-            val = float(num_match[-1]) if num_match else 25.0
-            args = {"product_name": matched_kw}
-            if "price" in lower:
-                args["new_price"] = val
-            elif "add stock" in lower:
-                args["add_stock"] = int(val)
-            else:
-                args["new_stock"] = int(val)
-            res = AgentTools.execute_tool("update_product_inventory", args, session_id)
-            return {
-                "reply": res.get("message", "Product updated."),
-                "tools_used": [{"name": "update_product_inventory", "args": args}],
-                "actions": [{"type": "PRODUCT_UPDATED", "product": res}, {"type": "REFRESH_DATA"}],
-                "tool_result": res
-            }
+            # --- E. OWNER PRODUCT PRICE / STOCK UPDATE ACTIONS ---
+            if any(w in lower for w in ["update price", "change price", "set price", "update stock", "change stock", "set stock", "add stock"]) or (re.search(r"\b(stock|price)\b", lower) and any(w in lower for w in ["update", "set", "change", "increase"])):
+                matched_prod = self._match_product_from_text(lower)
+                prod_name = matched_prod.name if matched_prod else "Milk"
+                num_match = re.findall(r"(\d+(?:\.\d+)?)", lower)
+                val = float(num_match[-1]) if num_match else 25.0
+                args = {"product_name": prod_name}
+                if "price" in lower:
+                    args["new_price"] = val
+                elif "add stock" in lower or "increase stock" in lower:
+                    args["add_stock"] = int(val)
+                else:
+                    args["new_stock"] = int(val)
+                res = AgentTools.execute_tool("update_product_inventory", args, session_id)
+                return {
+                    "reply": res.get("message", "Product updated."),
+                    "tools_used": [{"name": "update_product_inventory", "args": args}],
+                    "actions": [{"type": "PRODUCT_UPDATED", "product": res}, {"type": "REFRESH_DATA"}],
+                    "tool_result": res
+                }
+
+            # --- F. OWNER CATEGORY MANAGEMENT ("create category...", "delete category...", "list categories") ---
+            if "categor" in lower:
+                if any(w in lower for w in ["create ", "add ", "new "]):
+                    c_name = re.sub(r"^.*?(?:create|add|new)\s+category\s+", "", prompt, flags=re.IGNORECASE).strip(" '\".")
+                    res = AgentTools.execute_tool("manage_category", {"action": "create", "name": c_name or "Specialty"}, session_id)
+                    return {"reply": res.get("message"), "tools_used": [{"name": "manage_category", "args": {"action": "create", "name": c_name}}], "actions": [{"type": "REFRESH_DATA"}], "tool_result": res}
+                if any(w in lower for w in ["delete ", "remove "]):
+                    c_name = re.sub(r"^.*?(?:delete|remove)\s+category\s+", "", prompt, flags=re.IGNORECASE).strip(" '\".")
+                    res = AgentTools.execute_tool("manage_category", {"action": "delete", "name": c_name}, session_id)
+                    return {"reply": res.get("message"), "tools_used": [{"name": "manage_category", "args": {"action": "delete", "name": c_name}}], "actions": [{"type": "REFRESH_DATA"}], "tool_result": res}
+                res = AgentTools.execute_tool("manage_category", {"action": "list"}, session_id)
+                return {"reply": res.get("message"), "tools_used": [{"name": "manage_category", "args": {"action": "list"}}], "actions": [], "tool_result": res}
+
+            # --- G. OWNER PROMO CODE & OFFER MANAGEMENT ("create promo SAVE10 for 10% off", "delete promo...", "list promos") ---
+            if any(w in lower for w in ["promo", "coupon", "offer code"]):
+                code_match = re.search(r"\b([A-Z0-9]{4,15})\b", prompt)
+                code_str = code_match.group(1).upper() if code_match and code_match.group(1).upper() not in ("PROMO", "CREATE", "DELETE", "COUPON", "OFFER") else "SAVE10"
+                if any(w in lower for w in ["create", "add", "new"]):
+                    pct_match = re.search(r"(\d+(?:\.\d+)?)\s*%", lower)
+                    flat_match = re.search(r"\$(\d+(?:\.\d+)?)", lower)
+                    disc_type = "FLAT" if (flat_match and not pct_match) else "PERCENTAGE"
+                    disc_val = float(flat_match.group(1)) if (flat_match and not pct_match) else (float(pct_match.group(1)) if pct_match else 10.0)
+                    args = {"action": "create", "code": code_str, "discount_value": disc_val, "discount_type": disc_type}
+                    res = AgentTools.execute_tool("manage_promo_code", args, session_id)
+                    return {"reply": res.get("message"), "tools_used": [{"name": "manage_promo_code", "args": args}], "actions": [{"type": "REFRESH_DATA"}], "tool_result": res}
+                if any(w in lower for w in ["delete", "remove", "deactivate", "disable"]):
+                    act = "deactivate" if ("deactivate" in lower or "disable" in lower) else "delete"
+                    res = AgentTools.execute_tool("manage_promo_code", {"action": act, "code": code_str}, session_id)
+                    return {"reply": res.get("message"), "tools_used": [{"name": "manage_promo_code", "args": {"action": act, "code": code_str}}], "actions": [{"type": "REFRESH_DATA"}], "tool_result": res}
+                res = AgentTools.execute_tool("manage_promo_code", {"action": "list"}, session_id)
+                return {"reply": res.get("message"), "tools_used": [{"name": "manage_promo_code", "args": {"action": "list"}}], "actions": [], "tool_result": res}
+
+            # --- H. OWNER SALES, REVENUE & ANALYTICS ---
+            if any(w in lower for w in ["sales", "revenue", "analytics", "aov", "average order", "captured amount", "earnings", "financial"]):
+                res = AgentTools.execute_tool("get_sales_and_analytics", {}, session_id)
+                return {"reply": res.get("message"), "tools_used": [{"name": "get_sales_and_analytics", "args": {}}], "actions": [], "tool_result": res}
+
+            # --- I. OWNER CUSTOMERS & DELIVERY FLEET ---
+            if any(w in lower for w in ["delivery partner", "delivery fleet", "couriers", "drivers"]):
+                res = AgentTools.execute_tool("manage_customers_and_delivery", {"query_type": "delivery_partners"}, session_id)
+                return {"reply": res.get("message"), "tools_used": [{"name": "manage_customers_and_delivery", "args": {"query_type": "delivery_partners"}}], "actions": [], "tool_result": res}
+            if any(w in lower for w in ["how many customer", "list customer", "show customer", "store customer", "total customer"]):
+                res = AgentTools.execute_tool("manage_customers_and_delivery", {"query_type": "customers"}, session_id)
+                return {"reply": res.get("message"), "tools_used": [{"name": "manage_customers_and_delivery", "args": {"query_type": "customers"}}], "actions": [], "tool_result": res}
+
+            # --- J. OWNER CUSTOMER BROADCAST NOTIFICATION ---
+            if any(w in lower for w in ["broadcast", "send notification", "notify customer", "announce"]):
+                msg_body = re.sub(r"^.*?(?:broadcast|send notification|notify customers?|announce)\s*:?\s*", "", prompt, flags=re.IGNORECASE).strip(" '\"")
+                if not msg_body:
+                    msg_body = "Fresh organic groceries and daily deals are now live!"
+                res = AgentTools.execute_tool("send_customer_broadcast", {"title": "Store Flash Update", "message": msg_body}, session_id)
+                return {"reply": res.get("message"), "tools_used": [{"name": "send_customer_broadcast", "args": {"message": msg_body}}], "actions": [{"type": "REFRESH_DATA"}], "tool_result": res}
 
         # --- 1. RECENT / LATEST ORDER & SPECIFIC ORDER ID FAST-PATH (< 10ms) ---
         ord_id_match = re.search(r"\b(ord\d+\w*)\b", lower)
         if ord_id_match or any(k in lower for k in [
             "recent order", "latest order", "last order", "newest order",
-            "order number", "order id", "how many order", "total order"
+            "order number", "order id", "how many order", "total order", "track my order", "my order"
         ]):
             recent_orders = list(Order.objects.select_related("customer").prefetch_related("items").order_by("-created_at")[:5])
             total_orders = Order.objects.count()
@@ -1205,7 +1769,7 @@ class AgentService:
                 cap_amt = float(latest.captured_amount or latest.total_amount or 0)
                 rel_amt = float(latest.released_amount or 0)
 
-                reply = f"Most recent order is #{latest.id} ({total_orders} total orders, {pending_count} pending)."
+                reply = f"Most recent order is #{latest.id} ({latest.status} • ${float(latest.total_amount):.2f} • {total_orders} total orders, {pending_count} pending)."
                 actions = [{
                     "type": "ORDER_CARD",
                     "order": {
@@ -1240,7 +1804,7 @@ class AgentService:
         if any(k in lower for k in [
             "how many product", "how many item", "products are live", "live in our store",
             "products in store", "products in our store", "list all product", "store overview",
-            "what products do", "total products", "catalog count"
+            "what products do", "total products", "catalog count", "show all product"
         ]):
             active_prods = list(Product.objects.filter(is_active=True).order_by("-stock_quantity", "name"))
             in_stock = [p for p in active_prods if p.stock_quantity > 0 and p.is_in_stock]
@@ -1272,7 +1836,7 @@ class AgentService:
         # --- OWNER FAST-PATHS ---
         if persona == "owner":
             # 1. Low stock / Inventory health
-            if any(k in lower for k in ["low stock", "inventory health", "check stock", "stock health"]):
+            if any(k in lower for k in ["low stock", "inventory health", "check stock", "stock health", "out of stock"]):
                 res = AgentTools.execute_tool("get_inventory_health", {"threshold": 10}, session_id)
                 items = res.get("items", [])
                 reply = f"{len(items)} items are low on stock and ready for instant restock."
@@ -1292,8 +1856,9 @@ class AgentService:
                 return {"reply": reply, "tools_used": [{"name": "get_pending_packing_orders", "args": {}}], "actions": actions, "tool_result": res}
 
             # 3. Inspect Margin
-            if any(k in lower for k in ["check profit margin", "inspect margin", "margins on", "margin on"]):
-                query_term = "Atta" if "atta" in lower else ("Milk" if "milk" in lower else "all")
+            if any(k in lower for k in ["check profit margin", "inspect margin", "margins on", "margin on", "profit margin"]):
+                matched_p = self._match_product_from_text(lower)
+                query_term = matched_p.name if matched_p else "all"
                 res = AgentTools.execute_tool("inspect_margin", {"query": query_term}, session_id)
                 prods = res.get("products", [])
                 reply = "Store margins are protected above the 12% minimum floor."
@@ -1301,10 +1866,10 @@ class AgentService:
                 return {"reply": reply, "tools_used": [{"name": "inspect_margin", "args": {"query": query_term}}], "actions": actions, "tool_result": res}
 
             # 4. Evaluate Discount
-            if "discount" in lower:
+            if "discount" in lower or "% off" in lower:
                 pct_match = re.search(r"(\d+(?:\.\d+)?)\s*%", lower)
                 req_pct = float(pct_match.group(1)) if pct_match else 20.0
-                target_prod = Product.objects.filter(name__icontains="Atta").first() or Product.objects.filter(is_active=True).first()
+                target_prod = self._match_product_from_text(lower) or Product.objects.filter(is_active=True).first()
                 res = AgentTools.execute_tool("bargain_and_guard_margin", {"product_id": target_prod.id, "requested_discount_pct": req_pct}, session_id)
                 reply = self._synthesize_tool_response("bargain_and_guard_margin", res, persona)
                 actions = [{"type": "MARGIN_DECISION", "decision": res}]
@@ -1316,12 +1881,12 @@ class AgentService:
                 qty = int(qty_match.group(1)) if qty_match else 10
                 email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", lower)
                 email = email_match.group(0) if email_match else "wholesale@kirana.com"
-                keywords = ["milk", "bread", "pasta", "sauce", "cheese", "strawberries", "eggs", "avocado", "yogurt", "atta", "rice"]
-                prod_kw = next((kw.title() for kw in keywords if kw in lower), "Strawberries")
-                args = {"supplier_email": email, "product_name": prod_kw, "quantity": qty, "unit_cost": 3.60}
+                matched_p = self._match_product_from_text(lower)
+                prod_kw = matched_p.name if matched_p else "Strawberries"
+                args = {"supplier_email": email, "product_name": prod_kw, "quantity": qty, "unit_cost": float(matched_p.cost_price) if (matched_p and matched_p.cost_price) else 3.60}
                 res = AgentTools.execute_tool("execute_supplier_restock_payout", args, session_id)
                 reply = self._synthesize_tool_response("execute_supplier_restock_payout", res, persona)
-                actions = [{"type": "PAYOUT_RECEIPT", "receipt": res}]
+                actions = [{"type": "PAYOUT_RECEIPT", "receipt": res}, {"type": "REFRESH_DATA"}]
                 return {"reply": reply, "tools_used": [{"name": "execute_supplier_restock_payout", "args": args}], "actions": actions, "tool_result": res}
 
         # --- SHOPPER FAST-PATHS ---
@@ -1335,23 +1900,60 @@ class AgentService:
                     "tool_result": {"status": "cleared"}
                 }
 
+            # 0b. Remove item from cart ("remove milk from cart", "delete bread from cart")
+            if any(w in lower for w in ["remove ", "delete "]) and ("cart" in lower or "bag" in lower):
+                matched_p = self._match_product_from_text(lower)
+                if matched_p:
+                    return {
+                        "reply": f"Removed {matched_p.name} from your cart.",
+                        "tools_used": [{"name": "remove_from_shopper_cart", "args": {"product_id": matched_p.id}}],
+                        "actions": [{"type": "REMOVE_FROM_CART", "product_id": matched_p.id, "name": matched_p.name}],
+                        "tool_result": {"status": "removed", "product_id": matched_p.id}
+                    }
+
+            # 0c. Bargaining / Discount Negotiation for Shopper ("can I get 15% off strawberries?", "discount on milk")
+            if any(w in lower for w in ["% off", "discount", "bargain", "cheaper", "lower price"]):
+                pct_match = re.search(r"(\d+(?:\.\d+)?)\s*%", lower)
+                req_pct = float(pct_match.group(1)) if pct_match else 15.0
+                target_prod = self._match_product_from_text(lower) or Product.objects.filter(is_active=True).first()
+                if target_prod:
+                    res = AgentTools.execute_tool("bargain_and_guard_margin", {"product_id": target_prod.id, "requested_discount_pct": req_pct}, session_id)
+                    reply = self._synthesize_tool_response("bargain_and_guard_margin", res, persona)
+                    deal_price = res.get("final_price") if res.get("status") == "APPROVED" else res.get("counter_price")
+                    res["item"] = {
+                        "id": target_prod.id,
+                        "name": target_prod.name,
+                        "price": deal_price,
+                        "unit": target_prod.unit or "1 unit",
+                        "quantity": 1,
+                    }
+                    actions = [
+                        {"type": "MARGIN_DECISION", "decision": res},
+                        {"type": "SEARCH_RESULTS", "items": [res["item"]]},
+                    ]
+                    return {"reply": reply, "tools_used": [{"name": "bargain_and_guard_margin", "args": {"product_id": target_prod.id, "requested_discount_pct": req_pct}}], "actions": actions, "tool_result": res}
+
+            # 0d. Promo Codes / Offers Inquiry for Shopper
+            if any(w in lower for w in ["promo", "coupon", "voucher"]):
+                res = AgentTools.execute_tool("manage_promo_code", {"action": "list"}, session_id)
+                return {"reply": res.get("message"), "tools_used": [{"name": "manage_promo_code", "args": {"action": "list"}}], "actions": [], "tool_result": res}
+
             # 1. Autonomous Add to Cart ("Add X to my cart", "Add 2 Milk", "Buy Bread", "Get me Eggs")
             if any(w in lower for w in ["add ", "put ", "buy ", "get me ", "i want ", "order "]):
                 qty_match = re.search(r"\b(\d+)\b", lower)
                 qty = int(qty_match.group(1)) if qty_match else 1
-                keywords = ["milk", "bread", "pasta", "sauce", "marinara", "cheese", "parmesan", "strawberries", "eggs", "avocado", "yogurt", "atta"]
-                matched_kw = next((kw for kw in keywords if kw in lower), None)
-                prod = Product.objects.filter(name__icontains=(matched_kw or "Milk"), is_active=True).first()
-                if prod and (matched_kw or "cart" in lower or "bag" in lower):
+                matched_p = self._match_product_from_text(lower)
+                prod = matched_p or (Product.objects.filter(is_active=True).first() if ("cart" in lower or "bag" in lower) else None)
+                if prod:
                     res = AgentTools.execute_tool("add_to_shopper_cart", {"product_id": prod.id, "quantity": qty}, session_id)
                     actions = self._extract_frontend_actions("add_to_shopper_cart", res)
                     reply = f"Added {qty}x {prod.name} (${float(prod.offer_price or prod.regular_price):.2f}) to your cart."
                     return {"reply": reply, "tools_used": [{"name": "add_to_shopper_cart", "args": {"product_id": prod.id, "quantity": qty}}], "actions": actions, "tool_result": res}
 
             # 2. Recipe Basket Recommendations
-            if any(k in lower for k in ["pasta", "dinner", "breakfast", "smoothie", "recipe", "salad"]):
+            if any(k in lower for k in ["pasta", "dinner", "breakfast", "smoothie", "recipe", "salad", "meal", "plan a meal"]):
                 recipe_name = "Chef's Fresh Meal"
-                if "pasta" in lower or "dinner" in lower:
+                if "pasta" in lower or "dinner" in lower or "meal" in lower:
                     recipe_name = "Italian Pasta Dinner"
                 elif "breakfast" in lower:
                     recipe_name = "Healthy Farm Breakfast"
@@ -1369,17 +1971,19 @@ class AgentService:
                 actions = [{"type": "RECOMMEND_BASKET", "items": items, "recipe": recipe_name}]
                 return {"reply": reply, "tools_used": [{"name": "recommend_recipe_basket", "args": {"recipe_name": recipe_name, "budget": budget}}], "actions": actions, "tool_result": res}
 
-            # 3. Search & Best Deal Check ("Find organic milk and check for the best deal")
-            if any(k in lower for k in ["find ", "search ", "milk", "bread", "eggs", "strawberries", "cheese", "deal"]):
-                keywords = ["milk", "bread", "pasta", "sauce", "cheese", "strawberries", "eggs", "avocado", "yogurt", "atta"]
-                search_q = next((kw for kw in keywords if kw in lower), "Milk")
-                res = AgentTools.execute_tool("search_products_and_stock", {"query": search_q}, session_id)
+            # 3. Search & Best Deal Check ("Find groceries", "Show me grocery deals", "Find organic milk")
+            matched_p = self._match_product_from_text(lower)
+            if matched_p or any(k in lower for k in ["find ", "search ", "deal", "grocer", "under $", "dairy", "bakery", "produce", "pantry"]):
+                max_p_match = re.search(r"under\s*\$?(\d+(?:\.\d+)?)", lower)
+                max_p = float(max_p_match.group(1)) if max_p_match else None
+                search_q = matched_p.name if matched_p else ""
+                res = AgentTools.execute_tool("search_products_and_stock", {"query": search_q, "max_price": max_p}, session_id)
                 prods = res.get("products", [])
                 if prods:
                     top = prods[0]
-                    reply = f"Found {top['name']} at ${top['price']:.2f} (Safe Deal: ${top['best_deal_price']:.2f}, {top['max_safe_discount_pct']}% off)."
+                    reply = f"Found {len(prods)} in-stock items (Top deal: {top['name']} at ${top['price']:.2f}, safe deal ${top['best_deal_price']:.2f})."
                     actions = [{"type": "SEARCH_RESULTS", "items": prods}]
-                    return {"reply": reply, "tools_used": [{"name": "search_products_and_stock", "args": {"query": search_q}}], "actions": actions, "tool_result": res}
+                    return {"reply": reply, "tools_used": [{"name": "search_products_and_stock", "args": {"query": search_q or "all"}}], "actions": actions, "tool_result": res}
 
         return None
 
@@ -1441,6 +2045,10 @@ class AgentService:
             actions.append({"type": "REFRESH_DATA"})
         elif fn_name == "update_product_inventory" and res.get("status") == "SUCCESS":
             actions.append({"type": "PRODUCT_UPDATED", "product": res})
+            actions.append({"type": "REFRESH_DATA"})
+        elif fn_name in ("create_or_delete_product", "manage_category", "manage_promo_code", "send_customer_broadcast", "manage_customers_and_delivery") and res.get("status") == "SUCCESS":
+            if fn_name == "create_or_delete_product" and res.get("product_id"):
+                actions.append({"type": "PRODUCT_UPDATED", "product": res})
             actions.append({"type": "REFRESH_DATA"})
         elif fn_name == "inspect_margin" and res.get("products"):
             actions.append({"type": "MARGIN_LIST", "products": res.get("products", [])[:4]})

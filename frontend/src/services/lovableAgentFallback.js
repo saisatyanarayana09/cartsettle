@@ -63,23 +63,56 @@ export function handleLovableAgentFallback(config) {
     ? ['Check pending orders', 'Check low stock', 'Audit profit margins']
     : ['Suggest a pasta dinner basket under $20', 'Add 1 Organic Milk to my cart', 'Can I get 15% off Strawberries?'];
 
-  // 1. Navigation commands
-  if (/^(open|go to|navigate to|visit)\s+/.test(lower) || lower.includes('go to checkout') || lower === 'checkout') {
+  // 0. Strict Settings Guardrail (Block all Settings access/modifications)
+  if (
+    lower.includes('setting') ||
+    lower.includes('operating hour') ||
+    lower.includes('delivery radius') ||
+    lower.includes('change store name') ||
+    lower.includes('change password')
+  ) {
+    reply = 'Settings are restricted and cannot be accessed or modified by AI. Please update Settings manually.';
+    actions = [];
+    tools_used = [{ name: 'settings_guardrail', args: { blocked: true } }];
+  }
+  // 1. Navigation commands (All shop pages EXCEPT settings)
+  else if (/^(open|go to|navigate to|visit)\s+/.test(lower) || lower.includes('go to checkout') || lower === 'checkout') {
     const ordMatch = lower.match(/\b(ord\d+\w*)\b/i);
     if (ordMatch) {
       const oid = ordMatch[1].toUpperCase();
       reply = `Opening Order #${oid}.`;
       actions = [{ type: 'NAVIGATE', path: `/owner/orders/${oid}`, label: `Order #${oid}` }];
     } else if (lower.includes('order')) {
-      const path = persona === 'owner' ? '/owner/orders' : '/orders';
+      const path = persona === 'owner' ? '/owner/orders' : '/profile/orders';
       reply = 'Navigating to Orders Portal.';
       actions = [{ type: 'NAVIGATE', path, label: 'Orders' }];
     } else if (lower.includes('product') || lower.includes('catalog') || lower.includes('inventory')) {
+      const path = persona === 'owner' ? '/owner/products' : '/products';
       reply = 'Navigating to Products & Inventory.';
-      actions = [{ type: 'NAVIGATE', path: '/owner/products', label: 'Products' }];
+      actions = [{ type: 'NAVIGATE', path, label: 'Products' }];
+    } else if (lower.includes('categor')) {
+      const path = persona === 'owner' ? '/owner/categories' : '/categories';
+      reply = 'Navigating to Categories.';
+      actions = [{ type: 'NAVIGATE', path, label: 'Categories' }];
+    } else if (lower.includes('offer') || lower.includes('promo') || lower.includes('coupon')) {
+      const path = persona === 'owner' ? '/owner/offers' : '/profile/offers';
+      reply = 'Navigating to Offers & Promo Codes.';
+      actions = [{ type: 'NAVIGATE', path, label: 'Offers' }];
+    } else if (lower.includes('sale') || lower.includes('revenue')) {
+      reply = 'Navigating to Sales Analytics.';
+      actions = [{ type: 'NAVIGATE', path: '/owner/sales', label: 'Sales' }];
+    } else if (lower.includes('customer')) {
+      reply = 'Navigating to Customers.';
+      actions = [{ type: 'NAVIGATE', path: '/owner/customers', label: 'Customers' }];
+    } else if (lower.includes('invoice')) {
+      reply = 'Navigating to Invoices.';
+      actions = [{ type: 'NAVIGATE', path: '/owner/invoices', label: 'Invoices' }];
+    } else if (lower.includes('delivery')) {
+      reply = 'Navigating to Delivery Fleet.';
+      actions = [{ type: 'NAVIGATE', path: '/owner/delivery-partners', label: 'Delivery' }];
     } else if (lower.includes('dashboard') || lower.includes('analytics')) {
       reply = 'Navigating to Owner Dashboard.';
-      actions = [{ type: 'NAVIGATE', path: '/owner/dashboard', label: 'Dashboard' }];
+      actions = [{ type: 'NAVIGATE', path: '/owner', label: 'Dashboard' }];
     } else if (lower.includes('checkout')) {
       reply = 'Navigating to PayPal Checkout.';
       actions = [{ type: 'NAVIGATE', path: '/checkout', label: 'Checkout' }];
@@ -88,6 +121,42 @@ export function handleLovableAgentFallback(config) {
       actions = [{ type: 'NAVIGATE', path: '/cart', label: 'Cart' }];
     }
     tools_used = [{ name: 'navigate_portal', args: {} }];
+  }
+  // 1b. Create / Delete Product
+  else if (/(create|add|new|delete|remove)\s+product/.test(lower)) {
+    if (lower.includes('delete') || lower.includes('remove')) {
+      reply = 'Removed product from the store catalog.';
+      actions = [{ type: 'REFRESH_DATA' }];
+      tools_used = [{ name: 'create_or_delete_product', args: { action: 'delete' } }];
+    } else {
+      const priceMatch = lower.match(/\$?(\d+(?:\.\d+)?)/);
+      const price = priceMatch ? Number(priceMatch[1]) : 4.99;
+      const newProd = { id: Date.now(), name: 'Organic Honey', price, cost_price: Number((price * 0.78).toFixed(2)), stock_quantity: 25, category_name: 'Pantry', margin_pct: 22.0, max_safe_discount_pct: 10.0, best_deal_price: Number((price * 0.9).toFixed(2)) };
+      DEMO_PRODUCTS.unshift(newProd);
+      reply = `Created product '${newProd.name}' at $${price.toFixed(2)} (25 units in stock).`;
+      actions = [{ type: 'PRODUCT_UPDATED', product: newProd }, { type: 'REFRESH_DATA' }];
+      tools_used = [{ name: 'create_or_delete_product', args: { action: 'create', price } }];
+    }
+  }
+  // 1c. Categories, Promo Codes, Sales, Customers, Broadcast
+  else if (lower.includes('categor')) {
+    reply = '4 active categories: Dairy (4), Produce (2), Pantry (2), Bakery (1).';
+    tools_used = [{ name: 'manage_category', args: { action: 'list' } }];
+  } else if (lower.includes('promo') || lower.includes('coupon')) {
+    if (lower.includes('create') || lower.includes('add')) {
+      reply = 'Created promo code SAVE10 (10% off).';
+      actions = [{ type: 'REFRESH_DATA' }];
+    } else {
+      reply = 'Active promo codes: SAVE10 (10% off), FRESH15 (15% off orders over $25).';
+    }
+    tools_used = [{ name: 'manage_promo_code', args: {} }];
+  } else if (lower.includes('sales') || lower.includes('revenue') || lower.includes('aov')) {
+    reply = 'Sales Summary: $1,842.50 total volume across 52 orders (AOV: $35.43 • PayPal Captured: $1,690.10 • Auto-Released: $152.40).';
+    tools_used = [{ name: 'get_sales_and_analytics', args: {} }];
+  } else if (lower.includes('broadcast') || lower.includes('notify customer')) {
+    reply = 'Broadcast sent to active store customers.';
+    actions = [{ type: 'REFRESH_DATA' }];
+    tools_used = [{ name: 'send_customer_broadcast', args: {} }];
   }
   // 2. Recent order / Order ID
   else if (lower.includes('recent order') || lower.includes('latest order') || lower.includes('last order') || lower.includes('order number')) {
