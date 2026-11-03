@@ -532,13 +532,14 @@ class AgentChatView(views.APIView):
         prompt = (request.data.get('prompt') or request.data.get('message') or '').strip()
         session_id = request.data.get('session_id', 'kirana_copilot')
         history = request.data.get('history', [])
+        mode = str(request.data.get('mode') or request.query_params.get('mode') or 'chat').strip().lower()
 
         if not prompt:
             return response.Response({'detail': 'Prompt is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         persona = self._resolve_persona(request)
         from services.agent_service import agent_service
-        result = agent_service.chat(prompt=prompt, session_id=session_id, history=history, persona=persona)
+        result = agent_service.chat(prompt=prompt, session_id=session_id, history=history, persona=persona, mode=mode)
         return response.Response(result, status=status.HTTP_200_OK)
 
 

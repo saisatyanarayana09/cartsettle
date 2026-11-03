@@ -383,10 +383,35 @@ class AgentTools:
             "arguments": args
         })
 
+        def _serialize_card_product(p, quantity=1, custom_price=None):
+            selling = p.offer_price or p.regular_price
+            cost = p.cost_price or (selling * Decimal("0.80"))
+            min_safe = (cost / Decimal("0.88")).quantize(Decimal("0.01"))
+            max_disc_pct = max(Decimal("0.0"), ((selling - min_safe) / selling * 100)).quantize(Decimal("0.1"))
+            final_p = float(custom_price) if custom_price is not None else float(selling)
+            img_url = str(p.image) if getattr(p, "image", None) else None
+            cat_name = p.category.name if getattr(p, "category", None) else "Groceries"
+            return {
+                "id": p.id,
+                "name": p.name,
+                "price": final_p,
+                "regular_price": float(p.regular_price),
+                "offer_price": float(selling),
+                "max_safe_discount_pct": float(max_disc_pct),
+                "best_deal_price": float(min_safe) if min_safe < selling else float(selling),
+                "unit": p.unit or "1 unit",
+                "quantity": quantity,
+                "stock": p.stock_quantity,
+                "stock_quantity": p.stock_quantity,
+                "category": cat_name,
+                "image": img_url,
+                "thumbnail": img_url,
+            }
+
         if name == "search_products_and_stock":
             query = args.get("query", "").strip()
             max_price = args.get("max_price")
-            qs = Product.objects.filter(is_active=True, stock_quantity__gt=0)
+            qs = Product.objects.select_related("category").filter(is_active=True, stock_quantity__gt=0)
             if query:
                 # Match full query or individual keywords
                 keywords = [w for w in query.split() if len(w) > 2 and w.lower() not in ("organic", "fresh", "find", "best", "deal", "for")]
@@ -400,34 +425,18 @@ class AgentTools:
             if max_price:
                 qs = qs.filter(regular_price__lte=Decimal(str(max_price)))
 
-            products = []
-            for p in qs.order_by("regular_price")[:6]:
-                selling = p.offer_price or p.regular_price
-                cost = p.cost_price or (selling * Decimal("0.80"))
-                min_safe = (cost / Decimal("0.88")).quantize(Decimal("0.01"))
-                max_disc_pct = max(Decimal("0.0"), ((selling - min_safe) / selling * 100)).quantize(Decimal("0.1"))
-                products.append({
-                    "id": p.id,
-                    "name": p.name,
-                    "price": float(selling),
-                    "regular_price": float(p.regular_price),
-                    "max_safe_discount_pct": float(max_disc_pct),
-                    "best_deal_price": float(min_safe) if min_safe < selling else float(selling),
-                    "unit": p.unit or "1 unit",
-                    "stock": p.stock_quantity,
-                    "image": str(p.image) if p.image else None
-                })
+            products = [_serialize_card_product(p) for p in qs.order_by("regular_price")[:6]]
 
             return {
                 "status": "success",
                 "query": query,
                 "count": len(products),
                 "products": products,
-                "message": f"Found {len(products)} in-stock items matching '{query}'." if products else f"No products found matching '{query}'."
+                "message": f"Found {len(products)} items." if products else f"No items found for {query}."
             }
 
         elif name == "recommend_recipe_basket":
-            recipe = args.get("recipe_name", "Chef's Fresh Meal").strip()
+            recipe = args.get("recipe_name", "Dinner").strip()
             budget = max(Decimal("15.00"), Decimal(str(args.get("budget", 25))))
             r_lower = recipe.lower()
 
@@ -445,21 +454,16 @@ class AgentTools:
             for kw in preferred_keywords:
                 q_filter |= Q(name__icontains=kw)
 
-            candidate_prods = list(Product.objects.filter(q_filter, is_active=True, stock_quantity__gt=0).order_by("regular_price")[:6])
+            candidate_prods = list(Product.objects.select_related("category").filter(q_filter, is_active=True, stock_quantity__gt=0).order_by("regular_price")[:6])
             if not candidate_prods:
-                candidate_prods = list(Product.objects.filter(is_active=True, stock_quantity__gt=0).order_by("regular_price")[:6])
+                candidate_prods = list(Product.objects.select_related("category").filter(is_active=True, stock_quantity__gt=0).order_by("regular_price")[:6])
 
             matched_products = []
             total = Decimal("0.00")
             for p in candidate_prods:
                 selling = p.offer_price or p.regular_price
                 if total + selling <= budget or len(matched_products) < 2:
-                    matched_products.append({
-                        "id": p.id,
-                        "name": p.name,
-                        "price": float(selling),
-                        "unit": p.unit or "1 unit"
-                    })
+                    matched_products.append(_serialize_card_product(p))
                     total += selling
                 if len(matched_products) >= 4:
                     break
@@ -470,29 +474,22 @@ class AgentTools:
                 "budget": float(budget),
                 "total_price": float(total),
                 "items": matched_products,
-                "message": f"Curated {len(matched_products)} fresh ingredients for '{recipe}' totaling ${total:.2f} (within ${budget:.2f} budget)."
+                "message": f"{len(matched_products)} items for {recipe}."
             }
 
         elif name == "add_to_shopper_cart":
             prod_id = args.get("product_id")
             qty = max(1, int(args.get("quantity", 1)))
             try:
-                p = Product.objects.get(id=prod_id, is_active=True)
-                selling = p.offer_price or p.regular_price
+                p = Product.objects.select_related("category").get(id=prod_id, is_active=True)
                 return {
                     "status": "success",
                     "action": "ADD_TO_CART",
-                    "item": {
-                        "id": p.id,
-                        "name": p.name,
-                        "price": float(selling),
-                        "quantity": qty,
-                        "unit": p.unit or "1 unit"
-                    },
-                    "message": f"Added {qty}x '{p.name}' (${float(selling):.2f}) to your cart!"
+                    "item": _serialize_card_product(p, quantity=qty),
+                    "message": f"Added {qty} {p.name}."
                 }
             except Product.DoesNotExist:
-                return {"status": "error", "message": f"Product #{prod_id} is not currently available."}
+                return {"status": "error", "message": f"Product #{prod_id} is unavailable."}
 
         elif name == "inspect_margin":
             query = args.get("query", "").strip()
@@ -1199,14 +1196,76 @@ class AgentService:
                 return ["Add 1 Organic Milk to my cart", "Suggest a dinner recipe basket under $20", "Suggest healthy breakfast ingredients"]
             return ["Suggest a dinner recipe basket under $20", "Find organic milk and check for the best deal", "Add 1 Organic Milk to my cart"]
 
-    def chat(self, prompt: str, session_id: str = "default_session", history: list = None, persona: str = "owner") -> dict:
+    def _normalize_voice_transcript(self, text: str) -> str:
+        """Normalizes spoken number words and currency/percent terms from SpeechRecognition into clean digits."""
+        if not text:
+            return ""
+        out = text.strip()
+        word_to_num = [
+            (r"\btwenty[\s-]+five\b", "25"),
+            (r"\btwenty\b", "20"),
+            (r"\bnineteen\b", "19"),
+            (r"\beighteen\b", "18"),
+            (r"\bseventeen\b", "17"),
+            (r"\bsixteen\b", "16"),
+            (r"\bfifteen\b", "15"),
+            (r"\bfourteen\b", "14"),
+            (r"\bthirteen\b", "13"),
+            (r"\btwelve\b", "12"),
+            (r"\beleven\b", "11"),
+            (r"\bten\b", "10"),
+            (r"\bnine\b", "9"),
+            (r"\beight\b", "8"),
+            (r"\bseven\b", "7"),
+            (r"\bsix\b", "6"),
+            (r"\bfive\b", "5"),
+            (r"\bfour\b", "4"),
+            (r"\bthree\b", "3"),
+            (r"\btwo\b", "2"),
+            (r"\bone\b", "1"),
+            (r"\bthirty\b", "30"),
+            (r"\bforty\b", "40"),
+            (r"\bfifty\b", "50"),
+            (r"\bhundred\b", "100"),
+        ]
+        for pattern, digit in word_to_num:
+            out = re.sub(pattern, digit, out, flags=re.IGNORECASE)
+        out = re.sub(r"(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent)\b", r"\1%", out, flags=re.IGNORECASE)
+        out = re.sub(r"\b(\d+(?:\.\d+)?)\s*dollars?\b", r"$\1", out, flags=re.IGNORECASE)
+        return out
+
+    def _to_concise_human_reply(self, text: str, mode: str = "chat") -> tuple:
+        """Strips AI filler words, symbols, and parenthetical verbosity, returning (reply, voice_reply)."""
+        clean = re.sub(r"[*`#~]+", "", text or "").strip()
+        clean = re.sub(
+            r"^(?:sure[!,.]?\s*|certainly[!,.]?\s*|of course[!,.]?\s*|i have\s+|i've\s+|autonomously\s+|successfully\s+)",
+            "",
+            clean,
+            flags=re.IGNORECASE,
+        ).strip()
+        if clean:
+            clean = clean[0].upper() + clean[1:]
+        else:
+            clean = "Done."
+
+        # Build an ultra-clean spoken sentence without parentheticals or bullet symbols
+        spoken = re.sub(r"\s*\([^)]*\)", "", clean)
+        spoken = spoken.replace("•", ",").replace("—", ",")
+        first_sentence = re.split(r"(?<=[.!?])\s+", spoken)[0].strip()
+        voice_reply = first_sentence or clean
+        if mode == "voice":
+            return voice_reply, voice_reply
+        return clean, voice_reply
+
+    def chat(self, prompt: str, session_id: str = "default_session", history: list = None, persona: str = "owner", mode: str = "chat") -> dict:
         """
-        Persistent Multi-Turn Agentic AI Execution:
-        1. Syncs with server-side session memory & resolves contextual pronouns ("it", "that order")
+        Persistent Multi-Turn AI Execution:
+        1. Normalizes spoken transcripts & resolves contextual pronouns ("it", "that order")
         2. Sub-50ms Fast-Path Intent Router with structured UI action cards
         3. Single-Trip Gemini LLM with full multi-turn conversation history & live store snapshot
         """
         t0 = time.perf_counter()
+        normalized_prompt = self._normalize_voice_transcript(prompt)
         mem = self.get_session_memory(session_id, persona)
         stored_msgs = mem.get("messages", [])
 
@@ -1214,11 +1273,11 @@ class AgentService:
         effective_history = stored_msgs if stored_msgs else (history or [])
 
         # Resolve contextual pronouns ("settle it", "audit that order", "what about 10% discount")
-        resolved_prompt = prompt
-        lower_p = prompt.lower()
+        resolved_prompt = normalized_prompt
+        lower_p = normalized_prompt.lower()
         if mem.get("last_order_id") and any(w in lower_p for w in ["that order", "this order", "settle it", "audit it", "capture it"]):
             if not re.search(r"\b(ord\d+\w*)\b", lower_p):
-                resolved_prompt = f"{prompt} ({mem['last_order_id']})"
+                resolved_prompt = f"{normalized_prompt} ({mem['last_order_id']})"
 
         broadcast_agent_thought(session_id, {
             "status": "thinking",
@@ -1229,6 +1288,10 @@ class AgentService:
         # --- Fast-Path Intent Router (< 50ms) ---
         fast_reply = self._check_fast_path(resolved_prompt, persona, session_id)
         if fast_reply:
+            clean_rep, voice_rep = self._to_concise_human_reply(fast_reply.get("reply", "Done."), mode=mode)
+            fast_reply["reply"] = clean_rep
+            fast_reply["voice_reply"] = voice_rep
+            fast_reply["mode"] = mode
             fast_reply["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
             self._save_session_turn(session_id, persona, prompt, fast_reply)
             mem = self.get_session_memory(session_id, persona)
@@ -1248,6 +1311,10 @@ class AgentService:
         # Offline / fallback mode if no API key
         if not self.api_key:
             fb = self._fallback_chat(resolved_prompt, session_id, persona)
+            clean_rep, voice_rep = self._to_concise_human_reply(fb.get("reply", "Done."), mode=mode)
+            fb["reply"] = clean_rep
+            fb["voice_reply"] = voice_rep
+            fb["mode"] = mode
             fb["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
             fb["follow_ups"] = self._build_follow_ups(persona, [], mem)
             self._save_session_turn(session_id, persona, prompt, fb)
@@ -1263,17 +1330,17 @@ class AgentService:
 
         if persona == "shopper":
             system_instruction = (
-                "You are CartSettle Shopper Concierge. "
-                "Keep your response minimalist, simple, and easy to read (1 to 3 short lines max). "
-                "NEVER use markdown symbols like ** or ` or #. Use clean plain text only."
+                "You are a concise, natural grocery store helper. "
+                "Reply in 1 short sentence (4 to 8 words max). "
+                "Never use AI filler words like 'Sure!', 'Certainly', 'I have', emojis, or markdown symbols."
                 f"{recent_context_note}\n"
                 f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
         else:
             system_instruction = (
-                "You are CartSettle Kirana AI for store owners. "
-                "Keep your response minimalist, simple, and easy to read (1 to 3 short lines max). "
-                "NEVER use markdown symbols like ** or ` or #. Use clean plain text only."
+                "You are a concise store operations helper. "
+                "Reply in 1 short sentence (4 to 8 words max). "
+                "Never use AI filler words like 'Sure!', 'Certainly', 'I have', emojis, or markdown symbols."
                 f"{recent_context_note}\n"
                 f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
@@ -1316,7 +1383,7 @@ class AgentService:
             "tools": tools_spec,
             "generationConfig": {
                 "temperature": 0.2,
-                "maxOutputTokens": 300
+                "maxOutputTokens": 120
             }
         }
 
@@ -1325,6 +1392,10 @@ class AgentService:
             if res.status_code != 200:
                 logger.warning("Gemini API status %s, using fast fallback", res.status_code)
                 fb = self._fallback_chat(resolved_prompt, session_id, persona)
+                clean_rep, voice_rep = self._to_concise_human_reply(fb.get("reply", "Done."), mode=mode)
+                fb["reply"] = clean_rep
+                fb["voice_reply"] = voice_rep
+                fb["mode"] = mode
                 fb["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
                 fb["follow_ups"] = self._build_follow_ups(persona, [], mem)
                 self._save_session_turn(session_id, persona, prompt, fb)
@@ -1341,11 +1412,14 @@ class AgentService:
                 fn_name = fc.get("name")
                 fn_args = fc.get("args", {})
                 fn_result = AgentTools.execute_tool(fn_name, fn_args, session_id)
-                final_reply = self._synthesize_tool_response(fn_name, fn_result, persona)
+                raw_synth = self._synthesize_tool_response(fn_name, fn_result, persona)
+                final_reply, voice_rep = self._to_concise_human_reply(raw_synth, mode=mode)
                 actions = self._extract_frontend_actions(fn_name, fn_result)
 
                 out = {
                     "reply": final_reply,
+                    "voice_reply": voice_rep,
+                    "mode": mode,
                     "tools_used": [{"name": fn_name, "args": fn_args}],
                     "actions": actions,
                     "tool_result": fn_result,
@@ -1367,11 +1441,13 @@ class AgentService:
                 return out
 
             text_parts = [p.get("text", "") for p in parts if "text" in p]
-            raw_reply = "".join(text_parts).strip() or "Ready! How can I help you?"
-            final_reply = re.sub(r"[*`#]+", "", raw_reply).strip()
+            raw_reply = "".join(text_parts).strip() or "How can I help?"
+            final_reply, voice_rep = self._to_concise_human_reply(raw_reply, mode=mode)
 
             out = {
                 "reply": final_reply,
+                "voice_reply": voice_rep,
+                "mode": mode,
                 "tools_used": [{"name": "live_store_memory", "args": {}}],
                 "actions": [],
                 "latency_ms": max(1, int((time.perf_counter() - t0) * 1000))
@@ -1393,6 +1469,10 @@ class AgentService:
         except Exception as e:
             logger.error("Agent error: %s", e)
             fb = self._fallback_chat(resolved_prompt, session_id, persona)
+            clean_rep, voice_rep = self._to_concise_human_reply(fb.get("reply", "Done."), mode=mode)
+            fb["reply"] = clean_rep
+            fb["voice_reply"] = voice_rep
+            fb["mode"] = mode
             fb["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
             fb["follow_ups"] = self._build_follow_ups(persona, [], mem)
             self._save_session_turn(session_id, persona, prompt, fb)
@@ -1484,7 +1564,7 @@ class AgentService:
             "language setting", "theme setting"
         ]):
             return {
-                "reply": "Settings are restricted and cannot be accessed or modified by AI. Please update Settings manually.",
+                "reply": "Settings can only be changed manually.",
                 "tools_used": [{"name": "settings_guardrail", "args": {"blocked": True}}],
                 "actions": [],
                 "tool_result": {"status": "blocked", "reason": "settings_restricted"}
@@ -1806,10 +1886,10 @@ class AgentService:
             "products in store", "products in our store", "list all product", "store overview",
             "what products do", "total products", "catalog count", "show all product"
         ]):
-            active_prods = list(Product.objects.filter(is_active=True).order_by("-stock_quantity", "name"))
+            active_prods = list(Product.objects.select_related("category").filter(is_active=True).order_by("-stock_quantity", "name"))
             in_stock = [p for p in active_prods if p.stock_quantity > 0 and p.is_in_stock]
             cat_count = Category.objects.filter(is_active=True).count()
-            reply = f"Store has {len(active_prods)} live products ({len(in_stock)} in stock) across {cat_count} categories."
+            reply = f"{len(active_prods)} live products across {cat_count} categories."
             actions = [{
                 "type": "CATALOG_SUMMARY",
                 "total": len(active_prods),
@@ -1820,8 +1900,12 @@ class AgentService:
                         "id": p.id,
                         "name": p.name,
                         "price": float(p.offer_price or p.regular_price),
+                        "regular_price": float(p.regular_price),
                         "stock": p.stock_quantity,
-                        "unit": p.unit
+                        "unit": p.unit or "1 unit",
+                        "category": p.category.name if getattr(p, "category", None) else "Groceries",
+                        "image": str(p.image) if getattr(p, "image", None) else None,
+                        "thumbnail": str(p.image) if getattr(p, "image", None) else None,
                     }
                     for p in active_prods[:6]
                 ]
@@ -1839,7 +1923,7 @@ class AgentService:
             if any(k in lower for k in ["low stock", "inventory health", "check stock", "stock health", "out of stock"]):
                 res = AgentTools.execute_tool("get_inventory_health", {"threshold": 10}, session_id)
                 items = res.get("items", [])
-                reply = f"{len(items)} items are low on stock and ready for instant restock."
+                reply = f"{len(items)} items are low on stock."
                 actions = [{"type": "LOW_STOCK_LIST", "items": items[:4]}]
                 return {"reply": reply, "tools_used": [{"name": "get_inventory_health", "args": {}}], "actions": actions, "tool_result": res}
 
@@ -1848,10 +1932,10 @@ class AgentService:
                 res = AgentTools.execute_tool("get_pending_packing_orders", {}, session_id)
                 orders = res.get("orders", [])
                 if not orders:
-                    reply = "All caught up! No pending orders waiting for packing."
+                    reply = "No pending orders."
                     actions = []
                 else:
-                    reply = f"{len(orders)} orders are waiting for packing & PayPal settlement."
+                    reply = f"{len(orders)} orders are pending."
                     actions = [{"type": "PENDING_ORDERS", "orders": orders[:4]}]
                 return {"reply": reply, "tools_used": [{"name": "get_pending_packing_orders", "args": {}}], "actions": actions, "tool_result": res}
 
@@ -1861,7 +1945,7 @@ class AgentService:
                 query_term = matched_p.name if matched_p else "all"
                 res = AgentTools.execute_tool("inspect_margin", {"query": query_term}, session_id)
                 prods = res.get("products", [])
-                reply = "Store margins are protected above the 12% minimum floor."
+                reply = "Margins are above the 12% floor."
                 actions = [{"type": "MARGIN_LIST", "products": prods[:4]}]
                 return {"reply": reply, "tools_used": [{"name": "inspect_margin", "args": {"query": query_term}}], "actions": actions, "tool_result": res}
 
@@ -1894,7 +1978,7 @@ class AgentService:
             # 0. Clear Cart ("clear my cart", "empty cart")
             if any(k in lower for k in ["clear cart", "clear my cart", "empty cart", "empty my cart"]):
                 return {
-                    "reply": "Cleared all items from your shopping cart.",
+                    "reply": "Cleared your cart.",
                     "tools_used": [{"name": "clear_shopper_cart", "args": {}}],
                     "actions": [{"type": "CLEAR_CART"}],
                     "tool_result": {"status": "cleared"}
@@ -1905,7 +1989,7 @@ class AgentService:
                 matched_p = self._match_product_from_text(lower)
                 if matched_p:
                     return {
-                        "reply": f"Removed {matched_p.name} from your cart.",
+                        "reply": f"Removed {matched_p.name}.",
                         "tools_used": [{"name": "remove_from_shopper_cart", "args": {"product_id": matched_p.id}}],
                         "actions": [{"type": "REMOVE_FROM_CART", "product_id": matched_p.id, "name": matched_p.name}],
                         "tool_result": {"status": "removed", "product_id": matched_p.id}
@@ -1915,17 +1999,25 @@ class AgentService:
             if any(w in lower for w in ["% off", "discount", "bargain", "cheaper", "lower price"]):
                 pct_match = re.search(r"(\d+(?:\.\d+)?)\s*%", lower)
                 req_pct = float(pct_match.group(1)) if pct_match else 15.0
-                target_prod = self._match_product_from_text(lower) or Product.objects.filter(is_active=True).first()
+                target_prod = self._match_product_from_text(lower) or Product.objects.select_related("category").filter(is_active=True).first()
                 if target_prod:
                     res = AgentTools.execute_tool("bargain_and_guard_margin", {"product_id": target_prod.id, "requested_discount_pct": req_pct}, session_id)
                     reply = self._synthesize_tool_response("bargain_and_guard_margin", res, persona)
                     deal_price = res.get("final_price") if res.get("status") == "APPROVED" else res.get("counter_price")
+                    img_url = str(target_prod.image) if getattr(target_prod, "image", None) else None
                     res["item"] = {
                         "id": target_prod.id,
                         "name": target_prod.name,
                         "price": deal_price,
+                        "regular_price": float(target_prod.regular_price),
+                        "offer_price": deal_price,
                         "unit": target_prod.unit or "1 unit",
                         "quantity": 1,
+                        "stock": target_prod.stock_quantity,
+                        "stock_quantity": target_prod.stock_quantity,
+                        "category": target_prod.category.name if getattr(target_prod, "category", None) else "Groceries",
+                        "image": img_url,
+                        "thumbnail": img_url,
                     }
                     actions = [
                         {"type": "MARGIN_DECISION", "decision": res},
@@ -1947,27 +2039,27 @@ class AgentService:
                 if prod:
                     res = AgentTools.execute_tool("add_to_shopper_cart", {"product_id": prod.id, "quantity": qty}, session_id)
                     actions = self._extract_frontend_actions("add_to_shopper_cart", res)
-                    reply = f"Added {qty}x {prod.name} (${float(prod.offer_price or prod.regular_price):.2f}) to your cart."
+                    reply = f"Added {qty} {prod.name}."
                     return {"reply": reply, "tools_used": [{"name": "add_to_shopper_cart", "args": {"product_id": prod.id, "quantity": qty}}], "actions": actions, "tool_result": res}
 
             # 2. Recipe Basket Recommendations
             if any(k in lower for k in ["pasta", "dinner", "breakfast", "smoothie", "recipe", "salad", "meal", "plan a meal"]):
-                recipe_name = "Chef's Fresh Meal"
+                recipe_name = "Dinner"
                 if "pasta" in lower or "dinner" in lower or "meal" in lower:
-                    recipe_name = "Italian Pasta Dinner"
+                    recipe_name = "Pasta Dinner"
                 elif "breakfast" in lower:
-                    recipe_name = "Healthy Farm Breakfast"
+                    recipe_name = "Breakfast"
                 elif "smoothie" in lower:
-                    recipe_name = "Berry Protein Smoothie"
+                    recipe_name = "Berry Smoothie"
                 elif "salad" in lower:
-                    recipe_name = "Fresh Avocado & Berry Salad"
+                    recipe_name = "Fresh Salad"
 
                 budget_match = re.search(r"\$(\d+)", lower)
                 budget = float(budget_match.group(1)) if budget_match else 20.0
 
                 res = AgentTools.execute_tool("recommend_recipe_basket", {"recipe_name": recipe_name, "budget": budget}, session_id)
                 items = res.get("items", [])
-                reply = f"{recipe_name} Basket ready (${res.get('total_price', 0):.2f} total for {len(items)} items)."
+                reply = f"{len(items)} items for {recipe_name}."
                 actions = [{"type": "RECOMMEND_BASKET", "items": items, "recipe": recipe_name}]
                 return {"reply": reply, "tools_used": [{"name": "recommend_recipe_basket", "args": {"recipe_name": recipe_name, "budget": budget}}], "actions": actions, "tool_result": res}
 
@@ -1980,43 +2072,42 @@ class AgentService:
                 res = AgentTools.execute_tool("search_products_and_stock", {"query": search_q, "max_price": max_p}, session_id)
                 prods = res.get("products", [])
                 if prods:
-                    top = prods[0]
-                    reply = f"Found {len(prods)} in-stock items (Top deal: {top['name']} at ${top['price']:.2f}, safe deal ${top['best_deal_price']:.2f})."
+                    reply = f"Found {len(prods)} items."
                     actions = [{"type": "SEARCH_RESULTS", "items": prods}]
                     return {"reply": reply, "tools_used": [{"name": "search_products_and_stock", "args": {"query": search_q or "all"}}], "actions": actions, "tool_result": res}
 
         return None
 
     def _synthesize_tool_response(self, fn_name: str, res: dict, persona: str) -> str:
-        """Minimalist, clean plain-text synthesis from tool result."""
+        """Minimalist, human plain-text synthesis from tool result."""
         msg = res.get("message", "")
         if fn_name == "bargain_and_guard_margin":
             if res.get("status") == "APPROVED":
-                return f"Approved {res.get('discount_approved_pct')}% off on {res.get('product')} (Final: ${res.get('final_price'):.2f})."
+                return f"Approved {res.get('discount_approved_pct'):g}% off {res.get('product')} at ${res.get('final_price'):.2f}."
             else:
-                return f"Rejected {res.get('requested_discount_pct', 20)}% off to protect 12% margin. Max safe discount: {res.get('counter_discount_pct')}% (${res.get('counter_price'):.2f})."
+                return f"Max discount on {res.get('product')} is {res.get('counter_discount_pct'):g}% at ${res.get('counter_price'):.2f}."
 
         elif fn_name == "search_products_and_stock":
             prods = res.get("products", [])
             if not prods:
-                return "No exact match found. Try Milk, Bread, Pasta, Eggs, or Strawberries."
-            return f"Found {len(prods)} in-stock item(s)."
+                return "No matching items found."
+            return f"Found {len(prods)} items."
 
         elif fn_name == "recommend_recipe_basket":
             items = res.get("items", [])
             recipe_name = res.get("recipe", "Meal")
-            return f"{recipe_name} Basket ready (${res.get('total_price', 0):.2f} for {len(items)} items)."
+            return f"{len(items)} items for {recipe_name}."
 
         elif fn_name == "add_to_shopper_cart":
             return msg
 
         elif fn_name == "auto_settle_order_packing":
-            return f"Settled Order #{res.get('order_id')}: Captured ${res.get('captured_amount', 0):.2f}, Released ${res.get('released_amount', 0):.2f}."
+            return f"Order #{res.get('order_id')} settled for ${res.get('captured_amount', 0):.2f}."
 
         elif fn_name == "execute_supplier_restock_payout":
             if res.get("status") == "SUCCESS":
-                return f"Paid ${res.get('amount_paid', 0):.2f} to {res.get('supplier')} for {res.get('quantity')}x {res.get('product')}."
-            return f"Payout notice: {msg}"
+                return f"Paid ${res.get('amount_paid', 0):.2f} to restock {res.get('quantity')} {res.get('product')}."
+            return msg
 
         elif fn_name == "update_order_status":
             return res.get("message", f"Order #{res.get('order_id')} updated to {res.get('new_status')}.")
@@ -2024,7 +2115,7 @@ class AgentService:
         elif fn_name == "update_product_inventory":
             return res.get("message", f"Updated {res.get('name')}.")
 
-        return re.sub(r"[*`#]+", "", msg) or "Action completed."
+        return re.sub(r"[*`#]+", "", msg) or "Done."
 
     def _extract_frontend_actions(self, fn_name: str, res: dict) -> list:
         """Extracts actionable triggers for the React UI to execute in real-time."""
