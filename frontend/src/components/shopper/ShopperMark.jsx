@@ -1,5 +1,4 @@
-import React from "react";
-import mark from "../../assets/shopper-concierge-mark.png";
+import mark from "@/assets/shopper-concierge-mark.png";
 
 export function ShopperMark({ className = "" }) {
   return (
