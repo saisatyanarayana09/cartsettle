@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Phone, X } from 'lucide-react';
+import { ArrowLeft, Phone, X, Lock, User, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '../../services/api';
@@ -39,6 +39,10 @@ export function CustomerLoginPage() {
   const [manualCode, setManualCode] = useState('');
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [username, setUsername] = useState('shopper');
+  const [password, setPassword] = useState('Shopper@2026');
+  const [showPassword, setShowPassword] = useState(false);
+  const [submittingCreds, setSubmittingCreds] = useState(false);
 
   // Modal for mandatory mobile number on signup
   const [showMobileModal, setShowMobileModal] = useState(false);
@@ -165,6 +169,43 @@ export function CustomerLoginPage() {
     navigate(redirectTarget, { replace: true });
   };
 
+  const handleOneClickDemo = async (demoUser = 'shopper', demoPass = 'Shopper@2026') => {
+    setError('');
+    setSubmittingCreds(true);
+    try {
+      const res = await api.post('/auth/login/', {
+        username: demoUser,
+        password: demoPass,
+      });
+      completeLogin(res.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || err.response?.data?.error || 'Demo login failed.');
+    } finally {
+      setSubmittingCreds(false);
+    }
+  };
+
+  const handleCredentialsSubmit = async (e) => {
+    e.preventDefault();
+    if (!username.trim() || !password) {
+      setError('Please enter your username and password.');
+      return;
+    }
+    setError('');
+    setSubmittingCreds(true);
+    try {
+      const res = await api.post('/auth/login/', {
+        username: username.trim(),
+        password: password,
+      });
+      completeLogin(res.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || err.response?.data?.error || 'Invalid credentials. Please verify your username and password.');
+    } finally {
+      setSubmittingCreds(false);
+    }
+  };
+
   return (
     <CustomerLayout>
       <div className="relative min-h-[calc(100vh-140px)] flex flex-col justify-center items-center px-4 py-12">
@@ -223,17 +264,106 @@ export function CustomerLoginPage() {
             </div>
           )}
 
-          {/* Hero Action: Precision Google Sign-In Button */}
-          <div className="mt-6 w-full">
+          {/* 1-Click Judge Demo Quick Access (Prominent Hackathon Action) */}
+          <div className="mt-5 w-full">
+            <button
+              type="button"
+              disabled={submittingCreds}
+              onClick={() => handleOneClickDemo('shopper', 'Shopper@2026')}
+              className="w-full group relative overflow-hidden flex items-center justify-between gap-3 px-4 py-3 bg-linear-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-bold text-xs shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="p-1.5 rounded-lg bg-white/20">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </span>
+                <div className="text-left">
+                  <div className="text-[10px] uppercase tracking-wider text-amber-100 font-extrabold">Hackathon Reviewer</div>
+                  <div className="text-sm font-black">⚡ 1-Click Shopper Demo Login</div>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-white/80 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="w-full flex items-center gap-3 my-3.5">
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">or continue with</span>
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+          </div>
+
+          {/* Google Sign-In Button */}
+          <div className="w-full">
             <button
               type="button"
               disabled={googleLoading}
               onClick={() => handleGoogleSignIn()}
-              className="w-full h-12 flex items-center justify-center gap-3 px-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl hover:bg-slate-50/80 dark:hover:bg-slate-850 transition-all duration-200 text-sm font-bold text-slate-800 dark:text-slate-100 shadow-xs hover:shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+              className="w-full h-11 flex items-center justify-center gap-2.5 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 transition-all text-xs font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:shadow-xs active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
-              <GoogleIcon />
-              <span>{googleLoading ? 'Signing in...' : 'Continue with Google'}</span>
+              <GoogleIcon className="w-4 h-4" />
+              <span>{googleLoading ? 'Connecting to Google...' : 'Continue with Google'}</span>
             </button>
+          </div>
+
+          {/* Divider */}
+          <div className="w-full flex items-center gap-3 my-3.5">
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">or test credentials</span>
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+          </div>
+
+          {/* Direct Credentials Form (Matches DEVPOST_SUBMISSION.md) */}
+          <form onSubmit={handleCredentialsSubmit} className="w-full space-y-2 text-left">
+            <div>
+              <div className="relative">
+                <User className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-800 pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-slate-600"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <div className="relative">
+                <Lock className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-800 pl-8 pr-8 py-2 bg-slate-50 dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-slate-600"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={submittingCreds}
+              className="w-full py-2 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs rounded-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+            >
+              {submittingCreds ? 'Signing in...' : 'Sign In with Password'}
+            </button>
+          </form>
+
+          {/* Quick link to Owner Portal */}
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 w-full flex items-center justify-between text-[11px]">
+            <span className="text-slate-400">Store Manager?</span>
+            <Link to="/owner/login" className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1">
+              <span>Owner Portal</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
 
           {/* Inline Invite Code Drawer */}

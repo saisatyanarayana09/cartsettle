@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import api from '../../services/api';
-import { Eye, EyeOff, Loader2, Store, Mail, User, Lock, ArrowUpRight, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Store, Mail, User, Lock, ArrowUpRight, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 const OwnerLoginForm = () => {
@@ -90,6 +90,30 @@ const OwnerLoginForm = () => {
     onError: () => setError('Google Sign-In failed or was cancelled.')
   });
 
+  const handleOneClickOwnerDemo = async () => {
+    setError('');
+    setSubmitting(true);
+    try {
+      const { data } = await api.post('/auth/login/', {
+        username: 'owner',
+        password: 'CartSettle@2026',
+      });
+      if (!data.user.is_owner && !data.user.is_staff) {
+        throw new Error('This account does not have store owner/management access.');
+      }
+      localStorage.setItem('smart-kirana-owner-token', data.access);
+      localStorage.setItem('smart-kirana-owner-refresh', data.refresh);
+      localStorage.setItem('smart-kirana-owner-user', JSON.stringify(data.user));
+      const defaultRedirect = '/owner';
+      const from = location.state?.from?.pathname || defaultRedirect;
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.detail || err.message || 'Owner demo login failed.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <main className="min-h-screen flex bg-white dark:bg-slate-950 font-sans antialiased">
       {/* Left Column: Form & Brand Console */}
@@ -159,6 +183,27 @@ const OwnerLoginForm = () => {
 
           {/* Login Form */}
           <form onSubmit={submit} className="space-y-5">
+            {/* 1-Click Judge Demo Quick Access (Owner) */}
+            <div>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleOneClickOwnerDemo}
+                className="w-full group relative overflow-hidden flex items-center justify-between gap-3 px-4 py-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700 text-white rounded-xl font-bold text-sm shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="p-1.5 rounded-lg bg-white/20">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </span>
+                  <div className="text-left">
+                    <div className="text-[10px] uppercase tracking-wider text-emerald-100 font-extrabold">Hackathon Reviewer</div>
+                    <div className="text-sm font-black">⚡ 1-Click Store Owner Demo Login</div>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-white/80 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+
             {/* Google Login Button */}
             <div>
               <button
