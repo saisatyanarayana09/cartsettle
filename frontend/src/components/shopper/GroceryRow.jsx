@@ -3,7 +3,7 @@ import { Plus, Minus, Check, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { optimizeImage } from "../../utils/image";
 
-export function GroceryRow({ item, onAdd, added, currency = "INR" }) {
+export function GroceryRow({ item, onAdd, added, currency = "INR", disabled = false }) {
   const [quantity, setQuantity] = useState(item.quantity || 1);
   const [imageFailed, setImageFailed] = useState(false);
   const photo = item.image || item.thumbnail || item.image_url;
@@ -41,7 +41,7 @@ export function GroceryRow({ item, onAdd, added, currency = "INR" }) {
                 variant="ghost"
                 size="icon-sm"
                 aria-label={`Decrease ${item.name} quantity`}
-                disabled={quantity <= 1}
+                disabled={disabled || quantity <= 1}
                 onClick={() => setQuantity((value) => Math.max(1, value - 1))}
               >
                 <Minus />
@@ -56,6 +56,7 @@ export function GroceryRow({ item, onAdd, added, currency = "INR" }) {
                 variant="ghost"
                 size="icon-sm"
                 aria-label={`Increase ${item.name} quantity`}
+                disabled={disabled}
                 onClick={() => setQuantity((value) => value + 1)}
               >
                 <Plus />
@@ -65,6 +66,7 @@ export function GroceryRow({ item, onAdd, added, currency = "INR" }) {
               size="sm"
               className="h-9"
               aria-label={`Add ${quantity} ${item.name} to cart`}
+              disabled={disabled}
               onClick={() => onAdd({ ...item, quantity })}
             >
               {added ? <Check /> : <Plus />}

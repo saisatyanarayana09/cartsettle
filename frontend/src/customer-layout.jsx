@@ -1,6 +1,6 @@
-﻿import { optimizeImage } from "./utils/image";
-import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
+import { optimizeImage } from "./utils/image";
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { Link, useNavigate, useLocation, Outlet } from "./router";
 import {
   Home,
   Search,
@@ -28,7 +28,8 @@ import {
   ArrowUpRight,
   Bot,
 } from "lucide-react";
-import ShopperAgentDrawer from "./components/ShopperAgentDrawer";
+// Loaded on first open so the assistant's heavy chat/voice code never delays the store's first paint.
+const ShopperAgentDrawer = lazy(() => import("./components/ShopperAgentDrawer"));
 import { Button } from "@/components/ui/button";
 import { ShopperMark } from "./components/shopper/ShopperMark";
 import { useCart } from "./cart-context";
@@ -360,7 +361,7 @@ function GlobalSearchBar({ settings, onActiveChange }) {
             onClick={() => setVoiceError(null)}
             className="font-bold ml-2 text-amber-600 hover:text-amber-800"
           >
-            âœ•
+            ✕
           </button>
         </div>
       )}
@@ -448,7 +449,7 @@ function GlobalSearchBar({ settings, onActiveChange }) {
                     </p>
                   </div>
                   <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                    â‚¹{product.offer_price || product.regular_price}
+                    ₹{product.offer_price || product.regular_price}
                   </div>
                 </Link>
               ))}
@@ -755,25 +756,25 @@ function WelcomeScreen() {
         className="absolute top-[15%] left-[10%] text-2xl opacity-[0.06] animate-bounce"
         style={{ animationDuration: "3s" }}
       >
-        ðŸ¥¬
+        🥬
       </div>
       <div
         className="absolute top-[20%] right-[12%] text-xl opacity-[0.06] animate-bounce"
         style={{ animationDuration: "3.5s" }}
       >
-        ðŸ›’
+        🛒
       </div>
       <div
         className="absolute bottom-[20%] left-[15%] text-xl opacity-[0.06] animate-bounce"
         style={{ animationDuration: "4s" }}
       >
-        ðŸ¥•
+        🥕
       </div>
       <div
         className="absolute bottom-[15%] right-[10%] text-2xl opacity-[0.06] animate-bounce"
         style={{ animationDuration: "2.5s" }}
       >
-        ðŸŒ¿
+        🌿
       </div>
 
       <div
@@ -894,7 +895,7 @@ function FestivePopupModal({ settings }) {
     setIsOpen(false);
   };
 
-  const title = settings.festive_popup_title || "Special Festive Offers! ðŸŽ‰";
+  const title = settings.festive_popup_title || "Special Festive Offers! 🎉";
   const content =
     settings.festive_popup_content ||
     "Celebrate the festival season with exclusive store savings and specials!";
@@ -949,7 +950,7 @@ function FestivePopupModal({ settings }) {
             onClick={handleClose}
             className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-500 via-rose-500 to-emerald-600 hover:opacity-95 active:scale-95 text-white font-black text-base shadow-lg shadow-rose-500/25 transition-all text-center cursor-pointer"
           >
-            âœ¨ Shop Now
+            ✨ Shop Now
           </Link>
           <button
             type="button"
@@ -1058,13 +1059,13 @@ function MaintenanceModeOverlay({ settings }) {
             </p>
             {settings.store_phone && (
               <p>
-                ðŸ“ž Phone:{" "}
+                📞 Phone:{" "}
                 <span className="text-slate-200 font-semibold">{settings.store_phone}</span>
               </p>
             )}
             {settings.store_email && (
               <p>
-                âœ‰ï¸ Email:{" "}
+                ✉️ Email:{" "}
                 <span className="text-slate-200 font-semibold">{settings.store_email}</span>
               </p>
             )}
@@ -1089,6 +1090,10 @@ export function CustomerLayout({ children }) {
   const [isMobileSearchHidden, setIsMobileSearchHidden] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isShopperAgentOpen, setIsShopperAgentOpen] = useState(false);
+  const [shopperAgentLoaded, setShopperAgentLoaded] = useState(false);
+  useEffect(() => {
+    if (isShopperAgentOpen) setShopperAgentLoaded(true);
+  }, [isShopperAgentOpen]);
   const location = useLocation();
 
   useEffect(() => {
@@ -1315,21 +1320,19 @@ export function CustomerLayout({ children }) {
           <span>Home</span>
         </Link>
 
-        <Link
-          to="/categories"
-          className={`flex flex-1 flex-col items-center justify-center py-1 gap-1 text-[11px] font-bold transition-all ${
-            location.pathname === "/categories"
-              ? "text-emerald-600 dark:text-emerald-400 scale-105"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-          }`}
-        >
-          <LayoutGrid
-            size={20}
-            className={location.pathname === "/categories" ? "stroke-[2.5]" : "stroke-2"}
-          />
-          <span>Categories</span>
-        </Link>
 
+
+        <div className="flex flex-1 justify-center">
+          <button
+            type="button"
+            onClick={() => setIsShopperAgentOpen(true)}
+            aria-label="Open shopping assistant"
+            className="nav-ai-button -mt-7 flex size-14 flex-col items-center justify-center rounded-full text-[10px] font-black tracking-wide transition-transform active:scale-95"
+          >
+            <Sparkles size={20} className="stroke-[2.25]" />
+            <span>AI</span>
+          </button>
+        </div>
         <Link
           to={isCustomer ? "/profile/orders" : "/login?redirect=/profile/orders"}
           className={`flex flex-1 flex-col items-center justify-center py-1 gap-1 text-[11px] font-bold transition-all ${
@@ -1394,17 +1397,21 @@ export function CustomerLayout({ children }) {
       {/* Store-themed Shopper Concierge launcher */}
       <Button
         onClick={() => setIsShopperAgentOpen(true)}
-        className="shopper-theme fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 h-12 gap-2 border border-border bg-background px-4 text-foreground shadow-lg hover:bg-accent"
+        className="shopper-theme fixed hidden md:inline-flex md:bottom-6 right-4 md:right-6 z-40 h-12 gap-2 border border-border bg-background px-4 text-foreground shadow-lg hover:bg-accent"
         title="Open Shopper AI Concierge"
       >
         <ShopperMark className="size-7" />
         <span>Ask AI Shopper</span>
       </Button>
 
-      <ShopperAgentDrawer
-        isOpen={isShopperAgentOpen}
-        onClose={() => setIsShopperAgentOpen(false)}
-      />
+      {(isShopperAgentOpen || shopperAgentLoaded) && (
+        <Suspense fallback={null}>
+          <ShopperAgentDrawer
+            isOpen={isShopperAgentOpen}
+            onClose={() => setIsShopperAgentOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

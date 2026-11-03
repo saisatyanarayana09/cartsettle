@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react'
 
 import { GSAPFadeUp, GSAPZoomIn, GSAPSlideIn, GSAPStagger } from './components/GSAPScroll'
 
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from './router'
 
 import { ChevronRight, ChevronLeft, Search, X, Heart, ArrowLeft, ShoppingCart, Sparkles, Zap, Star, Megaphone, ShieldCheck, Tag, Minus, Plus, Check, Share2, Loader2, PackageSearch } from 'lucide-react'
 
@@ -18,7 +18,10 @@ import toast from 'react-hot-toast'
 
 
 
-const unpack = (response) => response.data.results ?? response.data
+const unpack = (response) => {
+  const d = response?.data?.results ?? response?.data;
+  return Array.isArray(d) ? d : [];
+}
 
 
 
@@ -400,7 +403,7 @@ export function HomePage() {
   const initSectionsRaw = readCacheSync('/store/homepage-sections/');
   const [sections, setSections] = useState(() => {
     if (!initSectionsRaw) return [];
-    const d = initSectionsRaw.results || initSectionsRaw || [];
+    const d0 = initSectionsRaw.results || initSectionsRaw; const d = Array.isArray(d0) ? d0 : [];
     const mapped = d.map(sec => ({
       ...sec,
       items: (sec.section_products || []).sort((a, b) => a.position - b.position).map(sp => sp.product_details)
@@ -428,7 +431,7 @@ export function HomePage() {
         if (bannersRes.status === 'fulfilled') setBanners(unpack(bannersRes.value));
         if (settingsRes.status === 'fulfilled') setSettings(settingsRes.value.data);
         if (sectionsRes.status === 'fulfilled') {
-          const d = sectionsRes.value.data.results || sectionsRes.value.data || [];
+          const d0 = sectionsRes.value.data?.results || sectionsRes.value.data; const d = Array.isArray(d0) ? d0 : [];
           const mapped = d.map(sec => ({
             ...sec,
             items: (sec.section_products || []).sort((a, b) => a.position - b.position).map(sp => sp.product_details)

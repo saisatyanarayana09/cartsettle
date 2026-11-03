@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { Outlet, Link, useLocation } from '../../router';
 import { 
   LayoutDashboard, Package, Tags, ShoppingCart, Users, Settings, 
   Menu, X, LogOut, PercentCircle, MessageSquare, Layout, Gift, 
@@ -11,7 +11,8 @@ import toast from 'react-hot-toast';
 import { useTheme } from '../../context/ThemeContext';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { playOrderChime } from '../../utils/sound';
-import KiranaCopilotDrawer from '../components/KiranaCopilotDrawer';
+// Loaded on first open so the co-pilot's heavy chat/voice code never delays the owner panel.
+const KiranaCopilotDrawer = lazy(() => import('../components/KiranaCopilotDrawer'));
 
 const OWNER_EMERALD_STYLES = {
   '--color-primary-50': '#ecfdf5',
@@ -41,6 +42,10 @@ const OwnerLayout = () => {
   const applyThemeToOwner = Boolean(storeTheme?.apply_theme_to_owner_app);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [copilotLoaded, setCopilotLoaded] = useState(false);
+  useEffect(() => {
+    if (isCopilotOpen) setCopilotLoaded(true);
+  }, [isCopilotOpen]);
   const [storeStatus, setStoreStatus] = useState({ is_open: true, loaded: false });
   const [notificationPermission, setNotificationPermission] = useState(() => {
     return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied';
@@ -497,10 +502,14 @@ const OwnerLayout = () => {
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
         </button>
 
-        <KiranaCopilotDrawer
-          isOpen={isCopilotOpen}
-          onClose={() => setIsCopilotOpen(false)}
-        />
+        {(isCopilotOpen || copilotLoaded) && (
+          <Suspense fallback={null}>
+            <KiranaCopilotDrawer
+              isOpen={isCopilotOpen}
+              onClose={() => setIsCopilotOpen(false)}
+            />
+          </Suspense>
+        )}
 
 
       </div>
