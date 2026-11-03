@@ -15,6 +15,7 @@ import json
 import logging
 import re
 import time
+import difflib
 from decimal import Decimal
 import requests
 from django.conf import settings
@@ -375,6 +376,32 @@ class AgentTools:
         return owner_tools
 
     @staticmethod
+    def serialize_card_product(p, quantity=1, custom_price=None) -> dict:
+        selling = p.offer_price or p.regular_price
+        cost = p.cost_price or (selling * Decimal("0.80"))
+        min_safe = (cost / Decimal("0.88")).quantize(Decimal("0.01"))
+        max_disc_pct = max(Decimal("0.0"), ((selling - min_safe) / selling * 100)).quantize(Decimal("0.1"))
+        final_p = float(custom_price) if custom_price is not None else float(selling)
+        img_url = str(p.image) if getattr(p, "image", None) else None
+        cat_name = p.category.name if getattr(p, "category", None) else "Groceries"
+        return {
+            "id": p.id,
+            "name": p.name,
+            "price": final_p,
+            "regular_price": float(p.regular_price),
+            "offer_price": float(selling),
+            "max_safe_discount_pct": float(max_disc_pct),
+            "best_deal_price": float(min_safe) if min_safe < selling else float(selling),
+            "unit": p.unit or "1 unit",
+            "quantity": quantity,
+            "stock": p.stock_quantity,
+            "stock_quantity": p.stock_quantity,
+            "category": cat_name,
+            "image": img_url,
+            "thumbnail": img_url,
+        }
+
+    @staticmethod
     def execute_tool(name: str, args: dict, session_id: str = "") -> dict:
         """Dispatches tool execution and broadcasts agent activity in real time."""
         broadcast_agent_thought(session_id, {
@@ -383,30 +410,7 @@ class AgentTools:
             "arguments": args
         })
 
-        def _serialize_card_product(p, quantity=1, custom_price=None):
-            selling = p.offer_price or p.regular_price
-            cost = p.cost_price or (selling * Decimal("0.80"))
-            min_safe = (cost / Decimal("0.88")).quantize(Decimal("0.01"))
-            max_disc_pct = max(Decimal("0.0"), ((selling - min_safe) / selling * 100)).quantize(Decimal("0.1"))
-            final_p = float(custom_price) if custom_price is not None else float(selling)
-            img_url = str(p.image) if getattr(p, "image", None) else None
-            cat_name = p.category.name if getattr(p, "category", None) else "Groceries"
-            return {
-                "id": p.id,
-                "name": p.name,
-                "price": final_p,
-                "regular_price": float(p.regular_price),
-                "offer_price": float(selling),
-                "max_safe_discount_pct": float(max_disc_pct),
-                "best_deal_price": float(min_safe) if min_safe < selling else float(selling),
-                "unit": p.unit or "1 unit",
-                "quantity": quantity,
-                "stock": p.stock_quantity,
-                "stock_quantity": p.stock_quantity,
-                "category": cat_name,
-                "image": img_url,
-                "thumbnail": img_url,
-            }
+        _serialize_card_product = AgentTools.serialize_card_product
 
         if name == "search_products_and_stock":
             query = args.get("query", "").strip()
@@ -1156,9 +1160,29 @@ class AgentService:
         if ord_matches:
             mem["last_order_id"] = ord_matches[-1].upper()
 
-        for kw in ["Milk", "Bread", "Pasta", "Sauce", "Cheese", "Strawberries", "Eggs", "Avocado", "Yogurt", "Atta"]:
-            if kw.lower() in combined.lower():
-                mem["last_product"] = kw
+        tracked_prod = None
+        for act in (result.get("actions") or []):
+            atype = act.get("type")
+            if atype == "ADD_TO_CART" and isinstance(act.get("item"), dict):
+                tracked_prod = act["item"].get("name")
+            elif atype == "MARGIN_DECISION" and isinstance(act.get("decision"), dict):
+                tracked_prod = act["decision"].get("product")
+            elif atype == "PRODUCT_UPDATED" and isinstance(act.get("product"), dict):
+                tracked_prod = act["product"].get("name")
+            elif atype in ("SEARCH_RESULTS", "LOW_STOCK_LIST") and act.get("items"):
+                tracked_prod = act["items"][0].get("name")
+            elif atype == "MARGIN_LIST" and act.get("products"):
+                tracked_prod = act["products"][0].get("name")
+            if tracked_prod:
+                break
+
+        if not tracked_prod:
+            matched_p = self._match_product_from_text(prompt) or self._match_product_from_text(reply_text)
+            if matched_p:
+                tracked_prod = matched_p.name
+
+        if tracked_prod:
+            mem["last_product"] = tracked_prod
 
         ts = time.strftime("%I:%M %p")
         msgs.append({"role": "user", "content": prompt, "timestamp": ts})
@@ -1176,25 +1200,31 @@ class AgentService:
         cache.set(key, mem, timeout=86400)
 
     def _build_follow_ups(self, persona: str, actions: list, mem: dict) -> list:
-        """Generates 2-3 smart contextual next-step chips based on current action."""
+        """Generates 2-3 smart contextual next-step chips based on current action and active product/order."""
         act_types = [a.get("type") for a in (actions or [])]
         last_ord = mem.get("last_order_id") or "ORD202600002"
+        last_prod = mem.get("last_product") or "Organic Farm Whole Milk"
+        short_prod = re.sub(r"\s*\([^)]*\)", "", last_prod).strip()
         if persona == "owner":
             if "ORDER_CARD" in act_types:
-                return [f"Audit order {last_ord}", "Check pending orders", "Check low stock items"]
+                return [f"Settle order {last_ord}", "Check pending orders", "Check low stock items"]
             if "PENDING_ORDERS" in act_types:
                 return [f"Settle order {last_ord}", "Generate the most recent order number", "Check low stock items"]
             if "LOW_STOCK_LIST" in act_types:
-                return ["Restock 10 units of Strawberries via PayPal Payout", "Check profit margins on Atta", "Currently how many products are live in our store"]
+                return [f"Restock 10 units of {short_prod} via PayPal Payout", "Which product has the highest margin?", "Currently how many products are live in our store"]
+            if "MARGIN_LIST" in act_types or "MARGIN_DECISION" in act_types:
+                return [f"What is 15% discount on {short_prod}?", "Check low stock items", "Show sales revenue analytics"]
             if "CATALOG_SUMMARY" in act_types:
-                return ["Check low stock items", "Check profit margins on Atta", "Generate the most recent order number"]
+                return ["Check low stock items", "Which product has the highest margin?", "Generate the most recent order number"]
             return ["Generate the most recent order number", "Check pending orders", "Check low stock items"]
         else:
             if "RECOMMEND_BASKET" in act_types:
-                return ["Find organic milk and check for the best deal", "Add 1 Sourdough Bread to my cart", "Suggest healthy breakfast ingredients"]
+                return [f"Add 1 {short_prod} to my cart", "What is the cheapest item?", "Suggest healthy breakfast ingredients"]
             if "SEARCH_RESULTS" in act_types:
-                return ["Add 1 Organic Milk to my cart", "Suggest a dinner recipe basket under $20", "Suggest healthy breakfast ingredients"]
-            return ["Suggest a dinner recipe basket under $20", "Find organic milk and check for the best deal", "Add 1 Organic Milk to my cart"]
+                return [f"Add 1 {short_prod} to my cart", f"Can I get 10% off {short_prod}?", "Suggest a dinner recipe basket under $20"]
+            if "ADD_TO_CART" in act_types:
+                return ["Go to checkout", f"Can I get 10% off {short_prod}?", "Show dairy products"]
+            return ["Suggest a dinner recipe basket under $20", "What is the cheapest item?", f"Add 1 {short_prod} to my cart"]
 
     def _normalize_voice_transcript(self, text: str) -> str:
         """Normalizes spoken number words and currency/percent terms from SpeechRecognition into clean digits."""
@@ -1272,12 +1302,15 @@ class AgentService:
         # Merge stored backend history with frontend history if backend was empty
         effective_history = stored_msgs if stored_msgs else (history or [])
 
-        # Resolve contextual pronouns ("settle it", "audit that order", "what about 10% discount")
+        # Resolve contextual pronouns ("settle it", "audit that order", "add 2 of it", "15% off that")
         resolved_prompt = normalized_prompt
         lower_p = normalized_prompt.lower()
         if mem.get("last_order_id") and any(w in lower_p for w in ["that order", "this order", "settle it", "audit it", "capture it"]):
             if not re.search(r"\b(ord\d+\w*)\b", lower_p):
                 resolved_prompt = f"{normalized_prompt} ({mem['last_order_id']})"
+        elif mem.get("last_product") and not self._match_product_from_text(normalized_prompt):
+            if re.search(r"\b(it|that|them|those|this item|that item|more)\b", lower_p) or any(w in lower_p for w in ["% off", "discount", "in stock", "how much"]):
+                resolved_prompt = f"{normalized_prompt} ({mem['last_product']})"
 
         broadcast_agent_thought(session_id, {
             "status": "thinking",
@@ -1530,28 +1563,166 @@ class AgentService:
             logger.warning("Could not build live store context: %s", e)
             return "Store active with protected 12% margin floor."
 
-    def _match_product_from_text(self, text: str):
-        """Dynamically matches any product in the database from natural language text."""
+    def _match_products_from_text(self, text: str, limit: int = 6) -> list:
+        """
+        Weighted & fuzzy product matcher:
+        - Distinguishes core product nouns ('eggs', 'milk', 'bread', 'strawberries', 'avocado')
+          from generic modifiers ('organic', 'fresh', 'farm', 'whole', 'bag').
+        - Handles singular/plural stems, domain synonyms ('cheese' -> Parmigiano, 'flour' -> Atta),
+          and typos/voice quirks via difflib SequenceMatcher.
+        """
+        if not text:
+            return []
         lower = text.lower()
         stop_words = {
             "update", "change", "set", "price", "stock", "add", "buy", "get", "put",
-            "cart", "bag", "order", "find", "search", "check", "best", "deal", "for",
-            "the", "and", "with", "from", "remove", "delete", "create", "product",
-            "item", "units", "unit", "off", "discount", "margin", "restock", "payout",
-            "via", "paypal", "please", "can", "you", "want", "need", "show", "me"
+            "cart", "bag", "basket", "order", "find", "search", "check", "best", "deal",
+            "deals", "for", "the", "and", "with", "from", "remove", "delete", "create",
+            "product", "products", "item", "items", "units", "unit", "off", "discount",
+            "margin", "margins", "restock", "payout", "via", "paypal", "please", "can",
+            "you", "want", "need", "show", "me", "how", "much", "many", "what", "which",
+            "who", "where", "when", "is", "are", "was", "were", "in", "of", "to", "my",
+            "our", "store", "shop", "have", "has", "do", "does", "cost", "costs",
+            "available", "left", "about", "tell", "give", "some", "any", "all", "more",
+            "most", "least", "cheapest", "expensive", "highest", "lowest", "total",
+            "under", "over", "above", "below", "dollar", "dollars", "percent",
+            "it", "that", "them", "those", "this", "these", "there", "here"
         }
-        all_prods = list(Product.objects.filter(is_active=True).order_by("id"))
-        # 1. Exact full name substring match
+        modifier_words = {
+            "organic", "fresh", "farm", "whole", "california", "imported", "creamy",
+            "aged", "pasture", "raised", "artisanal", "bronze", "cut", "san", "marzano",
+            "hass", "greek", "wheat", "chakki", "pack", "lb", "oz", "gal", "ct",
+            "bottle", "jar", "box", "loaf"
+        }
+
+        def _stem(w: str) -> str:
+            if w.endswith("ies") and len(w) > 4:
+                return w[:-3] + "y"
+            if w.endswith("oes") and len(w) > 4:
+                return w[:-2]
+            if w.endswith("s") and not w.endswith("ss") and len(w) > 3:
+                return w[:-1]
+            return w
+
+        q_tokens = [w for w in re.findall(r"[a-z]+", lower) if len(w) >= 3 and w not in stop_words]
+        if not q_tokens:
+            return []
+
+        all_prods = list(Product.objects.select_related("category").filter(is_active=True).order_by("id"))
+        scored = []
+
         for p in all_prods:
-            if p.name.lower() in lower:
-                return p
-        # 2. Match any word (>= 3 chars) in product name
-        for p in all_prods:
-            p_words = [w.lower().strip("(),.") for w in p.name.split() if len(w) >= 3]
-            for pw in p_words:
-                if pw not in stop_words and re.search(rf"\b{re.escape(pw)}s?\b", lower):
-                    return p
-        return None
+            p_lower = p.name.lower()
+            base_name = re.sub(r"\s*\([^)]*\)", "", p_lower).strip()
+            p_tokens = [w for w in re.findall(r"[a-z]+", p_lower) if len(w) >= 3 and w not in stop_words]
+
+            aliases = []
+            if "parmigiano" in p_lower or "reggiano" in p_lower:
+                aliases.extend(["cheese", "parmesan"])
+            if "atta" in p_lower:
+                aliases.extend(["flour", "roti", "chapati"])
+            if "strawberries" in p_lower:
+                aliases.extend(["strawberry", "berries", "berry"])
+            if "avocados" in p_lower:
+                aliases.extend(["avocado", "guacamole"])
+            if "marinara" in p_lower:
+                aliases.extend(["tomato"])
+            if "sourdough" in p_lower or "bread" in p_lower:
+                aliases.extend(["loaf", "toast"])
+
+            score = 0
+            core_matched = False
+
+            if p_lower in lower or (len(base_name) >= 5 and base_name in lower):
+                score += 50
+                core_matched = True
+
+            for qt in q_tokens:
+                qt_stem = _stem(qt)
+                best_tok = 0
+                tok_core = False
+                for pw in p_tokens + aliases:
+                    pw_stem = _stem(pw)
+                    if qt == pw or qt_stem == pw_stem:
+                        if pw in modifier_words and qt in modifier_words:
+                            if 3 > best_tok:
+                                best_tok = 3
+                        else:
+                            if 20 > best_tok:
+                                best_tok = 20
+                                tok_core = True
+                    elif len(qt) >= 4 and len(pw) >= 4:
+                        ratio = difflib.SequenceMatcher(None, qt_stem, pw_stem).ratio()
+                        if ratio >= 0.78:
+                            if pw in modifier_words:
+                                if 2 > best_tok:
+                                    best_tok = 2
+                            else:
+                                if 14 > best_tok:
+                                    best_tok = 14
+                                    tok_core = True
+                score += best_tok
+                if tok_core:
+                    core_matched = True
+
+            if score > 0:
+                scored.append((score, core_matched, p))
+
+        if not scored:
+            return []
+
+        has_core = any(cm for _, cm, _ in scored)
+        if has_core:
+            filtered = [(sc, p) for sc, cm, p in scored if cm]
+        else:
+            filtered = [(sc, p) for sc, cm, p in scored if sc >= 3]
+
+        filtered.sort(key=lambda item: (-item[0], item[1].id))
+        return [p for _, p in filtered[:limit]]
+
+    def _match_product_from_text(self, text: str):
+        """Returns the highest-scoring matched product from natural language text."""
+        matches = self._match_products_from_text(text, limit=1)
+        return matches[0] if matches else None
+
+    def _extract_items_with_quantities(self, text: str) -> list:
+        """
+        Extracts multiple (Product, quantity) pairs from compound commands or questions
+        like 'Add 2 milk and 1 sourdough bread' or 'How much for 3 pasta and 1 marinara sauce?'.
+        """
+        if not text:
+            return []
+        clauses = [c.strip() for c in re.split(r"\s*(?:\band\b|,|\bplus\b|\bwith\b|&|\balso\b)\s*", text, flags=re.IGNORECASE) if c.strip()]
+        extracted = {}
+        order_list = []
+
+        def _extract_qty(segment: str) -> int:
+            cleaned = re.sub(
+                r"\$\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*(?:%|lb|lbs|oz|ct|gal|kg|g|pack)\b|\b(?:bag\s+of\s+\d+|ord\d+\w*)\b",
+                "",
+                segment,
+                flags=re.IGNORECASE,
+            )
+            m = re.search(r"\b(\d+)\b", cleaned)
+            return max(1, min(int(m.group(1)), 99)) if m else 1
+
+        for clause in clauses:
+            prod = self._match_product_from_text(clause)
+            if prod:
+                qty = _extract_qty(clause)
+                if prod.id in extracted:
+                    extracted[prod.id] = (prod, extracted[prod.id][1] + qty)
+                else:
+                    extracted[prod.id] = (prod, qty)
+                    order_list.append(prod.id)
+
+        if not order_list:
+            single_prod = self._match_product_from_text(text)
+            if single_prod:
+                return [(single_prod, _extract_qty(text))]
+            return []
+
+        return [extracted[pid] for pid in order_list]
 
     def _check_fast_path(self, prompt: str, persona: str, session_id: str) -> dict:
         """Sub-50ms instant execution for all shop operations while strictly blocking Settings."""
@@ -1917,13 +2088,91 @@ class AgentService:
                 "tool_result": {"total_live_products": len(active_prods), "in_stock_products": len(in_stock)}
             }
 
+        # --- 3. SUPERLATIVE & ANALYTICAL QUERIES (Cheapest, Most Expensive, Highest/Lowest Margin, Stock) ---
+        if any(k in lower for k in [
+            "cheapest", "lowest price", "least expensive", "most affordable",
+            "most expensive", "highest price", "priciest",
+            "highest margin", "best margin", "most profitable", "lowest margin", "worst margin",
+            "most stock", "highest stock", "least stock", "lowest stock"
+        ]):
+            active_prods = list(Product.objects.select_related("category").filter(is_active=True))
+            if active_prods:
+                if any(k in lower for k in ["cheapest", "lowest price", "least expensive", "most affordable"]):
+                    sorted_p = sorted(active_prods, key=lambda x: float(x.offer_price or x.regular_price))
+                    top = sorted_p[0]
+                    sell = float(top.offer_price or top.regular_price)
+                    cards = [AgentTools.serialize_card_product(p) for p in sorted_p[:4]]
+                    return {
+                        "reply": f"Cheapest item is {top.name} at ${sell:.2f} per {top.unit or '1 unit'} with {top.stock_quantity} in stock.",
+                        "tools_used": [{"name": "search_products_and_stock", "args": {"sort": "price_asc"}}],
+                        "actions": [{"type": "SEARCH_RESULTS", "items": cards}],
+                        "tool_result": {"product": cards[0]}
+                    }
+                if any(k in lower for k in ["most expensive", "highest price", "priciest"]):
+                    sorted_p = sorted(active_prods, key=lambda x: float(x.offer_price or x.regular_price), reverse=True)
+                    top = sorted_p[0]
+                    sell = float(top.offer_price or top.regular_price)
+                    cards = [AgentTools.serialize_card_product(p) for p in sorted_p[:4]]
+                    return {
+                        "reply": f"Most expensive item is {top.name} at ${sell:.2f} per {top.unit or '1 unit'} with {top.stock_quantity} in stock.",
+                        "tools_used": [{"name": "search_products_and_stock", "args": {"sort": "price_desc"}}],
+                        "actions": [{"type": "SEARCH_RESULTS", "items": cards}],
+                        "tool_result": {"product": cards[0]}
+                    }
+                if any(k in lower for k in ["highest margin", "best margin", "most profitable", "lowest margin", "worst margin"]):
+                    is_low = any(k in lower for k in ["lowest margin", "worst margin"])
+                    margin_rows = []
+                    for p in active_prods:
+                        sell = p.offer_price or p.regular_price
+                        cost = p.cost_price or (p.regular_price * Decimal("0.80"))
+                        m_pct = float(((sell - cost) / sell * 100).quantize(Decimal("0.1"))) if sell > 0 else 0.0
+                        min_safe = (cost / Decimal("0.88")).quantize(Decimal("0.01"))
+                        max_disc = float(max(Decimal("0.0"), ((sell - min_safe) / sell * 100)).quantize(Decimal("0.1")))
+                        margin_rows.append({
+                            "id": p.id,
+                            "name": p.name,
+                            "regular_price": float(p.regular_price),
+                            "selling_price": float(sell),
+                            "cost_price": float(cost),
+                            "margin_pct": m_pct,
+                            "max_safe_discount_pct": max_disc,
+                            "stock": p.stock_quantity,
+                            "safe_for_bargain": Decimal(str(m_pct)) >= MIN_PROFIT_MARGIN_PCT,
+                        })
+                    margin_rows.sort(key=lambda r: r["margin_pct"], reverse=not is_low)
+                    top = margin_rows[0]
+                    label = "Lowest margin" if is_low else "Highest margin"
+                    return {
+                        "reply": f"{label} is {top['name']} at {top['margin_pct']:.1f}% margin, selling at ${top['selling_price']:.2f} with ${top['cost_price']:.2f} cost.",
+                        "tools_used": [{"name": "inspect_margin", "args": {"query": top["name"]}}],
+                        "actions": [{"type": "MARGIN_LIST", "products": margin_rows[:4]}],
+                        "tool_result": {"products": margin_rows[:4]}
+                    }
+                if any(k in lower for k in ["most stock", "highest stock", "least stock", "lowest stock"]):
+                    is_low = any(k in lower for k in ["least stock", "lowest stock"])
+                    sorted_p = sorted(active_prods, key=lambda x: x.stock_quantity, reverse=not is_low)
+                    top = sorted_p[0]
+                    sell = float(top.offer_price or top.regular_price)
+                    label = "Lowest stock" if is_low else "Highest stock"
+                    cards = [AgentTools.serialize_card_product(p) for p in sorted_p[:4]]
+                    return {
+                        "reply": f"{label} is {top.name} with {top.stock_quantity} units at ${sell:.2f}.",
+                        "tools_used": [{"name": "search_products_and_stock", "args": {"sort": "stock"}}],
+                        "actions": [{"type": "SEARCH_RESULTS", "items": cards}],
+                        "tool_result": {"product": cards[0]}
+                    }
+
         # --- OWNER FAST-PATHS ---
         if persona == "owner":
             # 1. Low stock / Inventory health
             if any(k in lower for k in ["low stock", "inventory health", "check stock", "stock health", "out of stock"]):
                 res = AgentTools.execute_tool("get_inventory_health", {"threshold": 10}, session_id)
                 items = res.get("items", [])
-                reply = f"{len(items)} items are low on stock."
+                if items:
+                    summary = ", ".join(f"{i['name']} ({i['stock']} left)" for i in items[:3])
+                    reply = f"{len(items)} items low on stock: {summary}."
+                else:
+                    reply = "All store inventory is healthy with over 10 units in stock."
                 actions = [{"type": "LOW_STOCK_LIST", "items": items[:4]}]
                 return {"reply": reply, "tools_used": [{"name": "get_inventory_health", "args": {}}], "actions": actions, "tool_result": res}
 
@@ -1935,17 +2184,25 @@ class AgentService:
                     reply = "No pending orders."
                     actions = []
                 else:
-                    reply = f"{len(orders)} orders are pending."
+                    first_o = orders[0]
+                    reply = f"{len(orders)} orders pending packing, starting with #{first_o['id']} for {first_o['customer']} at ${first_o['authorized_amount']:.2f}."
                     actions = [{"type": "PENDING_ORDERS", "orders": orders[:4]}]
                 return {"reply": reply, "tools_used": [{"name": "get_pending_packing_orders", "args": {}}], "actions": actions, "tool_result": res}
 
             # 3. Inspect Margin
-            if any(k in lower for k in ["check profit margin", "inspect margin", "margins on", "margin on", "profit margin"]):
+            if any(k in lower for k in ["check profit margin", "inspect margin", "margins on", "margin on", "profit margin", "margin for"]):
                 matched_p = self._match_product_from_text(lower)
                 query_term = matched_p.name if matched_p else "all"
                 res = AgentTools.execute_tool("inspect_margin", {"query": query_term}, session_id)
                 prods = res.get("products", [])
-                reply = "Margins are above the 12% floor."
+                if matched_p and prods:
+                    p0 = prods[0]
+                    reply = f"{p0['name']} has a {p0['margin_pct']:.1f}% margin, selling at ${p0['selling_price']:.2f} with ${p0['cost_price']:.2f} cost and {p0['max_safe_discount_pct']:.1f}% max safe discount."
+                elif prods:
+                    avg_m = sum(p["margin_pct"] for p in prods) / len(prods)
+                    reply = f"Store margins average {avg_m:.1f}%, well above the 12% protected floor."
+                else:
+                    reply = "Margins are above the 12% floor."
                 actions = [{"type": "MARGIN_LIST", "products": prods[:4]}]
                 return {"reply": reply, "tools_used": [{"name": "inspect_margin", "args": {"query": query_term}}], "actions": actions, "tool_result": res}
 
@@ -1961,7 +2218,8 @@ class AgentService:
 
             # 5. Restock via PayPal Payout
             if "restock" in lower or "payout" in lower:
-                qty_match = re.search(r"\b(\d+)\b", lower)
+                cleaned_num = re.sub(r"\$\d+(?:\.\d+)?|\d+\s*(?:lb|oz|ct|gal)\b", "", lower)
+                qty_match = re.search(r"\b(\d+)\b", cleaned_num)
                 qty = int(qty_match.group(1)) if qty_match else 10
                 email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", lower)
                 email = email_match.group(0) if email_match else "wholesale@kirana.com"
@@ -1989,7 +2247,7 @@ class AgentService:
                 matched_p = self._match_product_from_text(lower)
                 if matched_p:
                     return {
-                        "reply": f"Removed {matched_p.name}.",
+                        "reply": f"Removed {matched_p.name} from your cart.",
                         "tools_used": [{"name": "remove_from_shopper_cart", "args": {"product_id": matched_p.id}}],
                         "actions": [{"type": "REMOVE_FROM_CART", "product_id": matched_p.id, "name": matched_p.name}],
                         "tool_result": {"status": "removed", "product_id": matched_p.id}
@@ -2004,21 +2262,7 @@ class AgentService:
                     res = AgentTools.execute_tool("bargain_and_guard_margin", {"product_id": target_prod.id, "requested_discount_pct": req_pct}, session_id)
                     reply = self._synthesize_tool_response("bargain_and_guard_margin", res, persona)
                     deal_price = res.get("final_price") if res.get("status") == "APPROVED" else res.get("counter_price")
-                    img_url = str(target_prod.image) if getattr(target_prod, "image", None) else None
-                    res["item"] = {
-                        "id": target_prod.id,
-                        "name": target_prod.name,
-                        "price": deal_price,
-                        "regular_price": float(target_prod.regular_price),
-                        "offer_price": deal_price,
-                        "unit": target_prod.unit or "1 unit",
-                        "quantity": 1,
-                        "stock": target_prod.stock_quantity,
-                        "stock_quantity": target_prod.stock_quantity,
-                        "category": target_prod.category.name if getattr(target_prod, "category", None) else "Groceries",
-                        "image": img_url,
-                        "thumbnail": img_url,
-                    }
+                    res["item"] = AgentTools.serialize_card_product(target_prod, quantity=1, custom_price=deal_price)
                     actions = [
                         {"type": "MARGIN_DECISION", "decision": res},
                         {"type": "SEARCH_RESULTS", "items": [res["item"]]},
@@ -2030,20 +2274,37 @@ class AgentService:
                 res = AgentTools.execute_tool("manage_promo_code", {"action": "list"}, session_id)
                 return {"reply": res.get("message"), "tools_used": [{"name": "manage_promo_code", "args": {"action": "list"}}], "actions": [], "tool_result": res}
 
-            # 1. Autonomous Add to Cart ("Add X to my cart", "Add 2 Milk", "Buy Bread", "Get me Eggs")
-            if any(w in lower for w in ["add ", "put ", "buy ", "get me ", "i want ", "order "]):
-                qty_match = re.search(r"\b(\d+)\b", lower)
-                qty = int(qty_match.group(1)) if qty_match else 1
-                matched_p = self._match_product_from_text(lower)
-                prod = matched_p or (Product.objects.filter(is_active=True).first() if ("cart" in lower or "bag" in lower) else None)
-                if prod:
-                    res = AgentTools.execute_tool("add_to_shopper_cart", {"product_id": prod.id, "quantity": qty}, session_id)
-                    actions = self._extract_frontend_actions("add_to_shopper_cart", res)
-                    reply = f"Added {qty} {prod.name}."
-                    return {"reply": reply, "tools_used": [{"name": "add_to_shopper_cart", "args": {"product_id": prod.id, "quantity": qty}}], "actions": actions, "tool_result": res}
+            # 1. Autonomous Multi-Item & Single-Item Add to Cart ("Add 2 milk and 1 bread to my cart", "Buy Bread")
+            is_cost_question = any(lower.startswith(q) for q in ["how much", "what is the", "what's the", "cost of", "price of", "do you"])
+            if not is_cost_question and any(w in lower for w in ["add ", "put ", "buy ", "get me ", "i want ", "i'll take ", "order "]):
+                items_with_qty = self._extract_items_with_quantities(prompt)
+                if not items_with_qty and ("cart" in lower or "bag" in lower):
+                    fallback_p = Product.objects.select_related("category").filter(is_active=True).first()
+                    if fallback_p:
+                        items_with_qty = [(fallback_p, 1)]
+                if items_with_qty:
+                    actions = []
+                    tools_used = []
+                    added_parts = []
+                    grand_total = 0.0
+                    last_res = {}
+                    for prod, qty in items_with_qty:
+                        res = AgentTools.execute_tool("add_to_shopper_cart", {"product_id": prod.id, "quantity": qty}, session_id)
+                        last_res = res
+                        tools_used.append({"name": "add_to_shopper_cart", "args": {"product_id": prod.id, "quantity": qty}})
+                        actions.extend(self._extract_frontend_actions("add_to_shopper_cart", res))
+                        line_price = float(prod.offer_price or prod.regular_price) * qty
+                        grand_total += line_price
+                        added_parts.append(f"{qty} {prod.name}")
+                    if len(added_parts) == 1:
+                        reply = f"Added {added_parts[0]} for ${grand_total:.2f}."
+                    else:
+                        joined = ", ".join(added_parts[:-1]) + f" and {added_parts[-1]}"
+                        reply = f"Added {joined} for ${grand_total:.2f} total."
+                    return {"reply": reply, "tools_used": tools_used, "actions": actions, "tool_result": last_res}
 
-            # 2. Recipe Basket Recommendations
-            if any(k in lower for k in ["pasta", "dinner", "breakfast", "smoothie", "recipe", "salad", "meal", "plan a meal"]):
+            # 2. Recipe Basket Recommendations ("suggest a dinner recipe basket", "breakfast ingredients", "berry smoothie")
+            if any(k in lower for k in ["dinner", "breakfast", "smoothie", "recipe", "salad", "meal", "plan a meal", "basket", "ingredients"]):
                 recipe_name = "Dinner"
                 if "pasta" in lower or "dinner" in lower or "meal" in lower:
                     recipe_name = "Pasta Dinner"
@@ -2059,22 +2320,105 @@ class AgentService:
 
                 res = AgentTools.execute_tool("recommend_recipe_basket", {"recipe_name": recipe_name, "budget": budget}, session_id)
                 items = res.get("items", [])
-                reply = f"{len(items)} items for {recipe_name}."
+                total_p = res.get("total_price", sum(float(i.get("price", 0)) for i in items))
+                item_names = ", ".join(i["name"] for i in items[:3])
+                reply = f"{len(items)} items for {recipe_name} at ${total_p:.2f} total: {item_names}."
                 actions = [{"type": "RECOMMEND_BASKET", "items": items, "recipe": recipe_name}]
                 return {"reply": reply, "tools_used": [{"name": "recommend_recipe_basket", "args": {"recipe_name": recipe_name, "budget": budget}}], "actions": actions, "tool_result": res}
 
-            # 3. Search & Best Deal Check ("Find groceries", "Show me grocery deals", "Find organic milk")
-            matched_p = self._match_product_from_text(lower)
-            if matched_p or any(k in lower for k in ["find ", "search ", "deal", "grocer", "under $", "dairy", "bakery", "produce", "pantry"]):
-                max_p_match = re.search(r"under\s*\$?(\d+(?:\.\d+)?)", lower)
-                max_p = float(max_p_match.group(1)) if max_p_match else None
-                search_q = matched_p.name if matched_p else ""
-                res = AgentTools.execute_tool("search_products_and_stock", {"query": search_q, "max_price": max_p}, session_id)
-                prods = res.get("products", [])
-                if prods:
-                    reply = f"Found {len(prods)} items."
-                    actions = [{"type": "SEARCH_RESULTS", "items": prods}]
-                    return {"reply": reply, "tools_used": [{"name": "search_products_and_stock", "args": {"query": search_q or "all"}}], "actions": actions, "tool_result": res}
+        # --- 4. PRECISION PRODUCT Q&A, MULTI-ITEM COST CALCULATION & CATEGORY SEARCH (Both Shopper & Owner) ---
+        # 4a. Multi-item or multi-quantity cost calculation ("How much for 2 milk and 1 bread?")
+        if any(k in lower for k in ["how much", "total for", "cost for", "price for", "cost of"]):
+            calc_items = self._extract_items_with_quantities(prompt)
+            if len(calc_items) > 1 or (len(calc_items) == 1 and calc_items[0][1] > 1):
+                parts_str = []
+                total_cost = 0.0
+                cards = []
+                for prod, qty in calc_items:
+                    unit_p = float(prod.offer_price or prod.regular_price)
+                    sub = unit_p * qty
+                    total_cost += sub
+                    parts_str.append(f"{qty} {prod.name} at ${sub:.2f}")
+                    cards.append(AgentTools.serialize_card_product(prod, quantity=qty))
+                reply = f"{' plus '.join(parts_str)} comes to ${total_cost:.2f} total."
+                return {
+                    "reply": reply,
+                    "tools_used": [{"name": "search_products_and_stock", "args": {"query": prompt}}],
+                    "actions": [{"type": "SEARCH_RESULTS", "items": cards}],
+                    "tool_result": {"total_cost": total_cost, "items": cards}
+                }
+
+        # 4b. Specific product match Q&A (Price, Stock, Availability, Best Deal, Details)
+        matched_prods = self._match_products_from_text(prompt, limit=6)
+        if matched_prods:
+            max_p_match = re.search(r"under\s*\$?(\d+(?:\.\d+)?)", lower)
+            if max_p_match:
+                cap = float(max_p_match.group(1))
+                matched_prods = [p for p in matched_prods if float(p.offer_price or p.regular_price) <= cap]
+            if matched_prods:
+                cards = [AgentTools.serialize_card_product(p) for p in matched_prods]
+                if len(matched_prods) == 1:
+                    p0 = matched_prods[0]
+                    c0 = cards[0]
+                    sell = c0["price"]
+                    unit_str = c0["unit"]
+                    stock_qty = c0["stock"]
+                    stock_phrase = f"{stock_qty} in stock" if stock_qty > 0 else "out of stock"
+                    if "deal" in lower or "offer" in lower or "discount" in lower:
+                        best_p = c0["best_deal_price"]
+                        max_d = c0["max_safe_discount_pct"]
+                        if max_d > 0:
+                            reply = f"{p0.name} is ${sell:.2f} per {unit_str} with {stock_phrase}, and best deal is ${best_p:.2f} at {max_d:g}% off."
+                        else:
+                            reply = f"{p0.name} is ${sell:.2f} per {unit_str} with {stock_phrase}."
+                    elif any(k in lower for k in ["how many", "stock", "available", "have", "left"]):
+                        reply = f"{p0.name} has {stock_phrase} at ${sell:.2f} per {unit_str}."
+                    else:
+                        reply = f"{p0.name} is ${sell:.2f} per {unit_str} with {stock_phrase}."
+                else:
+                    summary = ", ".join(f"{c['name']} at ${c['price']:.2f}" for c in cards[:3])
+                    reply = f"Found {len(cards)} matching items: {summary}."
+                return {
+                    "reply": reply,
+                    "tools_used": [{"name": "search_products_and_stock", "args": {"query": matched_prods[0].name}}],
+                    "actions": [{"type": "SEARCH_RESULTS", "items": cards}],
+                    "tool_result": {"status": "success", "count": len(cards), "products": cards}
+                }
+
+        # 4c. Category & Budget Browse ("dairy", "bakery", "produce", "pantry", "under $6", "find groceries")
+        if any(k in lower for k in ["find ", "search ", "deal", "grocer", "under $", "dairy", "bakery", "produce", "pantry", "fruit", "vegetable", "italian"]):
+            qs = Product.objects.select_related("category").filter(is_active=True, stock_quantity__gt=0)
+            cat_label = "store"
+            if "dairy" in lower:
+                qs = qs.filter(category__name__icontains="dairy")
+                cat_label = "Dairy & Eggs"
+            elif "bakery" in lower:
+                qs = qs.filter(category__name__icontains="bakery")
+                cat_label = "Bakery"
+            elif "produce" in lower or "fruit" in lower or "vegetable" in lower:
+                qs = qs.filter(category__name__icontains="produce")
+                cat_label = "Produce"
+            elif "pantry" in lower or "italian" in lower:
+                qs = qs.filter(category__name__icontains="pantry")
+                cat_label = "Pantry"
+
+            max_p_match = re.search(r"under\s*\$?(\d+(?:\.\d+)?)", lower)
+            if max_p_match:
+                max_p = float(max_p_match.group(1))
+                qs = qs.filter(regular_price__lte=Decimal(str(max_p)))
+                cat_label = f"under ${max_p:g}"
+
+            prods_list = list(qs.order_by("regular_price")[:6])
+            if prods_list:
+                cards = [AgentTools.serialize_card_product(p) for p in prods_list]
+                top_names = ", ".join(f"{c['name']} (${c['price']:.2f})" for c in cards[:3])
+                reply = f"{len(cards)} {cat_label} items available: {top_names}."
+                return {
+                    "reply": reply,
+                    "tools_used": [{"name": "search_products_and_stock", "args": {"query": cat_label}}],
+                    "actions": [{"type": "SEARCH_RESULTS", "items": cards}],
+                    "tool_result": {"status": "success", "count": len(cards), "products": cards}
+                }
 
         return None
 
@@ -2091,7 +2435,11 @@ class AgentService:
             prods = res.get("products", [])
             if not prods:
                 return "No matching items found."
-            return f"Found {len(prods)} items."
+            if len(prods) == 1:
+                p0 = prods[0]
+                return f"{p0['name']} is ${p0['price']:.2f} per {p0.get('unit', '1 unit')} with {p0.get('stock', 0)} in stock."
+            top_names = ", ".join(f"{p['name']} (${p['price']:.2f})" for p in prods[:3])
+            return f"Found {len(prods)} items: {top_names}."
 
         elif fn_name == "recommend_recipe_basket":
             items = res.get("items", [])
@@ -2150,12 +2498,27 @@ class AgentService:
         return actions
 
     def _fallback_chat(self, prompt: str, session_id: str, persona: str) -> dict:
-        """Minimalist data-driven fallback."""
-        active_count = Product.objects.filter(is_active=True).count()
-        in_stock_count = Product.objects.filter(is_active=True, stock_quantity__gt=0).count()
+        """Smart data-driven fallback that answers product, order, or catalog questions from live DB."""
+        matched_prods = self._match_products_from_text(prompt, limit=4)
+        if matched_prods:
+            cards = [AgentTools.serialize_card_product(p) for p in matched_prods]
+            p0 = cards[0]
+            reply = f"{p0['name']} is ${p0['price']:.2f} per {p0['unit']} with {p0['stock']} in stock."
+            broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
+            return {"reply": reply, "tools_used": [{"name": "search_products_and_stock", "args": {"query": p0["name"]}}], "actions": [{"type": "SEARCH_RESULTS", "items": cards}]}
+
+        active_prods = list(Product.objects.select_related("category").filter(is_active=True).order_by("regular_price"))
+        in_stock_count = sum(1 for p in active_prods if p.stock_quantity > 0)
         orders_count = Order.objects.count()
         pending_count = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
-        reply = f"{active_count} live products ({in_stock_count} in stock) • {orders_count} orders ({pending_count} pending)."
+        if persona == "shopper" and active_prods:
+            cards = [AgentTools.serialize_card_product(p) for p in active_prods[:4]]
+            top_names = ", ".join(f"{c['name']} (${c['price']:.2f})" for c in cards[:3])
+            reply = f"{in_stock_count} items in stock including {top_names}."
+            broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
+            return {"reply": reply, "tools_used": [], "actions": [{"type": "SEARCH_RESULTS", "items": cards}]}
+
+        reply = f"{len(active_prods)} live products with {in_stock_count} in stock and {orders_count} orders ({pending_count} pending)."
         broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
         return {"reply": reply, "tools_used": [], "actions": []}
 
