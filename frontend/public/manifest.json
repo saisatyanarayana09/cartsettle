@@ -1,7 +1,7 @@
-﻿{
-  "short_name": "Kirana",
-  "name": "Narendra Kirana Store",
-  "description": "Your local grocery store, now online.",
+{
+  "short_name": "CartSettle",
+  "name": "CartSettle",
+  "description": "Autonomous AI Agentic Commerce & Instant Settlement",
   "icons": [
     {
       "src": "/favicon.jpg",
@@ -12,6 +12,6 @@
   "start_url": "/",
   "background_color": "#ffffff",
   "display": "standalone",
-  "theme_color": "#059669",
+  "theme_color": "#123B5D",
   "orientation": "portrait"
 }
