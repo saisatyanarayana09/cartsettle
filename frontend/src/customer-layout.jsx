@@ -27,6 +27,7 @@ import {
   SearchX,
   ArrowUpRight,
   Bot,
+  Keyboard,
 } from "lucide-react";
 // Loaded on first open so the assistant's heavy chat/voice code never delays the store's first paint.
 const ShopperAgentDrawer = lazy(() => import("./components/ShopperAgentDrawer"));
@@ -1246,97 +1247,103 @@ export function CustomerLayout({ children }) {
         </div>
       </main>
 
-      {/* Unified Morphing Mobile Navigation Bar (strictly mobile & tablet: md:hidden) */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl px-3 py-2 pb-[calc(0.55rem+env(safe-area-inset-bottom,0px))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] select-none transition-all duration-300">
-        {isShopperAgentOpen ? (
-          /* Active State: Morphing Bar with Close Button */
-          <div className="flex items-center justify-between w-full h-11 px-1 animate-in fade-in duration-200">
-            <button
-              type="button"
-              onClick={() => setIsShopperAgentOpen(false)}
-              className="flex items-center gap-1.5 h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all active:scale-95 cursor-pointer border border-slate-300/50 dark:border-slate-700/60 shadow-2xs"
-              aria-label="Close AI Assistant"
-            >
-              <X size={16} className="stroke-[2.5]" />
-              <span>Close</span>
-            </button>
-
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold shadow-2xs">
-              <Sparkles size={14} className="stroke-[2.5] text-emerald-600 dark:text-emerald-400 animate-pulse" />
-              <span>Ask AI Active</span>
-            </div>
-          </div>
-        ) : (
-          /* Default State: Unified Single Surface (Home, Orders, Cart, Stable Ask AI) */
-          <div className="flex items-center justify-between w-full h-11 animate-in fade-in duration-200">
-            {/* 3 Grouped Tabs */}
-            <div className="flex items-center justify-around flex-1 max-w-[58%] pr-2">
-              {/* Tab 1: Home */}
-              <Link
-                to="/"
-                className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg transition-all active:scale-90 ${
-                  location.pathname === "/"
-                    ? "text-emerald-600 dark:text-emerald-400 font-black"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
-                }`}
+      {/* 55/45 Asymmetric Morphing Navigation Bar with Dual Capsule Borders (strictly mobile & tablet: md:hidden) */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl px-2.5 sm:px-4 py-2 pb-[calc(0.55rem+env(safe-area-inset-bottom,0px))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] select-none transition-all duration-300">
+        <div className="flex items-center justify-between w-full h-12">
+          {isShopperAgentOpen ? (
+            /* ACTIVE STATE: Keyboard on Left, In-Place Close under thumb on Right */
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("shopper-switch-mode", { detail: "text" }));
+                }}
+                className="flex items-center gap-2 h-11 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all active:scale-95 cursor-pointer border border-slate-200/70 dark:border-slate-700/80 shadow-2xs animate-in slide-in-from-left duration-200"
+                aria-label="Open Keyboard"
               >
-                <Home size={19} className={location.pathname === "/" ? "stroke-[2.5]" : "stroke-2"} />
-                <span className="text-[10px] tracking-tight mt-0.5">Home</span>
-              </Link>
+                <Keyboard size={18} className="stroke-[2.25] text-emerald-600 dark:text-emerald-400" />
+                <span>Keyboard</span>
+              </button>
 
-              {/* Tab 2: Orders */}
-              <Link
-                to={isCustomer ? "/profile/orders" : "/login?redirect=/profile/orders"}
-                className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg transition-all active:scale-90 ${
-                  location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/order")
-                    ? "text-emerald-600 dark:text-emerald-400 font-black"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
-                }`}
+              <button
+                type="button"
+                onClick={() => setIsShopperAgentOpen(false)}
+                className="flex items-center justify-center gap-2 h-11 w-[44%] max-w-[200px] rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-black text-xs shadow-lg active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer animate-in zoom-in-95 duration-200 border border-slate-700 dark:border-slate-300"
+                aria-label="Close Assistant"
               >
-                <Package
-                  size={19}
-                  className={
+                <X size={18} className="stroke-[2.5]" />
+                <span>Close</span>
+              </button>
+            </>
+          ) : (
+            /* DEFAULT STATE: 55% / 45% Split with Dual Capsule Borders */
+            <>
+              {/* Left 54%: Frosted Border Capsule containing Home, Orders, Cart */}
+              <div className="flex items-center justify-around w-[54%] max-w-[240px] bg-slate-100/70 dark:bg-slate-900/60 p-1 rounded-2xl border border-slate-200/70 dark:border-slate-800/80 backdrop-blur-md">
+                <Link
+                  to="/"
+                  className={`flex flex-1 flex-col items-center justify-center py-1 rounded-xl transition-all duration-200 active:scale-90 ${
+                    location.pathname === "/"
+                      ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-black"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
+                  }`}
+                >
+                  <Home size={19} className={location.pathname === "/" ? "stroke-[2.5]" : "stroke-2"} />
+                  <span className="text-[10px] tracking-tight mt-0.5">Home</span>
+                </Link>
+
+                <Link
+                  to={isCustomer ? "/profile/orders" : "/login?redirect=/profile/orders"}
+                  className={`flex flex-1 flex-col items-center justify-center py-1 rounded-xl transition-all duration-200 active:scale-90 ${
                     location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/order")
-                      ? "stroke-[2.5]"
-                      : "stroke-2"
-                  }
-                />
-                <span className="text-[10px] tracking-tight mt-0.5">Orders</span>
-              </Link>
+                      ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-black"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
+                  }`}
+                >
+                  <Package
+                    size={19}
+                    className={
+                      location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/order")
+                        ? "stroke-[2.5]"
+                        : "stroke-2"
+                    }
+                  />
+                  <span className="text-[10px] tracking-tight mt-0.5">Orders</span>
+                </Link>
 
-              {/* Tab 3: Cart */}
-              <Link
-                to="/cart"
-                className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-lg transition-all active:scale-90 ${
-                  location.pathname === "/cart"
-                    ? "text-emerald-600 dark:text-emerald-400 font-black"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
-                }`}
+                <Link
+                  to="/cart"
+                  className={`relative flex flex-1 flex-col items-center justify-center py-1 rounded-xl transition-all duration-200 active:scale-90 ${
+                    location.pathname === "/cart"
+                      ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-black"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
+                  }`}
+                >
+                  <div className="relative">
+                    <ShoppingCart size={19} className={location.pathname === "/cart" ? "stroke-[2.5]" : "stroke-2"} />
+                    {cartCount > 0 && (
+                      <span className="absolute -right-2.5 -top-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-emerald-600 text-[9px] font-black text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs animate-bounce">
+                        {cartCount > 99 ? "99+" : cartCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5">Cart</span>
+                </Link>
+              </div>
+
+              {/* Right 44%: Expansive Ask AI Hero Button with Emerald Glow Border */}
+              <button
+                type="button"
+                onClick={() => setIsShopperAgentOpen(true)}
+                aria-label="Open AI Shopping Assistant"
+                className="flex items-center justify-center gap-2 h-11 w-[44%] max-w-[200px] rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-600/25 active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer border border-emerald-400/40"
               >
-                <div className="relative">
-                  <ShoppingCart size={19} className={location.pathname === "/cart" ? "stroke-[2.5]" : "stroke-2"} />
-                  {cartCount > 0 && (
-                    <span className="absolute -right-2.5 -top-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-emerald-600 text-[9px] font-black text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs">
-                      {cartCount > 99 ? "99+" : cartCount}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] tracking-tight mt-0.5">Cart</span>
-              </Link>
-            </div>
-
-            {/* Stable 'Ask AI' Hero Pill Button */}
-            <button
-              type="button"
-              onClick={() => setIsShopperAgentOpen(true)}
-              aria-label="Open AI Shopping Assistant"
-              className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
-            >
-              <Sparkles size={16} className="stroke-[2.5]" />
-              <span>Ask AI</span>
-            </button>
-          </div>
-        )}
+                <Sparkles size={17} className="stroke-[2.25] text-amber-200 animate-pulse" />
+                <span>Ask AI</span>
+              </button>
+            </>
+          )}
+        </div>
       </nav>
 
       {/* Store-themed Shopper Concierge launcher */}

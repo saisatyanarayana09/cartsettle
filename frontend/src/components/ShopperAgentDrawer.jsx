@@ -65,6 +65,22 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("voice");
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.detail) {
+        setMode(e.detail);
+        if (e.detail === "text") {
+          setTimeout(() => {
+            const textarea = panelRef.current?.querySelector("textarea");
+            textarea?.focus();
+          }, 100);
+        }
+      }
+    };
+    window.addEventListener("shopper-switch-mode", handler);
+    return () => window.removeEventListener("shopper-switch-mode", handler);
+  }, []);
+
   const requestRef = useRef(false);
   const [addedItems, setAddedItems] = useState({});
 
@@ -272,6 +288,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   if (!isOpen) return null;
   const close = () => {
     voice.stop();
+    clearShopperHistory();
     setConfirmClear(false);
     onClose();
   };
@@ -311,28 +328,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
             <ModeSwitch mode={mode} onChange={changeMode} />
-            <PanelMenu disabled={loading || isWelcome} onClear={() => setConfirmClear(true)} />
+            
             <IconControl label="Close concierge" onClick={close}>
               <X />
             </IconControl>
           </div>
         </header>
-        {confirmClear && (
-          <div
-            role="alert"
-            className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted px-5 py-3 text-sm"
-          >
-            <span>Clear this conversation?</span>
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setConfirmClear(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleResetChat}>
-                Clear
-              </Button>
-            </div>
-          </div>
-        )}
         {mode === "voice" ? (
           <VoiceView
             voice={voice}
