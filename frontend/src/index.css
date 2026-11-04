@@ -128,6 +128,16 @@
 @keyframes orb-bar { 0%, 100% { height: 8px; } 50% { height: 32px; } }
 @keyframes orb-speak { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 @keyframes orb-spin { to { filter: hue-rotate(0deg); transform: rotate(360deg); } }
+@keyframes slide-up {
+  0% { transform: translateY(100%); opacity: 0; }
+  12% { transform: translateY(0); opacity: 1; }
+  88% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-100%); opacity: 0; }
+}
+.animate-slide-up {
+  animation: slide-up 3.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
 .nav-ai-button {
   background: radial-gradient(circle at 32% 28%, color-mix(in oklab, var(--primary-foreground) 45%, transparent), transparent 45%), var(--primary);
   color: var(--primary-foreground);
