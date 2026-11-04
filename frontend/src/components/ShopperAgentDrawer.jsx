@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, ShoppingBag, Plus, UtensilsCrossed, ArrowUp, ArrowUpRight, Search } from "lucide-react";
+import { X, ShoppingBag, Plus, UtensilsCrossed, ArrowUp, ArrowUpRight, Search, Keyboard, Mic } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useCart } from "../cart-context";
