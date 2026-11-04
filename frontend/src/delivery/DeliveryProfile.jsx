@@ -3,7 +3,7 @@ import {
   User, Phone, Bike, CheckCircle2, 
   LogOut, Award, Truck, ShieldCheck, Mail
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../router';
 import api, { clearAllBrowserCaches } from '../services/api';
 
 export default function DeliveryProfile() {
@@ -120,7 +120,7 @@ export default function DeliveryProfile() {
             </div>
             <div className="min-w-0">
               <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Organization</p>
-              <p className="text-sm font-bold text-white">Narendra Kirana Store Logistics</p>
+              <p className="text-sm font-bold text-white">CartSettle Logistics</p>
             </div>
           </div>
         </div>

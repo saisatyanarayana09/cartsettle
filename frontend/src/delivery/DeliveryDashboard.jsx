@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext } from '../router';
 import { 
   Truck, Phone, MapPin, Navigation, CheckCircle2, 
   Package, Clock, ChevronDown, ChevronUp, 
@@ -275,7 +275,7 @@ export default function DeliveryDashboard() {
             <span className="relative inline-flex rounded-full size-2.5 bg-emerald-400" />
           </div>
           <div>
-            <p className="text-sm font-black text-white">Narendra Kirana Partner Fleet</p>
+            <p className="text-sm font-black text-white">CartSettle Partner Fleet</p>
             <p className="text-xs text-slate-400">Live order assignments update automatically every 12s</p>
           </div>
         </div>
@@ -617,7 +617,7 @@ export default function DeliveryDashboard() {
               </div>
               <h4 className="text-lg font-black">Customer OTP Verification</h4>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Ask <strong>{otpModalOrder.customer_name}</strong> for the 4-digit OTP shown on their Narendra Kirana order screen.
+                Ask <strong>{otpModalOrder.customer_name}</strong> for the 4-digit OTP shown on their CartSettle order screen.
               </p>
             </div>
 

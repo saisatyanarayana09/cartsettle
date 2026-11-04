@@ -1,5 +1,5 @@
 import React, { Suspense, useState, useEffect } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, Outlet, useLocation } from './router';
 import { CartProvider } from './CartProvider.jsx';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
@@ -230,7 +230,7 @@ class ErrorBoundary extends React.Component {
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
               {isChunkError
-                ? 'We just updated Narendra Kirana with new improvements. Please reload to apply the latest version.'
+                ? 'We just updated CartSettle with new improvements. Please reload to apply the latest version.'
                 : 'An unexpected error occurred. Please reload the page to continue shopping.'}
             </p>
             <div className="flex flex-col gap-3">
@@ -239,7 +239,7 @@ class ErrorBoundary extends React.Component {
                 onClick={this.handleHardReload}
                 className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 text-white font-black text-sm hover:bg-emerald-700 transition shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
               >
-                Reload Narendra Kirana
+                Reload CartSettle
               </button>
               <button
                 type="button"
@@ -309,7 +309,7 @@ function OwnerExternalRedirect() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white font-sans p-6 text-center">
       <div className="size-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4" />
       <h2 className="text-lg font-black text-white">Redirecting to Owner Portal...</h2>
-      <p className="text-xs text-slate-400 mt-1">Taking you to https://narendra-kirana-owner.vercel.app</p>
+      <p className="text-xs text-slate-400 mt-1">Opening CartSettle Owner Portal</p>
     </div>
   );
 }
@@ -326,7 +326,7 @@ function DeliveryExternalRedirect() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white font-sans p-6 text-center">
       <div className="size-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4" />
       <h2 className="text-lg font-black text-white">Redirecting to Delivery Portal...</h2>
-      <p className="text-xs text-slate-400 mt-1">Taking you to https://narendra-kirana-delivery.vercel.app</p>
+      <p className="text-xs text-slate-400 mt-1">Opening CartSettle Delivery Portal</p>
     </div>
   );
 }

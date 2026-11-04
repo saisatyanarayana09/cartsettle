@@ -392,10 +392,10 @@ function BannerCarousel({ banners }) {
 export function HomePage() {
 
     const initCats = readCacheSync('/categories/');
-  const [categories, setCategories] = useState(initCats ? (initCats.results || initCats) : []);
+  const [categories, setCategories] = useState(unpack({ data: initCats }));
 
   const initBanners = readCacheSync('/offers/banners/');
-  const [banners, setBanners] = useState(initBanners ? (initBanners.results || initBanners) : []);
+  const [banners, setBanners] = useState(unpack({ data: initBanners }));
 
   const initSettings = readCacheSync('/store/settings/');
   const [settings, setSettings] = useState(initSettings || null);
@@ -487,7 +487,7 @@ export function HomePage() {
 
     <div className="absolute bottom-0 right-20 -mb-8 w-32 h-32 rounded-full bg-white/10 animate-pulse" style={{animationDelay: '1s'}}></div>
 
-    <div className="absolute top-1/2 left-10 w-16 h-16 rounded-full bg-yellow-400/20 animate-bounce" style={{animationDuration: '3s'}}></div>
+    <div className="absolute top-1/2 left-10 w-16 h-16 rounded-full bg-accent-gold/20 animate-bounce" style={{animationDuration: '3s'}}></div>
 
     <div className="absolute top-4 right-32 text-4xl opacity-20 animate-bounce" style={{animationDuration: '2.5s'}}>🛒</div>
 
@@ -499,13 +499,13 @@ export function HomePage() {
 
     <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 mb-2">
 
-      <Sparkles size={12} className="text-yellow-300" />
+      <Sparkles size={12} className="text-offer-highlight" />
 
-      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white">{settings?.store_name || 'Narendra Kirana Store'}</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white">{'CartSettle'}</p>
 
     </div>
 
-    <h1 className="max-w-2xl text-2xl font-extrabold leading-tight sm:text-4xl text-white tracking-tight drop-shadow-sm">Everyday essentials, <span className="text-yellow-300">ready when you are.</span></h1>
+    <h1 className="max-w-2xl text-2xl font-extrabold leading-tight sm:text-4xl text-white tracking-tight drop-shadow-sm">Everyday essentials, <span className="text-offer-highlight">ready when you are.</span></h1>
 
     <p className="mt-2 max-w-xl text-sm text-emerald-100 font-medium leading-relaxed hidden sm:block">Order online and collect from your local store. Quality products, straightforward pricing, and reliable service.</p>
 
@@ -726,7 +726,7 @@ export function CategoriesPage() {
  const navigate = useNavigate();
 
  const initCats = readCacheSync('/categories/');
- const [categories, setCategories] = useState(initCats ? (initCats.results || initCats) : []);
+ const [categories, setCategories] = useState(unpack({ data: initCats }));
  const [loading, setLoading] = useState(() => !initCats);
 
 
@@ -1096,8 +1096,8 @@ export function ProductDetailPage() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${product.name} - Narendra Kirana`,
-          text: `Check out ${product.name} on Narendra Kirana!`,
+          title: `${product.name} - CartSettle`,
+          text: `Check out ${product.name} on CartSettle!`,
           url: shareUrl,
         });
       } catch (err) {
@@ -1358,7 +1358,7 @@ export function ProductDetailPage() {
                 )}
               </div>
 
-              {/* Kirana Perks Strip */}
+              {/* Store Perks Strip */}
               <div className="grid grid-cols-3 gap-2 py-3 my-4 border-y border-slate-100 dark:border-slate-800 text-center">
                 <div className="flex flex-col items-center gap-0.5">
                   <Zap size={14} className="text-amber-500" />
@@ -1373,7 +1373,7 @@ export function ProductDetailPage() {
                 <div className="flex flex-col items-center gap-0.5">
                   <Tag size={14} className="text-blue-500" />
                   <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Best Price</span>
-                  <span className="text-[10px] text-slate-400">Direct Kirana</span>
+                  <span className="text-[10px] text-slate-400">Direct from CartSettle</span>
                 </div>
               </div>
             </div>
@@ -1384,7 +1384,7 @@ export function ProductDetailPage() {
                 Product Details
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-h-28 overflow-y-auto pr-1 whitespace-pre-line">
-                {product.description || 'Fresh, quality daily essentials from Narendra Kirana Store.'}
+                {product.description || 'Fresh, quality daily essentials from CartSettle.'}
               </p>
             </div>
           </div>

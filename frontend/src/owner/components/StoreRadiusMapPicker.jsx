@@ -51,7 +51,7 @@ export default function StoreRadiusMapPicker({
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-        { headers: { 'User-Agent': 'NarendraKirana/1.0', 'Accept-Language': 'en' } }
+        { headers: { 'User-Agent': 'CartSettle/1.0', 'Accept-Language': 'en' } }
       );
       if (!res.ok) return;
       const data = await res.json();

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, lazy, Suspense } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from '../../router';
 import { ArrowLeft, CheckCircle2, MapPin, Edit2, Sparkles, AlertCircle, AlertTriangle, Clock, Calendar, QrCode, Smartphone, RefreshCw, Lock, ShieldCheck, Check, Copy, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -217,7 +217,7 @@ export function CheckoutPage() {
 
  // Dynamic UPI Details
  const upiId = storeSettings?.upi_id || 'narendrakirana@okaxis';
- const upiPayee = storeSettings?.upi_payee_name || storeSettings?.store_name || 'Narendra Kirana';
+ const upiPayee = storeSettings?.upi_payee_name || storeSettings?.store_name || 'CartSettle';
  const upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiPayee)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=Order`;
  const dynamicQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUri)}`;
 
@@ -331,7 +331,7 @@ export function CheckoutPage() {
             Order Placed Successfully!
           </h1>
           <p className="mt-3 text-slate-500 dark:text-slate-400 text-center px-6 animate-in slide-in-from-bottom-4 duration-500 delay-300">
-            Thank you for shopping with Narendra Kirana.<br/>We've received your order.
+            Thank you for shopping with CartSettle.<br/>We've received your order.
           </p>
           <div className="mt-8 animate-in slide-in-from-bottom-4 duration-500 delay-500">
             <button 

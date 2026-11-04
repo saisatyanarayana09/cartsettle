@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../../router';
 import { Store, Lock, Eye, EyeOff, Loader2, CheckCircle2, ShieldAlert, ShieldCheck, ArrowLeft, ArrowRight, KeyRound, Mail, RefreshCw } from 'lucide-react';
 import { usePasswordReset } from '../../hooks/usePasswordReset';
 
@@ -56,18 +56,15 @@ export default function OwnerResetPassword() {
           {/* Back to Login link */}
           <Link
             to="/owner/login"
-            className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors mb-8"
+            className="inline-flex items-center gap-0 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors mb-8"
           >
             <ArrowLeft size={16} /> Back to Owner Sign In
           </Link>
 
           <div className="mb-6">
-            <p className="text-sm font-black tracking-[0.2em] uppercase drop-shadow-sm mb-3 flex items-center gap-2">
-              <span className="p-1.5 bg-indigo-50 dark:bg-indigo-950/60 rounded-md">
-                <Store className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              </span>
-              <span className="text-emerald-900 dark:text-emerald-400">NARENDRA</span>{' '}
-              <span className="text-indigo-600 dark:text-indigo-400">KIRANA</span>
+            <p className="text-sm font-black tracking-normal drop-shadow-sm mb-3 flex items-center gap-0">
+              <span className="text-emerald-900 dark:text-emerald-400">Cart</span>
+              <span className="text-indigo-600 dark:text-indigo-400">Settle</span>
             </p>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               {mode === 'otp' && otpStep === 'verify' ? 'Verify Code' : 'Create New Password'}
@@ -167,7 +164,7 @@ export default function OwnerResetPassword() {
               {/* OTP MODE: STEP 1 - VERIFY CODE ONLY */}
               {mode === 'otp' && otpStep === 'verify' && (
                 <form onSubmit={handleVerifyOtp} className="space-y-5">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-0 mb-1">
                     <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[11px] font-black tracking-wide rounded-md border border-emerald-200 dark:border-emerald-800 uppercase">
                       Step 1 of 2: Verify Code
                     </span>
@@ -176,7 +173,7 @@ export default function OwnerResetPassword() {
                   {/* Email Destination Display */}
                   {email && !isEditingEmail ? (
                     <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                      <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="flex items-center gap-0.5 overflow-hidden">
                         <Mail className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                         <div className="truncate">
                           <span className="text-[11px] text-slate-400 block font-semibold">Code sent to:</span>
@@ -204,7 +201,7 @@ export default function OwnerResetPassword() {
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="owner@narendra-kirana.com"
+                            placeholder="owner@example.com"
                             className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 pl-10 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
                           />
                           <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -281,12 +278,12 @@ export default function OwnerResetPassword() {
                 <form onSubmit={handleSubmit} className="space-y-5">
                   {mode === 'otp' && (
                     <>
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-0 mb-1">
                         <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[11px] font-black tracking-wide rounded-md border border-emerald-200 dark:border-emerald-800 uppercase">
                           Step 2 of 2: Create New Password
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+                      <div className="flex items-center gap-0 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
                         <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         <span>Owner identity verified for <strong>{email}</strong></span>
                       </div>
@@ -390,7 +387,7 @@ export default function OwnerResetPassword() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent z-10" />
 
         <div className="absolute bottom-0 left-0 p-16 z-20 w-full max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-indigo-200 mb-4">
+          <div className="inline-flex items-center gap-0 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-indigo-200 mb-4">
             <span>🛡️ Owner Account Security</span>
           </div>
           <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight leading-tight">

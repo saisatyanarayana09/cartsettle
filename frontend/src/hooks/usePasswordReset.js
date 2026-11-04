@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from '../router';
 import api from '../services/api';
 
 export function usePasswordReset({ portal = 'customer', loginRedirect = '/login' } = {}) {

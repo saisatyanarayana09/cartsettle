@@ -31,11 +31,12 @@ import {
 // Loaded on first open so the assistant's heavy chat/voice code never delays the store's first paint.
 const ShopperAgentDrawer = lazy(() => import("./components/ShopperAgentDrawer"));
 import { Button } from "@/components/ui/button";
-import { ShopperMark } from "./components/shopper/ShopperMark";
 import { useCart } from "./cart-context";
 import { useLanguage } from "./context/LanguageContext";
 import { useSpeechRecognition, useTextToSpeech } from "./hooks/useVoice";
 import api from "./services/api";
+import WelcomeSequence from "./components/welcome/WelcomeSequence";
+import { readWelcomeName } from "./components/welcome/welcome-lifecycle";
 
 function GlobalSearchBar({ settings, onActiveChange }) {
   const [query, setQuery] = useState("");
@@ -646,19 +647,24 @@ function WelcomeScreen() {
   const [show, setShow] = useState(() => {
     if (typeof window === "undefined") return false;
 
-    // 1. If already shown in this tab session (in-memory or sessionStorage), DO NOT show again
-    if (isWelcomeAlreadyShown()) {
-      return false;
-    }
+    // Startup already presents the welcome before this heavy layout downloads.
+    try {
+      if (window.sessionStorage.getItem("welcome_screen_shown_in_session") === "true") return false;
+    } catch { /* Restricted storage must not prevent startup. */ }
 
-    // 2. Check URL parameter explicitly (e.g. ?welcome=true or ?welcome=1)
+    // Explicit homepage replay takes priority over the once-per-session flag.
     try {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("welcome") === "1" || params.get("welcome") === "true") {
+      if (window.location.pathname === "/" && (params.get("welcome") === "1" || params.get("welcome") === "true")) {
         markWelcomeAsShown();
         return true;
       }
     } catch {}
+
+    // Ordinary visits still show the welcome only once per tab session.
+    if (isWelcomeAlreadyShown()) {
+      return false;
+    }
 
     // 3. NEVER show the welcome splash on product, cart, checkout, or subpages!
     const pathname = window.location.pathname || "";
@@ -673,26 +679,6 @@ function WelcomeScreen() {
     markWelcomeAsShown();
     return true;
   });
-  const [stage, setStage] = useState("initial");
-
-  useEffect(() => {
-    if (show) {
-      markWelcomeAsShown();
-      const timer1 = setTimeout(() => setStage("fade-in"), 50);
-      const timer2 = setTimeout(() => setStage("fade-out"), 2000);
-      const timer3 = setTimeout(() => {
-        setShow(false);
-        setStage("hidden");
-      }, 2600);
-
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-        clearTimeout(timer3);
-      };
-    }
-  }, [show]);
-
   // Listen for explicit manual triggers (e.g. login) ONLY if on the homepage
   useEffect(() => {
     const handleTrigger = () => {
@@ -700,14 +686,14 @@ function WelcomeScreen() {
       if (pathname === "/" || pathname === "") {
         markWelcomeAsShown();
         setShow(true);
-        setStage("initial");
+
       }
     };
     window.addEventListener("trigger-welcome-screen", handleTrigger);
     return () => window.removeEventListener("trigger-welcome-screen", handleTrigger);
   }, []);
 
-  if (!show || stage === "hidden") return null;
+  if (!show) return null;
 
   const hour = new Date().getHours();
   let greeting = "Welcome";
@@ -719,102 +705,20 @@ function WelcomeScreen() {
     greeting = "Good evening";
   }
 
-  // Get user name from context or cached localStorage for instant display
-  const cachedUserStr =
-    typeof window !== "undefined" ? localStorage.getItem("smart-kirana-customer-user") : null;
   let cachedName = "";
   try {
-    const cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null;
-    cachedName = cachedUser?.first_name || cachedUser?.username || "";
+    cachedName = readWelcomeName(window.localStorage, "smart-kirana-customer-user");
   } catch {
-    cachedName = "";
+    // Restricted storage must not block the welcome screen.
   }
   const name = user?.first_name || user?.username || cachedName;
 
-  const handleSkip = () => {
-    setStage("fade-out");
-    setTimeout(() => {
-      setShow(false);
-      setStage("hidden");
-    }, 300);
-  };
-
   return (
-    <div
-      onClick={handleSkip}
-      role="button"
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-white via-white to-emerald-50 dark:from-[#090d16] dark:via-[#0c1220] dark:to-[#0f1b2b] transition-opacity duration-700 ease-in-out ${
-        stage === "fade-out" || stage === "hidden" ? "opacity-0 pointer-events-none" : "opacity-100"
-      } overflow-hidden cursor-pointer`}
-    >
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-96 h-96 rounded-full border border-emerald-200/10 absolute" />
-        <div className="w-72 h-72 rounded-full border border-emerald-300/10 absolute" />
-        <div className="w-48 h-48 rounded-full bg-emerald-400/5 absolute" />
-      </div>
-      <div
-        className="absolute top-[15%] left-[10%] text-2xl opacity-[0.06] animate-bounce"
-        style={{ animationDuration: "3s" }}
-      >
-        🥬
-      </div>
-      <div
-        className="absolute top-[20%] right-[12%] text-xl opacity-[0.06] animate-bounce"
-        style={{ animationDuration: "3.5s" }}
-      >
-        🛒
-      </div>
-      <div
-        className="absolute bottom-[20%] left-[15%] text-xl opacity-[0.06] animate-bounce"
-        style={{ animationDuration: "4s" }}
-      >
-        🥕
-      </div>
-      <div
-        className="absolute bottom-[15%] right-[10%] text-2xl opacity-[0.06] animate-bounce"
-        style={{ animationDuration: "2.5s" }}
-      >
-        🌿
-      </div>
-
-      <div
-        className={`flex flex-col items-center justify-center relative z-10 transition-[opacity,transform] duration-700 ease-out transform ${
-          stage === "fade-in"
-            ? "opacity-100 translate-y-0 scale-100"
-            : "opacity-0 translate-y-4 scale-95"
-        }`}
-      >
-        <div className="flex flex-col items-center justify-center mb-10 relative">
-          <div className="absolute w-40 h-40 sm:w-48 sm:h-48 bg-emerald-400/10 rounded-full blur-3xl" />
-          <img
-            src="/logo-transparent.png"
-            className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 object-contain mb-4 drop-shadow-xl relative z-10"
-            alt="Logo"
-          />
-          <div className="text-base sm:text-lg font-black tracking-[0.25em] uppercase text-slate-500 drop-shadow-sm text-center ml-2 relative z-10">
-            <span className="text-emerald-900 dark:text-emerald-300">Narendra</span>{" "}
-            <span className="text-primary-600 dark:text-primary-400">Kirana</span>
-          </div>
-        </div>
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight text-center px-6 leading-tight">
-          {name ? (
-            <>
-              {greeting},<br className="sm:hidden" /> {name}.
-            </>
-          ) : (
-            <>
-              {greeting} to
-              <br className="sm:hidden" /> Narendra Kirana
-            </>
-          )}
-        </h1>
-      </div>
-      <p
-        className={`absolute bottom-8 text-sm text-slate-300 dark:text-slate-500 transition-opacity duration-700 ${stage === "fade-in" ? "opacity-100" : "opacity-0"}`}
-      >
-        Click anywhere to skip
-      </p>
-    </div>
+    <WelcomeSequence
+      greeting={greeting}
+      name={name || ""}
+      onContinue={() => setShow(false)}
+    />
   );
 }
 
@@ -975,7 +879,7 @@ function WhatsAppSupportWidget({ settings }) {
   const cleanNumber = rawNumber.length === 10 ? `91${rawNumber}` : rawNumber;
   const defaultMessage =
     settings.whatsapp_default_message ||
-    `Hello ${settings.store_name || "Smart Kirana"}, I would like to inquire about my order.`;
+    `Hello ${"CartSettle"}, I would like to inquire about my order.`;
   const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(defaultMessage)}`;
 
   return (
@@ -1019,16 +923,6 @@ function MaintenanceModeOverlay({ settings }) {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.08)_0,transparent_70%)] pointer-events-none" />
 
       <div className="relative z-10 max-w-lg mx-auto flex flex-col items-center my-auto">
-        <div className="relative mb-6">
-          <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-2xl animate-pulse" />
-          <img
-            loading="lazy"
-            decoding="async"
-            src={settings?.store_logo || "/logo-transparent.png"}
-            alt={settings?.store_name || "Store Logo"}
-            className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-2xl relative z-10"
-          />
-        </div>
 
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-sm font-black uppercase tracking-wider mb-4">
           <Wrench size={14} className="animate-spin" style={{ animationDuration: "8s" }} />
@@ -1036,9 +930,7 @@ function MaintenanceModeOverlay({ settings }) {
         </div>
 
         <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-3">
-          {settings?.store_name
-            ? `${settings.store_name} Under Maintenance`
-            : "Store Under Scheduled Maintenance"}
+          CartSettle Under Maintenance
         </h1>
 
         <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-6 font-medium">
@@ -1182,13 +1074,13 @@ export function CustomerLayout({ children }) {
         >
           {/* Top Row on Mobile / Left Group on Desktop */}
           <div className="flex items-center justify-between w-full sm:w-auto shrink-0">
-            {/* Brand Logo & Text */}
+            {/* Brand name */}
             <Link
               to="/"
               className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tighter whitespace-nowrap shrink-0 drop-shadow-sm hover:opacity-80 transition-opacity"
             >
-              <span className="text-slate-800 dark:text-white">Narendra</span>
-              <span className="text-emerald-600 dark:text-emerald-400">Kirana</span>
+              <span className="text-slate-800 dark:text-white">Cart</span>
+              <span className="text-emerald-600 dark:text-emerald-400">Settle</span>
             </Link>
 
             {/* Mobile-only Notification Bell (Logged-in Customers) */}
@@ -1400,7 +1292,6 @@ export function CustomerLayout({ children }) {
         className="shopper-theme fixed hidden md:inline-flex md:bottom-6 right-4 md:right-6 z-40 h-12 gap-2 border border-border bg-background px-4 text-foreground shadow-lg hover:bg-accent"
         title="Open Shopper AI Concierge"
       >
-        <ShopperMark className="size-7" />
         <span>Ask AI Shopper</span>
       </Button>
 

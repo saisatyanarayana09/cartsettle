@@ -178,10 +178,7 @@ export function NotificationsBroadcast() {
             <div className="bg-slate-800/90 rounded-2xl p-4 border border-slate-700/80 shadow-md space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-emerald-600 flex items-center justify-center text-white text-xs font-black">
-                    NK
-                  </div>
-                  <span className="text-xs font-bold text-slate-200">Narendra Kirana</span>
+                  <span className="text-xs font-bold text-slate-200">CartSettle</span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-medium">now</span>
               </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../../router';
 import { ChevronRight, MapPin, Trash2, Plus, X, Edit2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import api, { getUserCacheSync, setUserCache } from '../../services/api';
 import toast from 'react-hot-toast';

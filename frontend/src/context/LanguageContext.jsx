@@ -50,7 +50,7 @@ export const translations = {
 
     // App Settings terms
     'Appearance': 'Appearance',
-    'Appearance Subtitle': 'Choose how Narendra Kirana looks to you.',
+    'Appearance Subtitle': 'Choose how CartSettle looks to you.',
     'Light Mode': 'Light Mode',
     'Light Mode Desc': 'Crisp, bright, and familiar layout',
     'Dark Mode': 'Dark Mode',
@@ -88,11 +88,11 @@ export const translations = {
 
     // Language Settings terms
     'Language Settings': 'Language Settings',
-    'Language Settings Subtitle': 'Select your preferred language for using Narendra Kirana',
+    'Language Settings Subtitle': 'Select your preferred language for using CartSettle',
     'English (India)': 'English (India)',
-    'English Desc': 'Use Narendra Kirana in English',
+    'English Desc': 'Use CartSettle in English',
     'Telugu (India)': 'తెలుగు (India)',
-    'Telugu Desc': 'నరేంద్ర కిరాణాను తెలుగులో ఉపయోగించండి',
+    'Telugu Desc': 'CartSettle ను తెలుగులో ఉపయోగించండి',
     'Language Updated': 'Language preference saved successfully!',
   },
   te: {
@@ -181,9 +181,9 @@ export const translations = {
     'Language Settings': 'భాష సెట్టింగ్‌లు',
     'Language Settings Subtitle': 'మీరు ఉపయోగించాలనుకుంటున్న భాషను ఎంచుకోండి',
     'English (India)': 'English (India)',
-    'English Desc': 'నరేంద్ర కిరాణాను ఆంగ్లంలో ఉపయోగించండి',
+    'English Desc': 'CartSettle ను ఆంగ్లంలో ఉపయోగించండి',
     'Telugu (India)': 'తెలుగు (India)',
-    'Telugu Desc': 'నరేంద్ర కిరాణాను తెలుగులో ఉపయోగించండి',
+    'Telugu Desc': 'CartSettle ను తెలుగులో ఉపయోగించండి',
     'Language Updated': 'భాష విజయవంతంగా మార్చబడింది!',
   },
 };

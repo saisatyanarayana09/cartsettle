@@ -61,7 +61,7 @@ export default function ReferAndEarn() {
     if (!settings || !referralCode) return;
     
     const referralUrl = `${window.location.origin}/download?ref=${encodeURIComponent(referralCode)}`;
-    let text = settings.share_text_template || 'Join Narendra Kirana with my referral code {code}! {link}';
+    let text = settings.share_text_template || 'Join CartSettle with my referral code {code}! {link}';
     if (text.includes('{link}')) {
       text = text.replace(/{code}/g, referralCode).replace(/{link}/g, referralUrl);
     } else {
@@ -70,7 +70,7 @@ export default function ReferAndEarn() {
       
     if (navigator.share) {
       navigator.share({
-        title: 'Join me on Narendra Kirana',
+        title: 'Join me on CartSettle',
         text: text,
       }).catch(console.error);
     } else {

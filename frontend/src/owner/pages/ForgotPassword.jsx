@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from '../../router';
 import api from '../../services/api';
 import { Store, Mail, ArrowLeft, Loader2, CheckCircle2, ShieldAlert, KeyRound, Link2, ExternalLink } from 'lucide-react';
 
@@ -54,18 +54,15 @@ export default function OwnerForgotPassword() {
           {/* Back to Login link */}
           <Link 
             to="/owner/login" 
-            className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors mb-8"
+            className="inline-flex items-center gap-0 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors mb-8"
           >
             <ArrowLeft size={16} /> Back to Owner Sign In
           </Link>
 
           <div className="mb-8">
-            <p className="text-sm font-black tracking-[0.2em] uppercase drop-shadow-sm mb-3 flex items-center gap-2">
-              <span className="p-1.5 bg-indigo-50 dark:bg-indigo-950/60 rounded-md">
-                <Store className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              </span>
-              <span className="text-emerald-900 dark:text-emerald-400">NARENDRA</span>{' '}
-              <span className="text-indigo-600 dark:text-indigo-400">KIRANA</span>
+            <p className="text-sm font-black tracking-normal drop-shadow-sm mb-3 flex items-center gap-0">
+              <span className="text-emerald-900 dark:text-emerald-400">Cart</span>
+              <span className="text-indigo-600 dark:text-indigo-400">Settle</span>
             </p>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Reset Password
@@ -167,7 +164,7 @@ export default function OwnerForgotPassword() {
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-0">
                         <div className={`p-1.5 rounded-lg ${method === 'link' ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                           <Link2 size={16} />
                         </div>
@@ -194,7 +191,7 @@ export default function OwnerForgotPassword() {
                         : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 hover:bg-slate-100/60'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-0">
                       <div className={`p-1.5 rounded-lg ${method === 'otp' ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                         <KeyRound size={16} />
                       </div>
@@ -221,7 +218,7 @@ export default function OwnerForgotPassword() {
                     autoFocus
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="owner@narendra-kirana.com"
+                    placeholder="owner@example.com"
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3.5 pl-11 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm text-sm"
                   />
                   <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -267,7 +264,7 @@ export default function OwnerForgotPassword() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent z-10" />
 
         <div className="absolute bottom-0 left-0 p-16 z-20 w-full max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-indigo-200 mb-4">
+          <div className="inline-flex items-center gap-0 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-indigo-200 mb-4">
             <span>🛡️ Owner Account Security</span>
           </div>
           <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight leading-tight">

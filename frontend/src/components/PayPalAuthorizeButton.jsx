@@ -11,7 +11,7 @@ export default function PayPalAuthorizeButton({
   currency = 'USD',
   onAuthorized,
   disabled = false,
-  description = 'CartSettle Kirana Order'
+  description = 'CartSettle Order'
 }) {
   const [loading, setLoading] = useState(false);
   const [authorizedId, setAuthorizedId] = useState(null);

@@ -41,8 +41,7 @@ export default function DownloadPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const appName = storeSettings?.app_name || storeSettings?.store_name || 'Narendra Kirana';
-  const appIconUrl = storeSettings?.app_icon || null;
+  const appName = 'CartSettle';
   const buttonText = storeSettings?.app_download_btn_text || 'Download APK';
 
   const rawUpdateUrl = (storeSettings?.app_update_url || '').trim();
@@ -60,7 +59,6 @@ export default function DownloadPage() {
       
       {/* Fixed App Bar */}
       <header className="fixed top-0 left-0 w-full flex items-center justify-center gap-3 py-4 z-50 bg-[#09090b]/80 backdrop-blur-lg border-b border-white/5">
-        <img src="/logo-transparent.png" alt="Logo" className="size-8 object-contain" />
         <span className="font-bold text-lg text-zinc-100">{appName}</span>
       </header>
       
@@ -72,7 +70,7 @@ export default function DownloadPage() {
         <div className="w-full flex flex-col space-y-3 pt-24 pb-32 px-6 opacity-80">
           <a
             href={ownerApkUrl}
-            download="narendra-kirana-owner.apk"
+            download="cartsettle-owner.apk"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-between p-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 transition-colors"
@@ -86,7 +84,7 @@ export default function DownloadPage() {
 
           <a
             href={deliveryApkUrl}
-            download="narendra-kirana-delivery.apk"
+            download="cartsettle-delivery.apk"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-between p-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 transition-colors"
@@ -108,18 +106,7 @@ export default function DownloadPage() {
 
           <div className="w-full flex flex-col items-center text-center space-y-8 mt-4">
             
-            <div className="relative group">
-              <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition duration-1000 animate-pulse"></div>
-              {loading ? (
-                <div className="relative size-32 rounded-[2rem] bg-zinc-900 animate-pulse" />
-              ) : (
-                <img
-                  src={appIconUrl || "/logo.jpg"}
-                  alt={appName}
-                  className="relative size-32 rounded-[2rem] object-cover shadow-2xl ring-1 ring-white/10"
-                />
-              )}
-            </div>
+
 
             <div className="space-y-3">
               {loading ? (
@@ -154,7 +141,7 @@ export default function DownloadPage() {
                   <a
                     onClick={handleDownloadClick}
                     href={customerApkUrl}
-                    download="narendra-kirana.apk"
+                    download="cartsettle.apk"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group relative w-full py-4 px-6 rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 hover:from-emerald-300 hover:to-emerald-500 text-white font-bold text-lg flex items-center justify-center gap-3 shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)] transition-all active:scale-95"

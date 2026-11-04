@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from '../../router';
 import api from '../../services/api';
 import { Eye, EyeOff, Loader2, Store, Mail, User, Lock, ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
@@ -131,24 +131,10 @@ const OwnerLoginForm = () => {
           {/* Brand Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3.5 mb-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-emerald-500/20 rounded-2xl blur-md" />
-                <img 
-                  src="/logo.jpg" 
-                  alt="Narendra Kirana Logo" 
-                  className="w-12 h-12 rounded-2xl object-contain relative z-10 border border-emerald-200 dark:border-emerald-800 shadow-sm"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.nextElementSibling.style.display = 'flex';
-                  }}
-                />
-                <div className="hidden w-12 h-12 rounded-2xl bg-indigo-600 items-center justify-center text-white relative z-10">
-                  <Store size={22} />
-                </div>
-              </div>
+
               <div>
-                <p className="text-[11px] font-black tracking-[0.22em] uppercase text-emerald-900 dark:text-emerald-400">
-                  NARENDRA <span className="text-indigo-600 dark:text-indigo-400">KIRANA</span>
+                <p className="text-[11px] font-black tracking-normal text-emerald-900 dark:text-emerald-400">
+                  Cart<span className="text-indigo-600 dark:text-indigo-400">Settle</span>
                 </p>
                 <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
                   Owner Portal

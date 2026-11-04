@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from '../../router';
 import { Printer, ArrowLeft, BadgeCheck, Smartphone, CheckCircle, Clock, MapPin, Phone, Mail } from 'lucide-react';
 import api from '../../services/api';
 
@@ -222,15 +222,9 @@ const Invoice = () => {
             {/* Left: Store Brand & Info */}
             <div className="space-y-1 max-w-md">
               <div className="flex items-center gap-2.5">
-                <img 
-                  src="/logo.jpg" 
-                  alt="Store Logo" 
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                  className="w-10 h-10 object-contain rounded-lg border border-slate-200 shrink-0" 
-                />
                 <div>
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 leading-tight">
-                    {settings?.store_name || "Narendra Kirana Store"}
+                    {"CartSettle"}
                   </h1>
                   <p className="text-[11px] font-semibold text-emerald-700 tracking-wider uppercase">
                     Grocery & Daily Essentials
@@ -541,14 +535,14 @@ const Invoice = () => {
                 })()}
               </div>
               <p className="text-[11px] font-semibold text-emerald-800 pt-1">
-                Thank you for shopping with {settings?.store_name || "Narendra Kirana"}!
+                Thank you for shopping with {"CartSettle"}!
               </p>
             </div>
 
             {/* Right: Signature Box */}
             <div className="w-full sm:w-auto text-left sm:text-right shrink-0">
               <p className="text-[11px] font-bold text-slate-600 mb-1">
-                For {settings?.store_name || "Narendra Kirana"}
+                For {"CartSettle"}
               </p>
               <div className="h-14 flex flex-col justify-end items-start sm:items-end">
                 {settings?.invoice_signature ? (

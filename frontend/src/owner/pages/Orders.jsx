@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from '../../router';
 import { createPortal } from 'react-dom';
 import { Search, Printer, AlertTriangle, Loader2, Table, LayoutGrid, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';

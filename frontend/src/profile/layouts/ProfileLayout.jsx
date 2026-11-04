@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation } from '../../router';
 import { ChevronLeft } from 'lucide-react';
 import { useCart } from '../../cart-context';
 import { CustomerLayout } from '../../customer-layout';

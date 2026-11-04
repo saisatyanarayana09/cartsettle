@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from '../../router';
 import { createPortal } from 'react-dom';
 import { 
   ArrowLeft, CheckCircle, Package, Clock, XCircle, ChevronRight, 

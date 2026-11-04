@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../../router';
 import { 
   SlidersHorizontal,
   QrCode,
@@ -80,8 +80,7 @@ const AdvancedSettings = () => {
     festive_popup_content: '',
     festive_popup_image: null,
     // 8. Mobile App Version, Downloads Page & Maintenance
-    app_name: '',
-    app_icon: null,
+    app_name: 'CartSettle',
     app_download_btn_text: 'Download APK',
     min_mobile_version: '1.0.0',
     latest_mobile_version: '1.0.0',
@@ -98,8 +97,6 @@ const AdvancedSettings = () => {
   const [upiQrPreview, setUpiQrPreview] = useState(null);
   const [festiveImageFile, setFestiveImageFile] = useState(null);
   const [festiveImagePreview, setFestiveImagePreview] = useState(null);
-  const [appIconFile, setAppIconFile] = useState(null);
-  const [appIconPreview, setAppIconPreview] = useState(null);
 
   // New slot inputs
   const [newSlotStart, setNewSlotStart] = useState('09:00');
@@ -130,7 +127,6 @@ const AdvancedSettings = () => {
       }));
       if (data.upi_qr_image) setUpiQrPreview(data.upi_qr_image);
       if (data.festive_popup_image) setFestiveImagePreview(data.festive_popup_image);
-      if (data.app_icon) setAppIconPreview(data.app_icon);
     } catch (err) {
       console.error('Failed to load settings:', err);
       toast.error('Failed to load advanced store settings.');
@@ -209,7 +205,7 @@ const AdvancedSettings = () => {
       const payload = {
         // UPI
         upi_id: settings.upi_id?.trim() || '',
-        upi_payee_name: settings.upi_payee_name?.trim() || 'Narendra Kirana',
+        upi_payee_name: settings.upi_payee_name?.trim() || 'CartSettle',
         enable_dynamic_upi_qr: Boolean(settings.enable_dynamic_upi_qr),
         // Legal
         fssai_license_number: (settings.fssai_license_number?.trim() || '').slice(0, 14),
@@ -252,7 +248,7 @@ const AdvancedSettings = () => {
         festive_popup_title: settings.festive_popup_title?.trim() || '',
         festive_popup_content: settings.festive_popup_content?.trim() || '',
         // Mobile App Version, Downloads Page & Maintenance
-        app_name: settings.app_name?.trim() || '',
+        app_name: 'CartSettle',
         app_download_btn_text: settings.app_download_btn_text?.trim() || 'Download APK',
         min_mobile_version: settings.min_mobile_version?.trim() || '1.0.0',
         latest_mobile_version: settings.latest_mobile_version?.trim() || '1.0.0',
@@ -265,7 +261,7 @@ const AdvancedSettings = () => {
       };
 
       let savePromise;
-      if (upiQrFile || festiveImageFile || appIconFile) {
+      if (upiQrFile || festiveImageFile) {
         const formData = new FormData();
         Object.entries(payload).forEach(([k, v]) => {
           if (typeof v === 'object' && v !== null) {
@@ -276,7 +272,6 @@ const AdvancedSettings = () => {
         });
         if (upiQrFile) formData.append('upi_qr_image', upiQrFile);
         if (festiveImageFile) formData.append('festive_popup_image', festiveImageFile);
-        if (appIconFile) formData.append('app_icon', appIconFile);
         savePromise = api.patch('/store/settings/', formData);
       } else {
         savePromise = api.patch('/store/settings/', payload);
@@ -312,7 +307,6 @@ const AdvancedSettings = () => {
 
       setUpiQrFile(null);
       setFestiveImageFile(null);
-      setAppIconFile(null);
       fetchSettings();
     } catch (err) {
       console.error('Save failed:', err);
@@ -355,7 +349,7 @@ const AdvancedSettings = () => {
       const link = document.createElement('a');
       link.href = downloadUrl;
       const dateStr = new Date().toISOString().slice(0, 10);
-      link.download = `narendra_kirana_backup_${dateStr}.json`;
+      link.download = `cartsettle_backup_${dateStr}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -493,7 +487,7 @@ const AdvancedSettings = () => {
                   name="upi_id"
                   value={settings.upi_id}
                   onChange={handleChange}
-                  placeholder="e.g. narendrakirana@okaxis"
+                  placeholder="Merchant UPI address"
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                 />
                 <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Customer payments will be routed to this VPA address.</p>
@@ -506,7 +500,7 @@ const AdvancedSettings = () => {
                   name="upi_payee_name"
                   value={settings.upi_payee_name}
                   onChange={handleChange}
-                  placeholder="e.g. Narendra Kirana Store"
+                  placeholder="e.g. CartSettle"
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                 />
                 <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Name shown inside customer's GPay, PhonePe, or Paytm app.</p>
@@ -950,7 +944,7 @@ const AdvancedSettings = () => {
                 name="whatsapp_default_message"
                 value={settings.whatsapp_default_message}
                 onChange={handleChange}
-                placeholder="Hi Narendra Kirana, I need assistance with grocery orders."
+                placeholder="Hi CartSettle, I need assistance with grocery orders."
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
               />
             </div>
@@ -962,7 +956,7 @@ const AdvancedSettings = () => {
                 name="whatsapp_order_help_template"
                 value={settings.whatsapp_order_help_template}
                 onChange={handleChange}
-                placeholder="Hi Narendra Kirana, I need help with Order #{order_id}"
+                placeholder="Hi CartSettle, I need help with Order #{order_id}"
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 font-mono"
               />
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Use <code className="text-slate-900 dark:text-white font-medium">{'{order_id}'}</code> to automatically insert the customer's actual order ID.</p>
@@ -1206,7 +1200,7 @@ const AdvancedSettings = () => {
                 <Smartphone className="w-5 h-5 text-slate-900 dark:text-white" />
                 <span>Mobile App Branding, Downloads Page & Maintenance</span>
               </h2>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Customize the public downloads page (icon, title, APK download button), set version gates, and trigger storewide maintenance.</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Manage the APK download button, version gates, and storewide maintenance.</p>
             </div>
 
             {/* Downloads Hub Branding & Customization */}
@@ -1217,31 +1211,12 @@ const AdvancedSettings = () => {
                   <span>Downloads Page Branding & APK Setup</span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                  Customize the app icon, title, and download button shown on the public downloads hub (<span className="font-mono text-slate-900 dark:text-white dark:text-slate-900 dark:text-white font-medium">narendra-kirana-downloads.vercel.app</span>).
+                  Configure the download button and APK setup for the CartSettle downloads page.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                {/* Left: App Icon Cropper */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-2">
-                    App Icon / Logo
-                  </label>
-                  <ImageCropper
-                    aspect={1}
-                    currentImageUrl={appIconPreview || settings.app_icon}
-                    label="Upload App Icon"
-                    onCropComplete={(file) => {
-                      setAppIconFile(file);
-                      setAppIconPreview(URL.createObjectURL(file));
-                    }}
-                  />
-                  <p className="text-[11px] text-gray-400 mt-2">
-                    1:1 Square icon recommended. Formats: PNG, JPG, WebP.
-                  </p>
-                </div>
-
-                {/* Right: App Name & Button Text */}
+                {/* App Name & Button Text */}
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">
@@ -1250,12 +1225,13 @@ const AdvancedSettings = () => {
                     <input
                       type="text"
                       name="app_name"
-                      value={settings.app_name}
+                      value="CartSettle"
+                      readOnly
                       onChange={handleChange}
-                      placeholder="e.g. Narendra Kirana"
+                      placeholder="e.g. CartSettle"
                       className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                     />
-                    <p className="text-[11px] text-gray-400 mt-1">If blank, defaults to Store Name.</p>
+                    <p className="text-[11px] text-gray-400 mt-1">CartSettle</p>
                   </div>
 
                   <div>
@@ -1469,7 +1445,7 @@ const AdvancedSettings = () => {
                   name="app_update_message"
                   value={settings.app_update_message}
                   onChange={handleChange}
-                  placeholder="A critical new version of Narendra Kirana is available. Please update to continue shopping."
+                  placeholder="A critical new version of CartSettle is available. Please update to continue shopping."
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
                 />
               </div>

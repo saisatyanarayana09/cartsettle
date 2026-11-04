@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from '../../router';
 import {
   ArrowLeft,
   User,
@@ -136,7 +136,7 @@ export default function DashboardHome() {
       ? user.first_name.slice(0, 2)
       : user?.username
       ? user.username.slice(0, 2)
-      : 'NK'
+      : ''
   ).toUpperCase();
 
   return (
@@ -173,7 +173,7 @@ export default function DashboardHome() {
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  initials
+                  initials || <User size={24} aria-label="Account" />
                 )}
               </div>
               <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-xs border border-white">
@@ -185,7 +185,7 @@ export default function DashboardHome() {
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                initials
+                initials || <User size={24} aria-label="Account" />
               )}
             </div>
           )}

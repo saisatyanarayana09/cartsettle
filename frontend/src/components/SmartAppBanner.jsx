@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from '../router';
 import { Smartphone, X, ExternalLink } from 'lucide-react';
 
 /**
@@ -78,7 +78,7 @@ export function SmartAppBanner() {
           <Smartphone size={18} className="text-white" />
         </div>
         <div className="truncate">
-          <p className="font-extrabold truncate">Narendra Kirana Mobile App</p>
+          <p className="font-extrabold truncate">CartSettle Mobile App</p>
           <p className="text-emerald-100 text-[11px] truncate">
             Faster checkout, live order tracking & instant invoices
           </p>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from './router';
 import api from './services/api';
 import { CheckCircle, XCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 
@@ -55,9 +55,9 @@ export function VerifyEmail() {
       {/* Clean Branded Header */}
       <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#0d1322]/90 backdrop-blur-xl sticky top-0 z-30 shadow-xs">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link to="/" className="flex items-center gap-2 text-xl sm:text-2xl font-black tracking-tight hover:opacity-85 transition">
-            <span className="text-slate-900 dark:text-white">Narendra</span>
-            <span className="text-primary-600 dark:text-primary-400">Kirana</span>
+          <Link to="/" className="flex items-center gap-0 text-xl sm:text-2xl font-black tracking-tight hover:opacity-85 transition">
+            <span className="text-slate-900 dark:text-white">Cart</span>
+            <span className="text-primary-600 dark:text-primary-400">Settle</span>
           </Link>
           <Link
             to="/login"
@@ -141,7 +141,7 @@ export function VerifyEmail() {
       <footer className="border-t border-slate-200/60 dark:border-slate-800/60 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
         <div className="flex items-center justify-center gap-1.5 font-medium">
           <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400" />
-          <span>256-Bit SSL Encrypted &bull; Narendra Kirana Security</span>
+          <span>256-Bit SSL Encrypted &bull; CartSettle Security</span>
         </div>
       </footer>
     </div>

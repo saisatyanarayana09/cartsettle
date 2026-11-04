@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '../router';
 import { Truck, Lock, User, Eye, EyeOff, AlertCircle, ArrowRight, ShieldCheck, Package, CheckCircle2 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '../services/api';
@@ -120,13 +120,10 @@ export default function DeliveryLogin() {
 
         {/* Top */}
         <div className="relative z-10">
-          {/* Brand Mark */}
+          {/* Brand name */}
           <div className="flex items-center gap-3 mb-12">
-            <div className="size-10 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <Truck size={20} className="text-white" />
-            </div>
             <div>
-              <p className="text-base font-black text-white leading-tight">Narendra Kirana</p>
+              <p className="text-base font-black text-white leading-tight">CartSettle</p>
               <p className="text-[11px] text-emerald-400 font-bold uppercase tracking-wider">Delivery Partner Portal</p>
             </div>
           </div>
@@ -155,7 +152,7 @@ export default function DeliveryLogin() {
 
         {/* Bottom */}
         <p className="relative z-10 text-xs text-slate-600 font-medium">
-          © {new Date().getFullYear()} Narendra Kirana
+          © {new Date().getFullYear()} CartSettle
         </p>
       </div>
 
@@ -166,13 +163,10 @@ export default function DeliveryLogin() {
 
         <div className="w-full max-w-sm relative z-10">
 
-          {/* Mobile-only brand mark */}
+          {/* Mobile-only brand name */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="size-9 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <Truck size={18} className="text-white" />
-            </div>
             <div>
-              <p className="text-sm font-black text-white leading-tight">Narendra Kirana</p>
+              <p className="text-sm font-black text-white leading-tight">CartSettle</p>
               <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Delivery Partner Portal</p>
             </div>
           </div>

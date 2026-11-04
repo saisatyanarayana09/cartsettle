@@ -84,7 +84,7 @@ export default function MapLocationPicker({
       const res = await fetch(url, {
         headers: {
           'Accept-Language': 'en',
-          'User-Agent': 'NarendraKirana/1.0'
+          'User-Agent': 'CartSettle/1.0'
         }
       });
       if (!res.ok) throw new Error('Geocoding service unavailable');
@@ -293,7 +293,7 @@ export default function MapLocationPicker({
           popupAnchor: [0, -28]
         })
       }).addTo(map);
-      storeMarker.bindPopup(`<b>${storeSettings.store_name || 'Narendra Kirana Store'}</b><br/>Store Pickup & Dispatch Hub`);
+      storeMarker.bindPopup(`<b>${'CartSettle'}</b><br/>Store Pickup & Dispatch Hub`);
 
       L.circle([storeLat, storeLng], {
         radius: maxRadiusKm * 1000,

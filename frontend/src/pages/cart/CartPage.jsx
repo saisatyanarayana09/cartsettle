@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from '../../router';
 import { Minus, Plus, Trash2, ShoppingBasket, ArrowLeft, AlertCircle, AlertTriangle, Clock, Zap, Shield, CheckCircle } from 'lucide-react';
 import { CustomerLayout } from '../../customer-layout';
 import { useCart } from '../../cart-context';

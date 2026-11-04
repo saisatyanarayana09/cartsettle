@@ -153,7 +153,7 @@ export default function OrderTrackingMap({
         <div style="font-family: system-ui, sans-serif; min-width: 170px; padding: 2px;">
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
             <span style="font-size: 16px;">🏪</span>
-            <b style="color: #064E3B; font-size: 13px;">${storeSettings?.store_name || 'Store'}</b>
+            <b style="color: #064E3B; font-size: 13px;">CartSettle</b>
           </div>
           <p style="margin: 0; font-size: 11px; color: #475569; line-height: 1.4;">Dispatch & Packing Hub</p>
           <div style="margin-top: 6px; font-size: 11px; font-weight: 700; color: #059669;">Order in Preparation</div>

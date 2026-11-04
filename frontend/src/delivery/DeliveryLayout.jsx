@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from '../router';
 import { Truck, CheckCircle2, User, LogOut } from 'lucide-react';
 import api, { clearAllBrowserCaches } from '../services/api';
 
@@ -61,12 +61,8 @@ export default function DeliveryLayout() {
       <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-2xl border-b border-slate-800/80 px-4 py-2.5 sm:px-8 lg:px-12 shadow-lg shadow-black/20">
         <div className="w-full flex items-center justify-between gap-4">
 
-          {/* Brand Mark + Rider identity */}
+          {/* Rider identity */}
           <Link to="/profile" className="flex items-center gap-3 group min-w-0">
-            {/* NK Logo mark */}
-            <div className="size-9 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
-              <Truck size={17} className="text-white" />
-            </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-black text-white truncate group-hover:text-emerald-400 transition-colors">
@@ -76,7 +72,7 @@ export default function DeliveryLayout() {
                   Rider
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 truncate">Narendra Kirana</p>
+              <p className="text-[11px] text-slate-500 truncate">CartSettle</p>
             </div>
           </Link>
 

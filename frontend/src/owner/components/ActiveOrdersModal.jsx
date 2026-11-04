@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, ShoppingBag, PackageSearch } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from '../../router';
 
 const ActiveOrdersModal = ({ isOpen, onClose, orders, handleQuickAction, getStatusBadge }) => {
   if (!isOpen) return null;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../../router';
 import { Package, ChevronRight } from 'lucide-react';
 import api, { getUserCacheSync, setUserCache } from '../../services/api';
 import { useWebSocket } from '../../hooks/useWebSocket';

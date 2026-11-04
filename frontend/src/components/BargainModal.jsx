@@ -87,7 +87,7 @@ export default function BargainModal({ isOpen, onClose, product, onDiscountAppli
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                Bargain with Kirana AI
+                Bargain with CartSettle
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                   Agentic Commerce
                 </span>
@@ -113,7 +113,7 @@ export default function BargainModal({ isOpen, onClose, product, onDiscountAppli
               <span>Autonomous Margin Guard (12% Safety Floor)</span>
             </div>
             <p className="text-[11px] leading-relaxed text-slate-500">
-              Kirana AI negotiates transparently with shoppers while algorithmically defending the store's minimum 12% gross profit margin.
+              CartSettle negotiates transparently with shoppers while algorithmically defending the store's minimum 12% gross profit margin.
             </p>
           </div>
 

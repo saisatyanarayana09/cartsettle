@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from '../../router';
 import { ArrowLeft, Package, PackageSearch, Truck, Store, XCircle, CheckCircle2, MapPin, Calendar, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -165,7 +165,7 @@ export function OrderDetailPage() {
                       <MapPin size={18} className="text-emerald-600" /> Live Delivery Route & Tracking
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      OpenStreetMap road navigation between Narendra Kirana and your doorstep
+                      OpenStreetMap road navigation between CartSettle and your doorstep
                     </p>
                   </div>
                 </div>

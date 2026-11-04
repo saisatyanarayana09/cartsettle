@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from '../../router';
 import { ArrowLeft, Phone, X, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -201,14 +201,10 @@ export function CustomerLoginPage() {
 
         {/* Unboxed Fluid Centerpiece */}
         <div className="w-full max-w-xs flex flex-col items-center text-center z-10">
-          {/* 64px Squircle Brand Mark */}
-          <div className="size-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 shadow-md flex items-center justify-center mb-4 transition-transform hover:scale-102">
-            <img src="/logo-transparent.png" alt="Narendra Kirana" className="w-full h-full object-contain" />
-          </div>
 
           {/* Typography */}
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Narendra <span className="text-red-600">Kirana</span>
+            Cart<span className="text-red-600">Settle</span>
           </h1>
 
           {/* Contextual Subline (Only if redirected from cart/checkout) */}

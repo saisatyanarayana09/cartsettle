@@ -20,7 +20,6 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { GroceryRow } from "./shopper/GroceryRow";
-import { ShopperMark } from "./shopper/ShopperMark";
 import { SHOPPER_HISTORY_KEY, loadShopperHistory } from "./shopper/history";
 import { useVoiceSession } from "./voice/useVoiceSession";
 import { ModeSwitch, PanelMenu, VoiceView } from "./voice/VoiceView";
@@ -291,13 +290,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       >
         <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <ShopperMark className="size-8 shrink-0" />
             <div className="min-w-0">
               <h2 id="shopper-title" className="text-base font-extrabold leading-snug">
                 Shopper
               </h2>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {storeSettings?.store_name || "Narendra Kirana"}
+                {"CartSettle"}
               </p>
             </div>
           </div>
@@ -371,7 +369,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                   >
                     {!isUser && !isWelcome && (
                       <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                        <ShopperMark className="size-5" />
                         Shopper
                       </div>
                     )}
@@ -459,7 +456,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               })}
               {loading && (
                 <div role="status" className="flex items-center gap-2 text-sm">
-                  <ShopperMark className="size-6" />
                   <Shimmer>One moment</Shimmer>
                 </div>
               )}

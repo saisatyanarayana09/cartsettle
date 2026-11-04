@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from '../../router';
 import { HelpCircle, ChevronRight } from 'lucide-react';
 import { useCart } from '../../cart-context';
 
@@ -28,7 +28,7 @@ export default function HelpCenter() {
           <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto md:mx-0 text-sm">Reach out to our store directly using the contact details below. We typically respond within 24 hours.</p>
           
           <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-xl p-5 inline-block text-left w-full max-w-md shadow-sm">
-            <h4 className="font-black text-slate-900 dark:text-white mb-1">{storeSettings?.store_name || "Narendra Kirana"}</h4>
+            <h4 className="font-black text-slate-900 dark:text-white mb-1">{"CartSettle"}</h4>
             {storeSettings?.store_address && <p className="text-slate-600 dark:text-slate-300 text-sm mb-4 font-medium whitespace-pre-wrap">{storeSettings.store_address}</p>}
             
             <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-700 mt-2">

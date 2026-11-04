@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from './router';
 import api from './services/api';
 import { ArrowLeft, Mail, ExternalLink, CheckCircle2, KeyRound, Link2, ShieldCheck } from 'lucide-react';
 
@@ -48,9 +48,9 @@ export function ForgotPassword() {
       {/* Clean Branded Header */}
       <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#0d1322]/90 backdrop-blur-xl sticky top-0 z-30 shadow-xs">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link to="/" className="flex items-center gap-2 text-xl sm:text-2xl font-black tracking-tight hover:opacity-85 transition">
-            <span className="text-slate-900 dark:text-white">Narendra</span>
-            <span className="text-primary-600 dark:text-primary-400">Kirana</span>
+          <Link to="/" className="flex items-center gap-0 text-xl sm:text-2xl font-black tracking-tight hover:opacity-85 transition">
+            <span className="text-slate-900 dark:text-white">Cart</span>
+            <span className="text-primary-600 dark:text-primary-400">Settle</span>
           </Link>
           <Link
             to="/login"
@@ -71,7 +71,7 @@ export function ForgotPassword() {
             </div>
             <div>
               <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Reset Password</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Narendra Kirana Account Recovery</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">CartSettle Account Recovery</p>
             </div>
           </div>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
@@ -240,7 +240,7 @@ export function ForgotPassword() {
       <footer className="border-t border-slate-200/60 dark:border-slate-800/60 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
         <div className="flex items-center justify-center gap-1.5 font-medium">
           <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400" />
-          <span>256-Bit SSL Encrypted &bull; Narendra Kirana Security</span>
+          <span>256-Bit SSL Encrypted &bull; CartSettle Security</span>
         </div>
       </footer>
     </div>

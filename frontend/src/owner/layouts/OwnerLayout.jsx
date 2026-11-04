@@ -14,32 +14,8 @@ import { playOrderChime } from '../../utils/sound';
 // Loaded on first open so the co-pilot's heavy chat/voice code never delays the owner panel.
 const KiranaCopilotDrawer = lazy(() => import('../components/KiranaCopilotDrawer'));
 
-const OWNER_EMERALD_STYLES = {
-  '--color-primary-50': '#ecfdf5',
-  '--color-primary-100': '#d1fae5',
-  '--color-primary-200': '#a7f3d0',
-  '--color-primary-300': '#6ee7b7',
-  '--color-primary-400': '#34d399',
-  '--color-primary-500': '#10b981',
-  '--color-primary-600': '#059669',
-  '--color-primary-700': '#047857',
-  '--color-primary-800': '#065f46',
-  '--color-primary-900': '#064e3b',
-  '--color-emerald-50': '#ecfdf5',
-  '--color-emerald-100': '#d1fae5',
-  '--color-emerald-200': '#a7f3d0',
-  '--color-emerald-300': '#6ee7b7',
-  '--color-emerald-400': '#34d399',
-  '--color-emerald-500': '#10b981',
-  '--color-emerald-600': '#059669',
-  '--color-emerald-700': '#047857',
-  '--color-emerald-800': '#065f46',
-  '--color-emerald-900': '#064e3b',
-};
-
 const OwnerLayout = () => {
-  const { theme, toggleTheme, storeTheme } = useTheme();
-  const applyThemeToOwner = Boolean(storeTheme?.apply_theme_to_owner_app);
+  const { theme, toggleTheme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [copilotLoaded, setCopilotLoaded] = useState(false);
@@ -167,7 +143,6 @@ const OwnerLayout = () => {
         try {
           const n = new Notification(`New Order #${order.id} Received`, {
             body: `₹${order.total_amount} placed by ${order.customer_name || 'Customer'}.`,
-            icon: '/favicon.png',
             tag: `order-${order.id}`,
           });
           n.onclick = () => {
@@ -243,8 +218,7 @@ const OwnerLayout = () => {
 
   return (
     <div
-      className="flex h-[100dvh] w-full bg-slate-50 dark:bg-[#090d16] overflow-hidden"
-      style={!applyThemeToOwner ? OWNER_EMERALD_STYLES : undefined}
+      className="owner-theme flex h-[100dvh] w-full bg-slate-50 dark:bg-[#090d16] overflow-hidden"
     >
       {/* Mobile sidebar overlay */}
       {isSidebarOpen && (
@@ -263,8 +237,8 @@ const OwnerLayout = () => {
         <div className="flex items-center justify-between h-16 px-6 bg-slate-950 border-b border-slate-800 shrink-0">
           <div className="flex flex-col justify-center">
             <Link to="/owner" className="text-lg font-black tracking-tight whitespace-nowrap leading-tight">
-              <span className="text-white">Narendra</span>
-              <span className="text-emerald-400 ml-1">Kirana</span>
+              <span className="text-white">Cart</span>
+              <span className="text-emerald-400">Settle</span>
             </Link>
             <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase mt-0.5">Owner Portal</span>
           </div>
@@ -410,7 +384,7 @@ const OwnerLayout = () => {
                 {currentSection.name}
               </span>
               <span className="text-[10px] text-slate-400 leading-none">
-                Narendra Kirana
+                CartSettle
               </span>
             </div>
           </div>
@@ -489,16 +463,16 @@ const OwnerLayout = () => {
         </main>
 
 
-        {/* Floating CartSettle Kirana AI Co-Pilot Launcher */}
+        {/* Floating CartSettle assistant launcher */}
         <button
           onClick={() => setIsCopilotOpen(true)}
           className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-linear-to-r from-indigo-600 via-indigo-700 to-amber-500 text-white font-bold text-xs shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white/20"
-          title="Open CartSettle Kirana AI Co-Pilot"
+          title="Open CartSettle assistant"
         >
           <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
             <Bot className="w-3.5 h-3.5" />
           </div>
-          <span>Kirana Co-Pilot</span>
+          <span>CartSettle Assistant</span>
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
         </button>
 

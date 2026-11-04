@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronRight, Camera } from 'lucide-react';
+import { Link } from '../../router';
+import { ChevronRight, Camera, User } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useCart } from '../../cart-context';
@@ -29,7 +29,7 @@ export default function AccountSettings() {
       ? user.first_name.slice(0, 2)
       : user?.username
       ? user.username.slice(0, 2)
-      : 'NK'
+      : ''
   ).toUpperCase();
 
   const handleImageChange = (e) => {
@@ -138,7 +138,7 @@ export default function AccountSettings() {
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  initials
+                  initials || <User size={24} aria-label="Account" />
                 )}
               </div>
               <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold shadow-xs">

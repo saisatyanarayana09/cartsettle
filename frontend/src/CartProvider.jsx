@@ -211,9 +211,8 @@ export function CartProvider({ children }) {
             seenNotificationIds.add(n.id);
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
               try {
-                new Notification(n.title || 'Narendra Kirana Alert', {
+                new Notification(n.title || 'CartSettle Alert', {
                   body: n.message || '',
-                  icon: '/favicon.ico',
                   tag: `nk-${n.id}`
                 });
               } catch (e) {

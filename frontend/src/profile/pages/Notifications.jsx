@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../../router';
 import { Bell, Trash2, ChevronRight } from 'lucide-react';
 import api, { getUserCacheSync, setUserCache } from '../../services/api';
 import { useCart } from '../../cart-context';

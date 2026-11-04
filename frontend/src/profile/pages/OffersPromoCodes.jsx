@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from '../../router';
 import { ChevronRight, Tag, Copy, Check, ShoppingBag, Calendar, AlertCircle, ShoppingCart, Percent } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
