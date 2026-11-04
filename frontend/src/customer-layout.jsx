@@ -987,6 +987,10 @@ export function CustomerLayout({ children }) {
     if (isShopperAgentOpen) setShopperAgentLoaded(true);
   }, [isShopperAgentOpen]);
   const location = useLocation();
+  const cartCount =
+    cart?.items?.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0) ||
+    cart?.items?.length ||
+    0;
 
   useEffect(() => {
     // Only auto-collapse searchbar on the customer home page
@@ -1083,25 +1087,68 @@ export function CustomerLayout({ children }) {
               <span className="text-emerald-600 dark:text-emerald-400">Settle</span>
             </Link>
 
-            {/* Mobile-only Notification Bell (Logged-in Customers) */}
-            {isCustomer && (
-              <div className="relative sm:hidden">
-                <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="grid size-9 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition relative cursor-pointer"
-                  title="Notifications"
+            {/* Mobile Header Actions (Notifications + Profile Avatar / Sign In) */}
+            <div className="relative flex items-center gap-2 sm:hidden">
+              {isCustomer ? (
+                <>
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="grid size-9 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition relative cursor-pointer"
+                    title="Notifications"
+                    aria-label="Notifications"
+                  >
+                    <Bell size={18} />
+                    {notifications?.some((n) => !n.is_read) && (
+                      <span className="absolute right-0 top-0 size-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
+                    )}
+                  </button>
+                  <NotificationPopup
+                    isOpen={showNotifications}
+                    onClose={() => setShowNotifications(false)}
+                  />
+
+                  <Link
+                    to="/profile"
+                    className={`grid size-9 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border transition overflow-hidden shadow-2xs cursor-pointer ${
+                      location.pathname.startsWith("/profile") && !location.pathname.startsWith("/profile/orders")
+                        ? "border-emerald-500 ring-2 ring-emerald-500/30 dark:ring-emerald-400/30"
+                        : "border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500"
+                    }`}
+                    title="My Profile"
+                    aria-label="My Profile"
+                  >
+                    {user?.avatar ||
+                    user?.customer_profile?.avatar ||
+                    user?.customer_profile?.avatar_url ||
+                    user?.customer_profile?.profile_picture ? (
+                      <img
+                        src={
+                          user?.avatar ||
+                          user?.customer_profile?.avatar ||
+                          user?.customer_profile?.avatar_url ||
+                          user?.customer_profile?.profile_picture
+                        }
+                        alt="Avatar"
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <div className="size-full grid place-items-center bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
+                        <User size={18} />
+                      </div>
+                    )}
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs"
+                  aria-label="Sign in"
                 >
-                  <Bell size={18} />
-                  {notifications?.some((n) => !n.is_read) && (
-                    <span className="absolute right-0 top-0 size-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
-                  )}
-                </button>
-                <NotificationPopup
-                  isOpen={showNotifications}
-                  onClose={() => setShowNotifications(false)}
-                />
-              </div>
-            )}
+                  <User size={15} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Sign in</span>
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Center Search Bar - Smooth Auto-Collapse / Expand on Mobile Home Page Scroll */}
@@ -1181,9 +1228,9 @@ export function CustomerLayout({ children }) {
               className="relative flex h-11 w-16 items-center justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all ml-2 shadow-sm hover:shadow active:scale-95 group cursor-pointer"
             >
               <ShoppingCart size={20} strokeWidth={2.5} className="mt-0.5" />
-              {cart?.items?.length > 0 && (
+              {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 flex h-[22px] min-w-[22px] px-1.5 items-center justify-center rounded-lg bg-slate-900 text-[11px] font-black text-white shadow-sm ring-2 ring-white dark:ring-slate-900">
-                  {cart.items.length}
+                  {cartCount > 99 ? "99+" : cartCount}
                 </span>
               )}
             </Link>
@@ -1198,8 +1245,9 @@ export function CustomerLayout({ children }) {
         </div>
       </main>
 
-      {/* 5-Tab Mobile Navigation Bar (strictly mobile & tablet: md:hidden) */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-around border-t border-slate-200/80 dark:border-slate-800/90 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-xl py-2 px-1 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+      {/* Redesigned 4-Action Mobile Navigation Bar (strictly mobile & tablet: md:hidden) */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between border-t border-slate-200/80 dark:border-slate-800/90 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-xl py-2 px-2.5 sm:px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        {/* Position a: Home */}
         <Link
           to="/"
           className={`flex flex-1 flex-col items-center justify-center py-1 gap-1 text-[11px] font-bold transition-all ${
@@ -1212,53 +1260,27 @@ export function CustomerLayout({ children }) {
           <span>Home</span>
         </Link>
 
-
-
-        <div className="flex flex-1 justify-center">
-          <button
-            type="button"
-            onClick={() => setIsShopperAgentOpen(true)}
-            aria-label="Open shopping assistant"
-            className="nav-ai-button -mt-7 flex size-14 flex-col items-center justify-center rounded-full text-[10px] font-black tracking-wide transition-transform active:scale-95"
-          >
-            <Sparkles size={20} className="stroke-[2.25]" />
-            <span>AI</span>
-          </button>
-        </div>
+        {/* Position b: Orders */}
         <Link
           to={isCustomer ? "/profile/orders" : "/login?redirect=/profile/orders"}
           className={`flex flex-1 flex-col items-center justify-center py-1 gap-1 text-[11px] font-bold transition-all ${
-            location.pathname === "/profile/orders"
+            location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/order")
               ? "text-emerald-600 dark:text-emerald-400 scale-105"
               : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
           }`}
         >
           <Package
             size={20}
-            className={location.pathname === "/profile/orders" ? "stroke-[2.5]" : "stroke-2"}
-          />
-          <span>Orders</span>
-        </Link>
-
-        <Link
-          to={isCustomer ? "/profile" : "/login"}
-          className={`flex flex-1 flex-col items-center justify-center py-1 gap-1 text-[11px] font-bold transition-all ${
-            location.pathname.startsWith("/profile") && location.pathname !== "/profile/orders"
-              ? "text-emerald-600 dark:text-emerald-400 scale-105"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-          }`}
-        >
-          <User
-            size={20}
             className={
-              location.pathname.startsWith("/profile") && location.pathname !== "/profile/orders"
+              location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/order")
                 ? "stroke-[2.5]"
                 : "stroke-2"
             }
           />
-          <span>{isCustomer ? "Profile" : "Sign in"}</span>
+          <span>Orders</span>
         </Link>
 
+        {/* Position c: Cart */}
         <Link
           to="/cart"
           className={`relative flex flex-1 flex-col items-center justify-center py-1 gap-1 text-[11px] font-bold transition-all ${
@@ -1269,21 +1291,45 @@ export function CustomerLayout({ children }) {
         >
           <div className="relative">
             <ShoppingCart
-              size={22}
+              size={21}
               className={
                 location.pathname === "/cart"
                   ? "text-emerald-600 dark:text-emerald-400 stroke-[2.5]"
                   : "stroke-2"
               }
             />
-            {cart?.items?.length > 0 && (
+            {cartCount > 0 && (
               <span className="absolute -right-2.5 -top-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-600 dark:bg-emerald-500 text-[10px] font-black text-white flex items-center justify-center ring-2 ring-white dark:ring-[#0c1220] shadow-sm">
-                {cart.items.length}
+                {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
           </div>
           <span>Cart</span>
         </Link>
+
+        {/* Position d & e: Ask AI Hero Pill Button */}
+        <div className="flex flex-initial items-center justify-center pl-1 sm:pl-2">
+          <button
+            type="button"
+            onClick={() => setIsShopperAgentOpen(true)}
+            aria-label="Open AI Shopping Assistant"
+            className={`group relative flex items-center justify-center gap-1.5 h-10 px-3.5 sm:px-4 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:via-teal-500 hover:to-emerald-600 text-white shadow-[0_2px_12px_rgba(16,185,129,0.35)] dark:shadow-[0_2px_12px_rgba(5,150,105,0.45)] hover:shadow-lg active:scale-95 active:brightness-95 transition-all duration-200 cursor-pointer border border-emerald-400/30 overflow-hidden shrink-0 ${
+              isShopperAgentOpen
+                ? "ring-2 ring-emerald-400 ring-offset-2 ring-offset-white dark:ring-offset-[#0c1220]"
+                : ""
+            }`}
+          >
+            <span className="absolute inset-0 rounded-full bg-gradient-to-t from-transparent via-white/10 to-white/20 pointer-events-none" />
+            <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-in-out pointer-events-none" />
+            <Sparkles
+              size={17}
+              className="text-amber-200 group-hover:rotate-12 transition-transform duration-300 stroke-[2.25] shrink-0 animate-pulse"
+            />
+            <span className="text-[12px] sm:text-[13px] font-black tracking-wide whitespace-nowrap drop-shadow-xs">
+              Ask AI
+            </span>
+          </button>
+        </div>
       </nav>
 
       {/* Store-themed Shopper Concierge launcher */}
