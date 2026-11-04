@@ -279,6 +279,14 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
 
   return (
     <TooltipProvider delayDuration={250}>
+      {/* Dimmed Background Overlay */}
+      <div
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        onClick={close}
+        aria-hidden="true"
+      />
+
+      {/* 78% Height Bottom Sheet Modal on Mobile, Side Drawer on Desktop */}
       <section
         ref={panelRef}
         tabIndex={-1}
@@ -286,8 +294,10 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         aria-modal="true"
         aria-labelledby="shopper-title"
         onPointerDownCapture={voice.interrupt}
-        className="shopper-panel shopper-theme bg-background text-foreground border-border flex flex-col overflow-hidden outline-none"
+        className="shopper-theme bg-background text-foreground border-border fixed inset-x-0 bottom-0 z-50 flex flex-col h-[78vh] max-h-[85vh] rounded-t-3xl border-t border-border shadow-[0_-12px_40px_rgba(0,0,0,0.3)] outline-none animate-in slide-in-from-bottom duration-300 md:inset-auto md:right-0 md:top-0 md:bottom-0 md:h-full md:w-[440px] md:rounded-none md:border-l md:border-t-0 md:animate-in md:slide-in-from-right overflow-hidden"
       >
+        {/* Mobile Top Drag Handle Indicator */}
+        <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
         <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="min-w-0">
