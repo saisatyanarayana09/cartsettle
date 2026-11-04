@@ -1247,102 +1247,72 @@ export function CustomerLayout({ children }) {
         </div>
       </main>
 
-      {/* 55/45 Asymmetric Morphing Navigation Bar with Dual Capsule Borders (strictly mobile & tablet: md:hidden) */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl px-2.5 sm:px-4 py-2 pb-[calc(0.55rem+env(safe-area-inset-bottom,0px))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] select-none transition-all duration-300">
+      {/* 54/44 Asymmetric Navigation Bar with Exact 48px Height Parity (strictly mobile & tablet: md:hidden) */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl px-2.5 sm:px-4 py-2 pb-[calc(0.55rem+env(safe-area-inset-bottom,0px))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] select-none">
         <div className="flex items-center justify-between w-full h-12">
-          {isShopperAgentOpen ? (
-            /* ACTIVE STATE: Keyboard on Left, In-Place Close under thumb on Right */
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent("shopper-switch-mode", { detail: "text" }));
-                }}
-                className="flex items-center gap-2 h-11 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all active:scale-95 cursor-pointer border border-slate-200/70 dark:border-slate-700/80 shadow-2xs animate-in slide-in-from-left duration-200"
-                aria-label="Open Keyboard"
-              >
-                <Keyboard size={18} className="stroke-[2.25] text-emerald-600 dark:text-emerald-400" />
-                <span>Keyboard</span>
-              </button>
+          {/* Left 54%: Frosted Capsule with Exact h-12 (48px) Height */}
+          <div className="flex items-center justify-around w-[54%] max-w-[240px] h-12 bg-slate-100/70 dark:bg-slate-900/60 p-1 rounded-2xl border border-slate-200/70 dark:border-slate-800/80 backdrop-blur-md">
+            <Link
+              to="/"
+              className={`flex flex-1 flex-col items-center justify-center h-full rounded-xl transition-all duration-200 active:scale-90 ${
+                location.pathname === "/"
+                  ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-black"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
+              }`}
+            >
+              <Home size={19} className={location.pathname === "/" ? "stroke-[2.5]" : "stroke-2"} />
+              <span className="text-[10px] tracking-tight mt-0.5">Home</span>
+            </Link>
 
-              <button
-                type="button"
-                onClick={() => setIsShopperAgentOpen(false)}
-                className="flex items-center justify-center gap-2 h-11 w-[44%] max-w-[200px] rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-black text-xs shadow-lg active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer animate-in zoom-in-95 duration-200 border border-slate-700 dark:border-slate-300"
-                aria-label="Close Assistant"
-              >
-                <X size={18} className="stroke-[2.5]" />
-                <span>Close</span>
-              </button>
-            </>
-          ) : (
-            /* DEFAULT STATE: 55% / 45% Split with Dual Capsule Borders */
-            <>
-              {/* Left 54%: Frosted Border Capsule containing Home, Orders, Cart */}
-              <div className="flex items-center justify-around w-[54%] max-w-[240px] bg-slate-100/70 dark:bg-slate-900/60 p-1 rounded-2xl border border-slate-200/70 dark:border-slate-800/80 backdrop-blur-md">
-                <Link
-                  to="/"
-                  className={`flex flex-1 flex-col items-center justify-center py-1 rounded-xl transition-all duration-200 active:scale-90 ${
-                    location.pathname === "/"
-                      ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-black"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
-                  }`}
-                >
-                  <Home size={19} className={location.pathname === "/" ? "stroke-[2.5]" : "stroke-2"} />
-                  <span className="text-[10px] tracking-tight mt-0.5">Home</span>
-                </Link>
+            <Link
+              to={isCustomer ? "/profile/orders" : "/login?redirect=/profile/orders"}
+              className={`flex flex-1 flex-col items-center justify-center h-full rounded-xl transition-all duration-200 active:scale-90 ${
+                location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/order")
+                  ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-black"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
+              }`}
+            >
+              <Package
+                size={19}
+                className={
+                  location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/order")
+                    ? "stroke-[2.5]"
+                    : "stroke-2"
+                }
+              />
+              <span className="text-[10px] tracking-tight mt-0.5">Orders</span>
+            </Link>
 
-                <Link
-                  to={isCustomer ? "/profile/orders" : "/login?redirect=/profile/orders"}
-                  className={`flex flex-1 flex-col items-center justify-center py-1 rounded-xl transition-all duration-200 active:scale-90 ${
-                    location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/order")
-                      ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-black"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
-                  }`}
-                >
-                  <Package
-                    size={19}
-                    className={
-                      location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/order")
-                        ? "stroke-[2.5]"
-                        : "stroke-2"
-                    }
-                  />
-                  <span className="text-[10px] tracking-tight mt-0.5">Orders</span>
-                </Link>
-
-                <Link
-                  to="/cart"
-                  className={`relative flex flex-1 flex-col items-center justify-center py-1 rounded-xl transition-all duration-200 active:scale-90 ${
-                    location.pathname === "/cart"
-                      ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-black"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
-                  }`}
-                >
-                  <div className="relative">
-                    <ShoppingCart size={19} className={location.pathname === "/cart" ? "stroke-[2.5]" : "stroke-2"} />
-                    {cartCount > 0 && (
-                      <span className="absolute -right-2.5 -top-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-emerald-600 text-[9px] font-black text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs animate-bounce">
-                        {cartCount > 99 ? "99+" : cartCount}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[10px] tracking-tight mt-0.5">Cart</span>
-                </Link>
+            <Link
+              to="/cart"
+              className={`relative flex flex-1 flex-col items-center justify-center h-full rounded-xl transition-all duration-200 active:scale-90 ${
+                location.pathname === "/cart"
+                  ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs font-black"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-semibold"
+              }`}
+            >
+              <div className="relative">
+                <ShoppingCart size={19} className={location.pathname === "/cart" ? "stroke-[2.5]" : "stroke-2"} />
+                {cartCount > 0 && (
+                  <span className="absolute -right-2.5 -top-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-emerald-600 text-[9px] font-black text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs animate-bounce">
+                    {cartCount > 99 ? "99+" : cartCount}
+                  </span>
+                )}
               </div>
+              <span className="text-[10px] tracking-tight mt-0.5">Cart</span>
+            </Link>
+          </div>
 
-              {/* Right 44%: Expansive Ask AI Hero Button with Emerald Glow Border */}
-              <button
-                type="button"
-                onClick={() => setIsShopperAgentOpen(true)}
-                aria-label="Open AI Shopping Assistant"
-                className="flex items-center justify-center gap-2 h-11 w-[44%] max-w-[200px] rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-600/25 active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer border border-emerald-400/40"
-              >
-                <Sparkles size={17} className="stroke-[2.25] text-amber-200 animate-pulse" />
-                <span>Ask AI</span>
-              </button>
-            </>
-          )}
+          {/* Right 44%: Expansive Ask AI Hero Button with Exact h-12 (48px) and Emerald Glow Border */}
+          <button
+            type="button"
+            onClick={() => setIsShopperAgentOpen(true)}
+            aria-label="Open AI Shopping Assistant"
+            className="flex items-center justify-center gap-2 h-12 w-[44%] max-w-[200px] rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-600/25 active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer border border-emerald-400/40"
+          >
+            <Sparkles size={17} className="stroke-[2.25] text-amber-200 animate-pulse" />
+            <span>Ask AI</span>
+          </button>
         </div>
       </nav>
 

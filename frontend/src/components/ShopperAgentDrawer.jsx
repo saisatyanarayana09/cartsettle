@@ -84,6 +84,31 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const requestRef = useRef(false);
   const [addedItems, setAddedItems] = useState({});
 
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const touchStartY = useRef(0);
+
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaY = touchStartY.current - touchEndY;
+    // Swipe Up > 50px -> expand to full screen
+    if (deltaY > 50 && !isFullScreen) {
+      setIsFullScreen(true);
+    }
+    // Swipe Down > 50px -> collapse to 75% or close
+    if (deltaY < -50) {
+      if (isFullScreen) {
+        setIsFullScreen(false);
+      } else {
+        close();
+      }
+    }
+  };
+
+
   const panelRef = useRef(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -303,36 +328,45 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         aria-hidden="true"
       />
 
-      {/* 78% Height Bottom Sheet Modal on Mobile, Side Drawer on Desktop */}
+{/* 2-Stage Snap Sheet Modal on Mobile (75% to 100% Fullscreen on swipe-up), Side Drawer on Desktop */}
       <section
         ref={panelRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="shopper-title"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         onPointerDownCapture={voice.interrupt}
-        className="shopper-theme bg-background text-foreground border-border fixed inset-x-0 bottom-0 z-50 flex flex-col h-[78vh] max-h-[85vh] rounded-t-3xl border-t border-border shadow-[0_-12px_40px_rgba(0,0,0,0.3)] outline-none animate-in slide-in-from-bottom duration-300 md:inset-auto md:right-0 md:top-0 md:bottom-0 md:h-full md:w-[440px] md:rounded-none md:border-l md:border-t-0 md:animate-in md:slide-in-from-right overflow-hidden"
+        className={`shopper-theme bg-background text-foreground border-border fixed inset-x-0 bottom-0 z-50 flex flex-col ${
+          isFullScreen ? "h-[100dvh] rounded-none" : "h-[75vh] max-h-[85vh] rounded-t-3xl"
+        } border-t border-border shadow-[0_-12px_40px_rgba(0,0,0,0.3)] outline-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] md:inset-auto md:right-0 md:top-0 md:bottom-0 md:h-full md:w-[440px] md:rounded-none md:border-l md:border-t-0 md:animate-in md:slide-in-from-right overflow-hidden`}
       >
         {/* Mobile Top Drag Handle Indicator */}
-        <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
-        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-5 py-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="min-w-0">
-              <h2 id="shopper-title" className="text-base font-extrabold leading-snug">
-                Shopper
-              </h2>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {"CartSettle"}
-              </p>
-            </div>
+        <div
+          onClick={() => setIsFullScreen((prev) => !prev)}
+          className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mt-2.5 mb-1 sm:hidden shrink-0 cursor-pointer hover:bg-slate-400 transition"
+          title="Drag up for full screen"
+        />
+
+        {/* Top Header: Prominently displaying CartSettle brand (No close or mode buttons here!) */}
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 px-5 py-3.5 bg-background/80 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-black tracking-tighter">
+              <span className="text-slate-800 dark:text-white">Cart</span>
+              <span className="text-emerald-600 dark:text-emerald-400">Settle</span>
+            </span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+              AI Assistant
+            </span>
           </div>
-          <div className="flex shrink-0 items-center gap-0.5">
-            <ModeSwitch mode={mode} onChange={changeMode} />
-            
-            <IconControl label="Close concierge" onClick={close}>
-              <X />
-            </IconControl>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsFullScreen((prev) => !prev)}
+            className="sm:hidden text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 transition"
+          >
+            {isFullScreen ? "Collapse" : "Full Screen"}
+          </button>
         </header>
         {mode === "voice" ? (
           <VoiceView
@@ -503,6 +537,48 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             )}
           </footer>
         )}
+      
+        {/* Built-In Bottom Toolbar with Keyboard Toggle & In-Place Close under thumb */}
+        <div className="shrink-0 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl px-3 py-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between z-10">
+          <button
+            type="button"
+            onClick={() => {
+              setMode((prev) => {
+                const nextMode = prev === "voice" ? "chat" : "voice";
+                if (nextMode === "chat") {
+                  setTimeout(() => {
+                    const textarea = panelRef.current?.querySelector("textarea");
+                    textarea?.focus();
+                  }, 120);
+                }
+                return nextMode;
+              });
+            }}
+            className="flex items-center gap-2 h-11 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all active:scale-95 cursor-pointer border border-slate-200/70 dark:border-slate-700/80 shadow-2xs"
+          >
+            {mode === "voice" ? (
+              <>
+                <Keyboard size={18} className="stroke-[2.25] text-emerald-600 dark:text-emerald-400" />
+                <span>Keyboard</span>
+              </>
+            ) : (
+              <>
+                <Mic size={18} className="stroke-[2.25] text-emerald-600 dark:text-emerald-400" />
+                <span>Voice Mode</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={close}
+            className="flex items-center justify-center gap-2 h-11 w-[44%] max-w-[200px] rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-black text-xs shadow-lg active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer border border-slate-700 dark:border-slate-300"
+            aria-label="Close Assistant"
+          >
+            <X size={18} className="stroke-[2.5]" />
+            <span>Close</span>
+          </button>
+        </div>
       </section>
     </TooltipProvider>
   );
