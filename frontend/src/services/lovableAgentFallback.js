@@ -416,7 +416,10 @@ export function handleLovableAgentFallback(config) {
   else if (lower.includes('categor')) {
     reply = '4 categories: Dairy & Eggs, Produce, Pantry, Bakery.';
     tools_used = [{ name: 'manage_category', args: { action: 'list' } }];
-  } else if (lower.includes('promo') || lower.includes('coupon')) {
+  } else if (
+    (lower.includes('promo') || lower.includes('coupon')) &&
+    !(persona === 'shopper' && ['apply ', 'use ', 'best '].some((w) => lower.includes(w)))
+  ) {
     if (lower.includes('create') || lower.includes('add')) {
       reply = 'Created promo code SAVE10.';
       actions = [{ type: 'REFRESH_DATA' }];
@@ -433,7 +436,10 @@ export function handleLovableAgentFallback(config) {
     tools_used = [{ name: 'send_customer_broadcast', args: {} }];
   }
   // 2. Recent order / Order ID
-  else if (lower.includes('recent order') || lower.includes('latest order') || lower.includes('last order') || lower.includes('order number')) {
+  else if (
+    (lower.includes('recent order') || lower.includes('latest order') || lower.includes('last order') || lower.includes('order number')) &&
+    !['reorder', 'repeat', 'cancel', 'place'].some((w) => lower.includes(w))
+  ) {
     const top = DEMO_ORDERS[0];
     mem.last_order_id = top.id;
     reply = `Order #${top.id} is ${top.status} for $${top.total_amount.toFixed(2)}.`;
@@ -442,7 +448,12 @@ export function handleLovableAgentFallback(config) {
     follow_ups = [`Settle order ${top.id}`, 'Check pending orders', 'Check low stock'];
   }
   // 3. Pending orders
-  else if (lower.includes('pending') && lower.includes('order')) {
+  else if (
+    lower.includes('pending') &&
+    lower.includes('order') &&
+    !['settle', 'capture', 'pack all', 'accept all'].some((w) => lower.includes(w)) &&
+    !(persona === 'shopper' && lower.includes('show'))
+  ) {
     const pending = DEMO_ORDERS.filter((o) => ['NEW', 'ACCEPTED', 'PREPARING'].includes(o.status));
     reply = pending.length
       ? `${pending.length} orders pending packing, starting with #${pending[0].id} for ${pending[0].customer} at $${pending[0].total_amount.toFixed(2)}.`
@@ -487,7 +498,11 @@ export function handleLovableAgentFallback(config) {
     }
   }
   // 5. Accept / Prepare / Dispatch / Deliver / Cancel order
-  else if (['accept', 'prepare', 'dispatch', 'deliver', 'reject', 'cancel'].some((w) => lower.includes(w)) && (lower.includes('order') || /ord\d+/i.test(lower))) {
+  else if (
+    ['accept', 'prepare', 'dispatch', 'deliver', 'reject', 'cancel'].some((w) => lower.includes(w)) &&
+    (lower.includes('order') || /ord\d+/i.test(lower)) &&
+    !(persona === 'shopper' && !lower.includes('cancel'))
+  ) {
     const ordMatch = lower.match(/\b(ord\d+\w*)\b/i);
     const targetId = ordMatch ? ordMatch[1].toUpperCase() : (mem.last_order_id || 'ORD202600002');
     const found = DEMO_ORDERS.find((o) => o.id === targetId) || DEMO_ORDERS[3];
@@ -720,6 +735,37 @@ export function handleLovableAgentFallback(config) {
     reply = `Showing your ${qTerm.toLowerCase() || 'filtered'} orders.`;
     actions = [{ type: 'NAVIGATE', path }];
     tools_used = [{ name: 'filter_shopper_orders', args: { filter: qTerm } }];
+  } else if (
+    persona === 'owner' &&
+    lower.includes('all ') &&
+    ['dairy', 'bakery', 'produce', 'pantry'].some((c) => lower.includes(c)) &&
+    ['discount', '% off', 'reduce price', 'stock', 'increase'].some((w) => lower.includes(w))
+  ) {
+    const catKw = ['dairy', 'bakery', 'produce', 'pantry'].find((c) => lower.includes(c)) || 'dairy';
+    const pctMatch = lower.match(/(\d+(?:\.\d+)?)\s*%/);
+    const pctVal = pctMatch ? Number(pctMatch[1]) : 10;
+    const catProds = DEMO_PRODUCTS.filter((p) => String(p.category || '').toLowerCase().includes(catKw));
+    const targets = catProds.length ? catProds : DEMO_PRODUCTS.slice(0, 3);
+    for (const p of targets) {
+      if (lower.includes('stock')) {
+        p.stock_quantity += Math.round(pctVal);
+        p.stock = p.stock_quantity;
+      } else {
+        p.offer_price = Number((p.regular_price * (1 - Math.min(pctVal, 25) / 100)).toFixed(2));
+        p.price = p.offer_price;
+      }
+    }
+    reply = `Updated ${targets.length} ${catKw.charAt(0).toUpperCase() + catKw.slice(1)} products immediately.`;
+    actions = [
+      {
+        type: 'BULK_INVENTORY_UPDATED',
+        category: catKw.charAt(0).toUpperCase() + catKw.slice(1),
+        count: targets.length,
+        summary: `Updated ${targets.length} ${catKw} products`,
+      },
+      { type: 'REFRESH_DATA' },
+    ];
+    tools_used = [{ name: 'update_product_inventory', args: { category: catKw, count: targets.length } }];
   }
   // 9. Margin / Discount negotiation
   else if (lower.includes('margin') || lower.includes('discount') || lower.includes('% off') || lower.includes('bargain')) {

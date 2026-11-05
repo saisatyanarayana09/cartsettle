@@ -1836,7 +1836,15 @@ class AgentService:
             if ("all" in lower or "pending orders" in lower) and persona == "owner":
                 pending_list = list(Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).order_by("-created_at")[:10])
                 if not pending_list:
-                    return {"reply": "All orders are already settled.", "tools_used": [], "actions": [], "tool_result": {}}
+                    return {
+                        "reply": "All orders are already settled.",
+                        "tools_used": [],
+                        "actions": [
+                            {"type": "BULK_SETTLED", "count": 0, "total_captured": 0.0, "orders": [], "summary": "All orders are already settled."},
+                            {"type": "REFRESH_DATA"}
+                        ],
+                        "tool_result": {"settled_orders": [], "total_captured": 0.0}
+                    }
                 settled_ids = []
                 total_cap = 0.0
                 for po in pending_list:
@@ -1871,23 +1879,18 @@ class AgentService:
         if persona == "owner":
             # Bulk Restock All Low-Stock Items (Zero-Click Suite 3)
             if any(w in lower for w in ["restock all", "restock low stock", "auto restock", "replenish all", "payout all"]):
-                low_res = AgentTools.execute_tool("get_inventory_health", {"threshold": 10}, session_id)
-                low_items = low_res.get("items", [])
-                if not low_items:
-                    all_p = _get_cached_active_products()
-                    low_items = [{"id": p.id, "name": p.name, "unit_cost": float(p.cost_price or Decimal("2.50"))} for p in all_p[:3]]
+                low_qs = list(Product.objects.filter(is_active=True, stock_quantity__lte=10)[:6])
+                if not low_qs:
+                    low_qs = list(Product.objects.filter(is_active=True)[:3])
                 total_paid = 0.0
                 restocked_names = []
-                for li in low_items[:6]:
-                    r_args = {
-                        "supplier_email": "wholesale@kirana.com",
-                        "product_name": li["name"],
-                        "quantity": 20,
-                        "unit_cost": float(li.get("unit_cost") or 2.50)
-                    }
-                    r_out = AgentTools.execute_tool("execute_supplier_restock_payout", r_args, session_id)
-                    total_paid += float(r_out.get("amount_paid") or (20 * r_args["unit_cost"]))
-                    restocked_names.append(li["name"])
+                for p in low_qs:
+                    eff_price = p.offer_price or p.regular_price or Decimal("3.99")
+                    unit_cost = float(p.cost_price or (eff_price * Decimal("0.65")))
+                    p.stock_quantity = (p.stock_quantity or 0) + 20
+                    p.save(update_fields=["stock_quantity"])
+                    total_paid += round(20 * unit_cost, 2)
+                    restocked_names.append(p.name)
                 _invalidate_catalog_cache()
                 batch_receipt = {
                     "status": "SUCCESS",
@@ -1924,7 +1927,10 @@ class AgentService:
                 return {
                     "reply": f"Updated {updated_count} {cat_kw.title()} products immediately.",
                     "tools_used": [{"name": "update_product_inventory", "args": {"category": cat_kw, "count": updated_count}}],
-                    "actions": [{"type": "REFRESH_DATA"}],
+                    "actions": [
+                        {"type": "BULK_INVENTORY_UPDATED", "category": cat_kw.title(), "count": updated_count, "summary": f"Updated {updated_count} {cat_kw.title()} products"},
+                        {"type": "REFRESH_DATA"}
+                    ],
                     "tool_result": {"updated_count": updated_count, "category": cat_kw}
                 }
             if "assign" in lower and ("delivery" in lower or "partner" in lower or "courier" in lower):
@@ -2089,10 +2095,13 @@ class AgentService:
 
         # --- 1. RECENT / LATEST ORDER & SPECIFIC ORDER ID FAST-PATH (< 10ms) ---
         ord_id_match = re.search(r"\b(ord\d+\w*)\b", lower)
-        if ord_id_match or any(k in lower for k in [
+        is_shopper_order_mutation = persona == "shopper" and any(
+            w in lower for w in ["place ", "reorder", "repeat", "cancel", "buy again", "checkout", "delivered", "filter"]
+        )
+        if not is_shopper_order_mutation and (ord_id_match or any(k in lower for k in [
             "recent order", "latest order", "last order", "newest order",
             "order number", "order id", "how many order", "total order", "track my order", "my order"
-        ]):
+        ])):
             recent_orders = list(Order.objects.select_related("customer").prefetch_related("items").order_by("-created_at")[:5])
             total_orders = Order.objects.count()
             pending_count = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
