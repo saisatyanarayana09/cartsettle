@@ -981,6 +981,7 @@ export function CustomerLayout({ children }) {
   const [storeSettings, setStoreSettings] = useState(contextSettings);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isHeaderCompact, setIsHeaderCompact] = useState(false);
+  const isCompactRef = useRef(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isShopperAgentOpen, setIsShopperAgentOpen] = useState(false);
   const [shopperAgentLoaded, setShopperAgentLoaded] = useState(false);
@@ -993,20 +994,23 @@ export function CustomerLayout({ children }) {
     cart?.items?.length ||
     0;
 
-
   useEffect(() => {
     let ticking = false;
 
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const currentScrollY = window.scrollY;
+          const y = window.scrollY;
 
-          // Threshold-based morphing:
-          // When scrolled down > 40px, collapse into compact single-line header
-          if (currentScrollY > 40) {
+          // 30px Directional Hysteresis Buffer:
+          // Downward scroll > 50px collapses header into compact single-line
+          // Upward scroll < 20px (near top) smoothly expands back to 2 rows
+          // This 30px dead-zone 100% eliminates threshold oscillation & flicker
+          if (y > 50 && !isCompactRef.current) {
+            isCompactRef.current = true;
             setIsHeaderCompact(true);
-          } else {
+          } else if (y < 20 && isCompactRef.current) {
+            isCompactRef.current = false;
             setIsHeaderCompact(false);
           }
 
@@ -1058,10 +1062,10 @@ export function CustomerLayout({ children }) {
       <FestivePopupModal settings={storeSettings} />
       <WhatsAppSupportWidget settings={storeSettings} />
 
-      {/* Customer Header */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/60 dark:border-slate-800 bg-white/95 dark:bg-[#0d1322]/95 backdrop-blur-xl shadow-xs transition-colors duration-200">
+      {/* Customer Header - Ultra-Refined Luxury Frosted Glass */}
+      <header className="sticky top-0 z-30 border-b border-slate-200/50 dark:border-slate-800/60 bg-white/85 dark:bg-[#0c1220]/85 backdrop-blur-2xl shadow-xs transition-colors duration-200">
         <div
-          className={`mx-auto flex w-full transition-all duration-300 ease-out sm:flex-row sm:items-center sm:justify-between px-3.5 sm:px-6 sm:py-3 lg:px-8 xl:px-12 sm:gap-6 ${
+          className={`mx-auto flex w-full transition-all duration-300 ease-out sm:flex-row sm:items-center sm:justify-between px-3 sm:px-6 sm:py-3 lg:px-8 xl:px-12 sm:gap-6 ${
             isHeaderCompact
               ? "flex-row items-center justify-between py-1.5 gap-2.5"
               : "flex-col py-2.5 gap-2.5"
@@ -1075,17 +1079,18 @@ export function CustomerLayout({ children }) {
                 : "w-full justify-between sm:w-auto shrink-0"
             }`}
           >
-            {/* Brand name */}
+            {/* Brand Logo with Jewel Dot */}
             <Link
               to="/"
-              className={`font-black tracking-tighter whitespace-nowrap shrink-0 drop-shadow-sm hover:opacity-80 transition-all duration-300 ${
+              className={`flex items-center tracking-tight whitespace-nowrap shrink-0 drop-shadow-xs hover:opacity-90 transition-all duration-300 group ${
                 isHeaderCompact
                   ? "text-lg sm:text-2xl lg:text-3xl"
                   : "text-xl sm:text-2xl lg:text-3xl"
               }`}
             >
-              <span className="text-slate-800 dark:text-white">Cart</span>
-              <span className="text-emerald-600 dark:text-emerald-400">Settle</span>
+              <span className="font-black text-slate-900 dark:text-white">Cart</span>
+              <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
+              <span className="inline-block size-1.5 rounded-full bg-emerald-500 ml-0.5 mb-1.5 shadow-xs shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
             </Link>
 
             {/* Mobile Header Actions (Notifications + Profile Avatar / Sign In) */}
@@ -1100,13 +1105,13 @@ export function CustomerLayout({ children }) {
                 <>
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="grid size-9 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition relative cursor-pointer shrink-0"
+                    className="grid size-9 place-items-center rounded-full bg-slate-100/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-90 relative cursor-pointer shrink-0 border border-slate-200/60 dark:border-slate-700/60 shadow-xs"
                     title="Notifications"
                     aria-label="Notifications"
                   >
-                    <Bell size={18} />
+                    <Bell size={17} />
                     {notifications?.some((n) => !n.is_read) && (
-                      <span className="absolute right-0 top-0 size-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
+                      <span className="absolute right-0.5 top-0.5 size-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
                     )}
                   </button>
                   <NotificationPopup
@@ -1116,10 +1121,10 @@ export function CustomerLayout({ children }) {
 
                   <Link
                     to="/profile"
-                    className={`grid size-9 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border transition overflow-hidden shadow-2xs cursor-pointer shrink-0 ${
+                    className={`grid size-9 place-items-center rounded-full bg-slate-100/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border transition-all active:scale-90 overflow-hidden shadow-xs cursor-pointer shrink-0 ${
                       location.pathname.startsWith("/profile") && !location.pathname.startsWith("/profile/orders")
                         ? "border-emerald-500 ring-2 ring-emerald-500/30 dark:ring-emerald-400/30"
-                        : "border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500"
+                        : "border-slate-200/80 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500"
                     }`}
                     title="My Profile"
                     aria-label="My Profile"
@@ -1140,7 +1145,7 @@ export function CustomerLayout({ children }) {
                       />
                     ) : (
                       <div className="size-full grid place-items-center bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
-                        <User size={18} />
+                        <User size={17} />
                       </div>
                     )}
                   </Link>
@@ -1148,21 +1153,21 @@ export function CustomerLayout({ children }) {
               ) : (
                 <Link
                   to="/login"
-                  className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs shrink-0"
+                  className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs shrink-0 active:scale-95"
                   aria-label="Sign in"
                 >
-                  <User size={15} className="text-emerald-600 dark:text-emerald-400" />
+                  <User size={14} className="text-emerald-600 dark:text-emerald-400" />
                   <span>Sign in</span>
                 </Link>
               )}
             </div>
           </div>
 
-          {/* Center Search Bar - Smooth Auto-Collapse into single row beside brand on scroll */}
+          {/* Center Search Bar with Smooth Upward Glide & Docking Sheen */}
           <div
-            className={`transition-all duration-300 ease-out ${
+            className={`transition-all duration-300 ease-out origin-top ${
               isHeaderCompact
-                ? "flex-1 min-w-0 sm:max-w-2xl sm:mx-2 md:mx-4"
+                ? "flex-1 min-w-0 sm:max-w-2xl sm:mx-2 md:mx-4 ring-1 ring-emerald-500/30 dark:ring-emerald-400/30 rounded-xl sm:rounded-2xl shadow-xs"
                 : "w-full sm:flex-1 sm:max-w-2xl sm:mx-2 md:mx-4"
             }`}
           >
