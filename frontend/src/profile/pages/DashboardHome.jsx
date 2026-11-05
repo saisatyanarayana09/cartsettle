@@ -31,105 +31,95 @@ export default function DashboardHome() {
   const cards = [
     {
       name: t('Your Orders'),
-      desc: t('Your Orders Desc'),
       icon: Package,
       path: '/profile/orders',
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      color: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-50 dark:bg-blue-950/50',
     },
     {
       name: t('Offers & Promo Codes'),
-      desc: t('Offers & Promo Codes Desc'),
       icon: Tag,
       path: '/profile/offers',
-      color: 'text-rose-600',
-      bg: 'bg-rose-50',
+      color: 'text-rose-600 dark:text-rose-400',
+      bg: 'bg-rose-50 dark:bg-rose-950/50',
     },
     {
       name: t('Digital Wallet'),
-      desc: t('Digital Wallet Desc'),
       icon: IndianRupee,
       path: '/profile/wallet',
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-50',
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-950/50',
     },
     {
       name: t('Refer & Earn'),
-      desc: t('Refer & Earn Desc'),
       icon: Gift,
       path: '/profile/refer-and-earn',
-      color: 'text-teal-600',
-      bg: 'bg-teal-50',
+      color: 'text-teal-600 dark:text-teal-400',
+      bg: 'bg-teal-50 dark:bg-teal-950/50',
     },
     {
       name: t('Favorites'),
-      desc: t('Favorites Desc'),
       icon: Heart,
       path: '/profile/favorites',
-      color: 'text-rose-600',
-      bg: 'bg-rose-50',
+      color: 'text-pink-600 dark:text-pink-400',
+      bg: 'bg-pink-50 dark:bg-pink-950/50',
     },
     {
       name: t('Saved Addresses'),
-      desc: t('Saved Addresses Desc'),
       icon: MapPin,
       path: '/profile/addresses',
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-950/50',
     },
     {
       name: t('Notifications'),
-      desc: t('Notifications Desc'),
       icon: Bell,
       path: '/profile/notifications',
-      color: 'text-indigo-600',
-      bg: 'bg-indigo-50',
+      color: 'text-indigo-600 dark:text-indigo-400',
+      bg: 'bg-indigo-50 dark:bg-indigo-950/50',
     },
     {
       name: t('Account Settings'),
-      desc: t('Account Settings Desc'),
       icon: User,
       path: '/profile/account',
-      color: 'text-primary-600',
-      bg: 'bg-primary-50',
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-950/50',
     },
     {
       name: t('Languages'),
-      desc: t('Languages Desc'),
       icon: Globe,
       path: '/profile/language',
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      color: 'text-sky-600 dark:text-sky-400',
+      bg: 'bg-sky-50 dark:bg-sky-950/50',
     },
     {
       name: t('App Settings'),
-      desc: t('App Settings Desc'),
       icon: Sliders,
       path: '/profile/settings',
-      color: 'text-slate-600',
-      bg: 'bg-slate-100',
+      color: 'text-slate-600 dark:text-slate-400',
+      bg: 'bg-slate-100 dark:bg-slate-800',
     },
     {
       name: t('Help Center'),
-      desc: t('Help Center Desc'),
       icon: HelpCircle,
       path: '/profile/help',
-      color: 'text-slate-600',
-      bg: 'bg-slate-100',
+      color: 'text-slate-600 dark:text-slate-400',
+      bg: 'bg-slate-100 dark:bg-slate-800',
     },
     {
       name: t('Leave Feedback'),
-      desc: t('Feedback Desc'),
       icon: MessageSquare,
       path: '/profile/feedback',
-      color: 'text-slate-600',
-      bg: 'bg-slate-100',
+      color: 'text-slate-600 dark:text-slate-400',
+      bg: 'bg-slate-100 dark:bg-slate-800',
     },
   ];
 
-  const avatarUrl = user?.avatar || user?.customer_profile?.avatar || user?.customer_profile?.avatar_url || user?.customer_profile?.profile_picture;
-  const completion = user?.profile_completion?.percentage ?? (user?.customer_profile?.dob ? 100 : 80);
-  const isComplete = completion === 100;
+  const avatarUrl =
+    user?.avatar ||
+    user?.customer_profile?.avatar ||
+    user?.customer_profile?.avatar_url ||
+    user?.customer_profile?.profile_picture;
 
   const initials = (
     user?.first_name
@@ -141,105 +131,71 @@ export default function DashboardHome() {
 
   return (
     <div>
-      {/* Customer Hero Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-800 p-6 sm:p-8 text-white shadow-lg mb-8">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
-        <div className="relative z-10 flex items-center gap-4 sm:gap-5">
-          {!isComplete ? (
-            <div className="relative size-16 sm:size-20 flex items-center justify-center shrink-0">
-              <svg className="absolute inset-0 size-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="44"
-                  fill="none"
-                  stroke="rgba(255, 255, 255, 0.2)"
-                  strokeWidth="4"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="44"
-                  fill="none"
-                  stroke="#34D399"
-                  strokeWidth="4"
-                  strokeDasharray="276.46"
-                  strokeDashoffset={276.46 - (276.46 * completion) / 100}
-                  strokeLinecap="round"
-                  className="transition-all duration-700 ease-out"
-                />
-              </svg>
-              <div className="size-12 sm:size-14 rounded-full bg-white text-emerald-900 flex items-center justify-center text-lg sm:text-xl font-black shadow-md overflow-hidden">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  initials || <User size={24} aria-label="Account" />
-                )}
-              </div>
-              <div className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-xs border border-white">
-                {completion}%
-              </div>
-            </div>
-          ) : (
-            <div className="size-14 sm:size-16 rounded-full bg-white text-emerald-900 flex items-center justify-center text-xl sm:text-2xl font-black shadow-md shrink-0 overflow-hidden border-2 border-white/20">
+      {/* Minimalist Clean Header Card */}
+      <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 sm:p-7 shadow-xs mb-6 transition-all">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+          {/* Avatar + User Info */}
+          <div className="flex items-center gap-4">
+            <div className="size-14 sm:size-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xl font-black shadow-2xs shrink-0 overflow-hidden">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={avatarUrl} alt="Avatar" className="size-full object-cover" />
               ) : (
-                initials || <User size={24} aria-label="Account" />
+                initials || <User size={26} aria-label="Account" />
               )}
             </div>
-          )}
-          <div className="flex-1 min-w-0">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">
+                Hi, {user?.first_name || user?.username || 'Customer'}
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm truncate mt-0.5">
+                {user?.email || 'Manage your account and track orders'}
+              </p>
+            </div>
+          </div>
+
+          {/* Header Action Shortcuts */}
+          <div className="flex items-center gap-2.5">
             <button
               onClick={() => navigate('/')}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-bold mb-2 transition-colors cursor-pointer w-fit"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
             >
               <ArrowLeft size={14} /> {t('Back to Store')}
             </button>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight truncate">
-              Hi, {user?.first_name || user?.username || 'Customer'}
-            </h1>
-            <p className="text-emerald-100/80 text-xs sm:text-sm mt-0.5 truncate">
-              {user?.email || 'Manage your account and track orders'}
-            </p>
-            {!isComplete && (
-              <Link to="/profile/account" className="inline-block text-emerald-200 hover:text-white text-xs underline mt-1 transition-colors">
-                Add date of birth to reach 100%
-              </Link>
-            )}
+
+            <Link
+              to="/profile/account"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-2xs"
+            >
+              <span>Edit Profile</span>
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Horizontal Action Cards: Symbol on Left, Text on Right, Decreased Height */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4">
+      {/* Compact Modern Grid Tiles: Icon on Left, Title Only, Right Chevron, Tactile Spring */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {cards.map((card, idx) => {
           const Icon = card.icon;
           return (
             <Link
               key={idx}
               to={card.path}
-              className="group flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 relative overflow-hidden"
+              className="group flex items-center justify-between h-[64px] px-4 bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-200/80 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200"
             >
-              <div className="flex items-center gap-3.5 relative z-10 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${card.bg} ${card.color} transition-transform duration-200 group-hover:scale-105 shadow-inner`}
+                  className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${card.bg} ${card.color} transition-transform duration-200 group-hover:scale-105 shadow-2xs`}
                 >
-                  <Icon size={22} />
+                  <Icon size={19} className="stroke-[2.25]" />
                 </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-primary-700 dark:group-hover:text-primary-400 transition-colors truncate">
-                    {card.name}
-                  </h3>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
-                    {card.desc}
-                  </p>
-                </div>
+                <span className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
+                  {card.name}
+                </span>
               </div>
-              <div className="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-50 dark:group-hover:bg-primary-950/50 transition-colors ml-2">
+              <div className="size-7 rounded-full bg-slate-50 dark:bg-slate-800/80 flex items-center justify-center shrink-0 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/50 transition-colors ml-2">
                 <ChevronRight
-                  size={16}
-                  className="text-slate-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors translate-x-0 group-hover:translate-x-0.5"
+                  size={15}
+                  className="text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-transform duration-200 group-hover:translate-x-0.5"
                 />
               </div>
             </Link>
