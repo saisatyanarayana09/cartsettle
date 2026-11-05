@@ -980,7 +980,7 @@ export function CustomerLayout({ children }) {
   const { cart, isCustomer, notifications, storeSettings: contextSettings, user } = useCart();
   const [storeSettings, setStoreSettings] = useState(contextSettings);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [isMobileSearchHidden, setIsMobileSearchHidden] = useState(false);
+  const [isHeaderCompact, setIsHeaderCompact] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isShopperAgentOpen, setIsShopperAgentOpen] = useState(false);
   const [shopperAgentLoaded, setShopperAgentLoaded] = useState(false);
@@ -995,13 +995,6 @@ export function CustomerLayout({ children }) {
 
 
   useEffect(() => {
-    // Only auto-collapse searchbar on the customer home page
-    if (location.pathname !== "/") {
-      setIsMobileSearchHidden(false);
-      return;
-    }
-
-    let lastScrollY = window.scrollY;
     let ticking = false;
 
     const handleScroll = () => {
@@ -1009,20 +1002,14 @@ export function CustomerLayout({ children }) {
         window.requestAnimationFrame(() => {
           const currentScrollY = window.scrollY;
 
-          // If at or near top of the page, searchbar is always visible
-          if (currentScrollY <= 25) {
-            setIsMobileSearchHidden(false);
-          } else if (!isSearchActive) {
-            if (currentScrollY > lastScrollY && currentScrollY > 50) {
-              // Scrolling down (user swiping up) - hide searchbar like mobile app
-              setIsMobileSearchHidden(true);
-            } else if (currentScrollY < lastScrollY - 12) {
-              // Scrolling up (user swiping down towards top) - reveal searchbar
-              setIsMobileSearchHidden(false);
-            }
+          // Threshold-based morphing:
+          // When scrolled down > 40px, collapse into compact single-line header
+          if (currentScrollY > 40) {
+            setIsHeaderCompact(true);
+          } else {
+            setIsHeaderCompact(false);
           }
 
-          lastScrollY = currentScrollY;
           ticking = false;
         });
         ticking = true;
@@ -1031,7 +1018,7 @@ export function CustomerLayout({ children }) {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [location.pathname, isSearchActive]);
+  }, []);
 
   useEffect(() => {
     if (contextSettings) {
@@ -1074,28 +1061,46 @@ export function CustomerLayout({ children }) {
       {/* Customer Header */}
       <header className="sticky top-0 z-30 border-b border-slate-200/60 dark:border-slate-800 bg-white/95 dark:bg-[#0d1322]/95 backdrop-blur-xl shadow-xs transition-colors duration-200">
         <div
-          className={`mx-auto flex flex-col sm:flex-row w-full sm:items-center sm:justify-between px-3.5 sm:px-6 sm:py-3 lg:px-8 xl:px-12 transition-all duration-300 ${
-            isMobileSearchHidden ? "py-2 gap-0 sm:gap-6" : "py-2.5 gap-2.5 sm:gap-6"
+          className={`mx-auto flex w-full transition-all duration-300 ease-out sm:flex-row sm:items-center sm:justify-between px-3.5 sm:px-6 sm:py-3 lg:px-8 xl:px-12 sm:gap-6 ${
+            isHeaderCompact
+              ? "flex-row items-center justify-between py-1.5 gap-2.5"
+              : "flex-col py-2.5 gap-2.5"
           }`}
         >
           {/* Top Row on Mobile / Left Group on Desktop */}
-          <div className="flex items-center justify-between w-full sm:w-auto shrink-0">
+          <div
+            className={`flex items-center transition-all duration-300 ease-out ${
+              isHeaderCompact
+                ? "w-auto shrink-0 gap-0"
+                : "w-full justify-between sm:w-auto shrink-0"
+            }`}
+          >
             {/* Brand name */}
             <Link
               to="/"
-              className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tighter whitespace-nowrap shrink-0 drop-shadow-sm hover:opacity-80 transition-opacity"
+              className={`font-black tracking-tighter whitespace-nowrap shrink-0 drop-shadow-sm hover:opacity-80 transition-all duration-300 ${
+                isHeaderCompact
+                  ? "text-lg sm:text-2xl lg:text-3xl"
+                  : "text-xl sm:text-2xl lg:text-3xl"
+              }`}
             >
               <span className="text-slate-800 dark:text-white">Cart</span>
               <span className="text-emerald-600 dark:text-emerald-400">Settle</span>
             </Link>
 
             {/* Mobile Header Actions (Notifications + Profile Avatar / Sign In) */}
-            <div className="relative flex items-center gap-2 sm:hidden">
+            <div
+              className={`relative flex items-center transition-all duration-300 ease-out sm:hidden ${
+                isHeaderCompact
+                  ? "max-w-0 opacity-0 pointer-events-none scale-75 overflow-hidden -mr-2"
+                  : "max-w-xs opacity-100 scale-100 gap-2"
+              }`}
+            >
               {isCustomer ? (
                 <>
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="grid size-9 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition relative cursor-pointer"
+                    className="grid size-9 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition relative cursor-pointer shrink-0"
                     title="Notifications"
                     aria-label="Notifications"
                   >
@@ -1111,7 +1116,7 @@ export function CustomerLayout({ children }) {
 
                   <Link
                     to="/profile"
-                    className={`grid size-9 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border transition overflow-hidden shadow-2xs cursor-pointer ${
+                    className={`grid size-9 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border transition overflow-hidden shadow-2xs cursor-pointer shrink-0 ${
                       location.pathname.startsWith("/profile") && !location.pathname.startsWith("/profile/orders")
                         ? "border-emerald-500 ring-2 ring-emerald-500/30 dark:ring-emerald-400/30"
                         : "border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500"
@@ -1143,7 +1148,7 @@ export function CustomerLayout({ children }) {
               ) : (
                 <Link
                   to="/login"
-                  className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs"
+                  className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs shrink-0"
                   aria-label="Sign in"
                 >
                   <User size={15} className="text-emerald-600 dark:text-emerald-400" />
@@ -1153,12 +1158,12 @@ export function CustomerLayout({ children }) {
             </div>
           </div>
 
-          {/* Center Search Bar - Smooth Auto-Collapse / Expand on Mobile Home Page Scroll */}
+          {/* Center Search Bar - Smooth Auto-Collapse into single row beside brand on scroll */}
           <div
-            className={`w-full sm:flex-1 sm:max-w-2xl sm:mx-2 md:mx-4 transition-all duration-300 ease-in-out origin-top ${
-              isMobileSearchHidden
-                ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none overflow-hidden sm:max-h-none sm:opacity-100 sm:translate-y-0 sm:pointer-events-auto sm:overflow-visible"
-                : "max-h-20 opacity-100 translate-y-0 pointer-events-auto sm:max-h-none"
+            className={`transition-all duration-300 ease-out ${
+              isHeaderCompact
+                ? "flex-1 min-w-0 sm:max-w-2xl sm:mx-2 md:mx-4"
+                : "w-full sm:flex-1 sm:max-w-2xl sm:mx-2 md:mx-4"
             }`}
           >
             <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
