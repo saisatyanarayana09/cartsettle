@@ -1,29 +1,29 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from '../../router';
-import { 
-  Minus, 
-  Plus, 
-  Trash2, 
-  ShoppingBag, 
-  ArrowLeft, 
-  ArrowRight,
-  AlertCircle, 
-  AlertTriangle, 
-  Clock, 
-  Check,
+import {
+  Minus,
+  Plus,
+  Trash2,
+  ShoppingBag,
+  ChevronLeft,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  AlertCircle,
+  AlertTriangle,
+  Clock
 } from 'lucide-react';
 import { CustomerLayout } from '../../customer-layout';
 import { useCart } from '../../cart-context';
 import { checkOperatingHours } from '../../utils/operatingHours';
+import BargainModal from '../../components/BargainModal';
 
 export function CartPage() {
   const navigate = useNavigate();
-  const { cart, isCustomer, storeSettings, update, flushCartSync } = useCart();
+  const { cart, isCustomer, storeSettings, update, flushCartSync, refresh } = useCart();
   const [error, setError] = useState('');
   const [removingIds, setRemovingIds] = useState(new Set());
   const [showBillDrawer, setShowBillDrawer] = useState(false);
+  const [bargainProduct, setBargainProduct] = useState(null);
 
   // Track products added by AI assistant
   const [aiAddedIds] = useState(() => {
@@ -39,21 +39,25 @@ export function CartPage() {
   if (!isCustomer) {
     return (
       <CustomerLayout>
-        <main className="mx-auto max-w-md px-4 py-20 text-center">
-          <div className="size-14 mx-auto mb-3 rounded-2xl bg-slate-100 dark:bg-slate-800 grid place-items-center text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
-            <ShoppingBag size={24} />
+        <div className="min-h-[80vh] bg-[#F5F5F7] dark:bg-black flex items-center justify-center px-4">
+          <div className="max-w-sm w-full bg-white dark:bg-[#1C1C1E] rounded-[24px] p-8 text-center shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-black/[0.03] dark:border-white/[0.06]">
+            <div className="size-14 mx-auto mb-4 rounded-[16px] bg-[#F5F5F7] dark:bg-[#2C2C2E] grid place-items-center text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <ShoppingBag size={24} />
+            </div>
+            <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+              Your Bag is Waiting
+            </h1>
+            <p className="mt-1.5 text-xs text-[#86868B] leading-relaxed">
+              Sign in to view your saved items and check out with instant member savings.
+            </p>
+            <Link
+              to="/login"
+              className="mt-6 w-full h-11 inline-flex items-center justify-center rounded-[14px] bg-[#1D1D1F] hover:bg-black/85 dark:bg-white dark:hover:bg-white/90 text-white dark:text-[#1D1D1F] text-xs font-semibold transition-all active:scale-[0.98]"
+            >
+              Sign In
+            </Link>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">Your Cart is Waiting</h1>
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs mx-auto">
-            Sign in to start ordering fresh essentials and unlock personalized member savings.
-          </p>
-          <Link
-            to="/login"
-            className="mt-5 inline-flex items-center justify-center rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 px-6 py-2.5 text-xs font-bold text-white transition-all active:scale-[0.98] shadow-sm"
-          >
-            Sign in to continue
-          </Link>
-        </main>
+        </div>
       </CustomerLayout>
     );
   }
@@ -62,7 +66,7 @@ export function CartPage() {
     try {
       await update(item, quantity);
     } catch {
-      setError('Could not update your cart.');
+      setError('Could not update your bag.');
     }
   }
 
@@ -76,7 +80,7 @@ export function CartPage() {
           next.delete(item.id);
           return next;
         });
-      }, 200);
+      }, 180);
     } else {
       await change(item, newQuantity);
     }
@@ -92,7 +96,7 @@ export function CartPage() {
   const isEmergencyPaused = Boolean(storeSettings?.is_emergency_paused);
   const emergencyPauseMsg =
     storeSettings?.emergency_pause_message ||
-    'Online order placement is temporarily paused by the store due to high volume. We apologize for the inconvenience.';
+    'Online ordering is temporarily paused by the store due to high volume.';
   const operatingHours = checkOperatingHours(storeSettings);
   const isClosedHours = operatingHours.isClosed;
 
@@ -110,431 +114,479 @@ export function CartPage() {
   const freeThreshold = parseFloat(storeSettings?.free_delivery_threshold || 0);
   const freeDeliveryGap = Math.max(0, freeThreshold - itemsTotal);
   const isFreeDeliveryUnlocked = freeThreshold > 0 && itemsTotal >= freeThreshold;
+  const freeProgressPct = freeThreshold > 0 ? Math.min(100, (itemsTotal / freeThreshold) * 100) : 100;
   const minOrderAmount = parseFloat(storeSettings?.min_order_amount || 0);
   const isBelowMinOrder = minOrderAmount > 0 && itemsTotal < minOrderAmount;
 
   return (
     <CustomerLayout>
-      {/* Flush Sticky Top Header (zero negative margins/gaps, no shop button) */}
-      <div className="sticky top-0 z-20 w-full px-4 sm:px-6 lg:px-8 py-2.5 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between shadow-2xs">
-        <button
-          onClick={() => navigate(-1)}
-          aria-label="Back"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs active:scale-95 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700/80 shadow-2xs"
-        >
-          <ArrowLeft size={14} className="stroke-[2.5]" />
-          <span>Back</span>
-        </button>
-        
-        <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
-          Cart {items.length > 0 && <span className="text-slate-400 dark:text-slate-500 font-medium text-xs sm:text-sm">({items.length})</span>}
-        </h1>
-        
-        <div className="w-14" />
-      </div>
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-black text-[#1D1D1F] dark:text-[#F5F5F7] antialiased">
+        {/* Authentic iOS Translucent Frosted Top Bar */}
+        <header className="sticky top-0 z-20 h-12 w-full px-4 sm:px-6 lg:px-8 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-2xl border-b border-[#E5E5EA] dark:border-[#38383A] flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="Back"
+            className="inline-flex items-center gap-0.5 -ml-1.5 px-2 py-1 rounded-lg text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] font-medium text-[14px] active:opacity-60 transition-all cursor-pointer"
+          >
+            <ChevronLeft size={19} className="stroke-[2.2]" />
+            <span>Back</span>
+          </button>
 
-      <main className="mx-auto max-w-6xl px-3 sm:px-6 lg:px-8 py-3 pb-36 lg:pb-16">
-        {/* Empty State */}
-        {!items.length ? (
-          <div className="mt-8 py-16 px-4 text-center rounded-2xl bg-slate-50/60 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 flex flex-col items-center max-w-md mx-auto">
-            <div className="size-14 rounded-2xl bg-white dark:bg-slate-800 grid place-items-center text-slate-400 dark:text-slate-500 mb-3 shadow-xs border border-slate-200/60 dark:border-slate-700/60">
-              <ShoppingBag size={24} />
-            </div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-1 tracking-tight">Your cart is empty</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mb-5 leading-relaxed">
-              Explore freshly stocked groceries, produce, and daily essentials.
-            </p>
-            <Link
-              to="/products"
-              className="inline-flex items-center gap-1.5 h-10 px-6 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs transition-all active:scale-95 shadow-sm"
-            >
-              <span>Start Shopping</span>
-              <ArrowRight size={14} />
-            </Link>
+          <h1 className="text-[15px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+            Bag
+          </h1>
+
+          <div className="min-w-[54px] text-right">
+            {items.length > 0 && (
+              <span className="text-xs font-medium text-[#86868B] tabular-nums">
+                {items.length} {items.length === 1 ? 'item' : 'items'}
+              </span>
+            )}
           </div>
-        ) : (
-          /* Expansive 2-Column Desktop Grid */
-          <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
-            {/* Left Column: Line Items & Alerts */}
-            <div className="lg:col-span-7 xl:col-span-8 space-y-3">
-              {/* Slender Hairline Free Delivery Tracker */}
-              {freeThreshold > 0 && (
-                <div className="py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
-                  <div className="flex justify-between items-center text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      {isFreeDeliveryUnlocked ? (
-                        <>
-                          <Check size={13} className="text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
-                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">Free delivery unlocked</span>
-                        </>
-                      ) : (
-                        <span>
-                          Add <span className="font-bold text-slate-900 dark:text-white tabular-nums">Γé╣{freeDeliveryGap.toFixed(0)}</span> more for Free Delivery
-                        </span>
-                      )}
-                    </div>
-                    <span className="font-semibold tabular-nums text-slate-500 dark:text-slate-400">
-                      Γé╣{itemsTotal.toFixed(0)} / Γé╣{freeThreshold.toFixed(0)}
-                    </span>
-                  </div>
-                  <div className="h-1 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-600 dark:bg-emerald-400 rounded-full transition-all duration-500 ease-out"
-                      style={{ width: `${Math.min(100, (itemsTotal / freeThreshold) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              )}
+        </header>
 
-              {error && (
-                <p className="rounded-xl bg-red-50 dark:bg-red-950/50 p-2.5 text-xs font-bold text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900">
-                  {error}
-                </p>
-              )}
-
-              {/* Alert Banners */}
-              {hasOutOfStock && (
-                <div className="rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 p-2.5 text-rose-900 dark:text-rose-200 flex items-start gap-2 shadow-xs">
-                  <AlertCircle className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" size={15} />
-                  <p className="text-xs font-semibold leading-snug">
-                    {outOfStockItems.length === 1
-                      ? '1 item in your cart is out of stock. Please remove it to proceed.'
-                      : `${outOfStockItems.length} items in your cart are out of stock. Please remove them to proceed.`}
-                  </p>
-                </div>
-              )}
-
-              {isEmergencyPaused && (
-                <div className="rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-2.5 text-amber-900 dark:text-amber-200 flex items-start gap-2 shadow-xs">
-                  <AlertTriangle className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={15} />
-                  <p className="text-xs font-semibold leading-snug">{emergencyPauseMsg}</p>
-                </div>
-              )}
-
-              {isClosedHours && (
-                <div className="rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 p-2.5 text-rose-900 dark:text-rose-200 flex items-start gap-2 shadow-xs">
-                  <Clock className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" size={15} />
-                  <p className="text-xs font-semibold leading-snug">{operatingHours.message}</p>
-                </div>
-              )}
-
-              {/* Ultra-Compact Line-Item Rows */}
-              <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60 bg-white dark:bg-slate-900 rounded-2xl p-2 sm:p-4 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                {items.map((item) => {
-                  const stockQty = item.stock_quantity ?? 999;
-                  const maxOrderQty = item.max_order_quantity ?? 0;
-                  const isItemOutOfStock = item.is_in_stock === false || stockQty <= 0;
-                  const maxAllowed = maxOrderQty > 0 ? Math.min(stockQty, maxOrderQty) : stockQty;
-                  const isMaxReached = isItemOutOfStock || item.quantity >= maxAllowed;
-                  const unitPriceNum = parseFloat(item.unit_price || 0);
-                  const itemLineTotal = (unitPriceNum * item.quantity).toFixed(2);
-                  const isRemoving = removingIds.has(item.id);
-
-                  // AI item detection
-                  const isAiAdded = 
-                    Boolean(item.added_by_ai) || 
-                    aiAddedIds.has(item.product) || 
-                    aiAddedIds.has(item.product_id) || 
-                    aiAddedIds.has(item.id);
-
-                  const firstLetter = (item.product_name?.trim()?.charAt(0) || 'P').toUpperCase();
-
-                  return (
-                    <article
-                      key={item.id}
-                      className={`py-2.5 sm:py-3 flex items-center gap-2.5 sm:gap-3.5 group transition-all duration-200 ease-out ${
-                        isRemoving
-                          ? 'opacity-0 scale-95 pointer-events-none max-h-0 py-0 overflow-hidden'
-                          : 'opacity-100'
-                      }`}
-                    >
-                      {/* Rounded-Square Product Frame with Letter Fallback */}
-                      <div className="size-14 sm:size-16 rounded-xl aspect-square overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 p-0.5 flex items-center justify-center shrink-0">
-                        {item.product_image ? (
-                          <img
-                            src={item.product_image}
-                            alt={item.product_name}
-                            className="size-full object-cover rounded-lg"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              const sibling = e.currentTarget.parentElement?.querySelector('.monogram-fallback');
-                              if (sibling) sibling.classList.remove('hidden');
-                            }}
-                          />
-                        ) : null}
-                        <div
-                          className={`monogram-fallback size-full rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-black text-base sm:text-lg flex items-center justify-center select-none ${
-                            item.product_image ? 'hidden' : 'flex'
-                          }`}
-                        >
-                          {firstLetter}
-                        </div>
-                      </div>
-
-                      {/* Info & Unit */}
-                      <div className="flex-1 min-w-0 pr-1">
-                        <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate">
-                          {item.product_name}
-                        </h2>
-                        
-                        <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Γé╣{item.unit_price} ┬╖ {item.product_unit}
-                          </span>
-                          
-                          {/* Added by AI Micro-Badge without extra row height */}
-                          {isAiAdded && (
-                            <span className="inline-flex items-center text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.2 rounded border border-purple-200/60 dark:border-purple-800/60">
-                              Added by AI
-                            </span>
-                          )}
-
-                          {isItemOutOfStock && (
-                            <span className="inline-block text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-1.5 py-0.2 rounded border border-rose-200 dark:border-rose-900">
-                              Out of stock
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Stepper Pill & Item Total */}
-                      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                        {/* Compact Pill Stepper */}
-                        <div className="flex items-center h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 px-1 shadow-2xs">
-                          <button
-                            onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                            disabled={item.quantity > 1 && isItemOutOfStock}
-                            title={item.quantity === 1 ? 'Remove item' : 'Decrease quantity'}
-                            aria-label={item.quantity === 1 ? `Remove ${item.product_name}` : `Decrease ${item.product_name}`}
-                            className="size-6 rounded-full grid place-items-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            {item.quantity === 1 ? (
-                              <Trash2 size={12} className="text-rose-500 hover:text-rose-600 transition-transform active:scale-110" />
-                            ) : (
-                              <Minus size={12} />
-                            )}
-                          </button>
-                          <span aria-label={`${item.product_name} quantity`} className="w-6 text-center text-xs font-bold text-slate-900 dark:text-white tabular-nums select-none">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => handleQuantityChange(item, item.quantity + 1)}
-                            disabled={isMaxReached || isItemOutOfStock}
-                            title="Increase quantity"
-                            aria-label={`Increase ${item.product_name}`}
-                            className="size-6 rounded-full grid place-items-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
-
-                        {/* Line Item Total */}
-                        <div className="text-right min-w-[56px]">
-                          <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tabular-nums">
-                            Γé╣{itemLineTotal}
-                          </p>
-                          {item.regular_price && Number(item.regular_price) > unitPriceNum && (
-                            <p className="text-[10px] text-slate-400 line-through tabular-nums">
-                              Γé╣{(Number(item.regular_price) * item.quantity).toFixed(0)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
+        <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-5 pb-36 lg:pb-16">
+          {/* Store Constraint Alerts */}
+          {isEmergencyPaused && (
+            <div className="mb-4 p-3.5 rounded-[16px] bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-start gap-2.5">
+              <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Ordering Temporarily Paused</p>
+                <p className="opacity-80 mt-0.5">{emergencyPauseMsg}</p>
               </div>
             </div>
+          )}
 
-            {/* Right Column: Desktop Native Sticky Order Summary Card (hidden on mobile, sticky on desktop) */}
-            <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-16">
-              <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
-                <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] pb-2 border-b border-slate-100 dark:border-slate-800">
-                  Order Summary
-                </h3>
+          {!isEmergencyPaused && isClosedHours && (
+            <div className="mb-4 p-3.5 rounded-[16px] bg-rose-500/10 border border-rose-500/20 text-rose-900 dark:text-rose-200 text-xs font-medium flex items-start gap-2.5">
+              <Clock size={16} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Store Outside Operating Hours</p>
+                <p className="opacity-80 mt-0.5">{operatingHours.message}</p>
+              </div>
+            </div>
+          )}
 
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
+          {hasOutOfStock && (
+            <div className="mb-4 p-3.5 rounded-[16px] bg-rose-500/10 border border-rose-500/20 text-rose-900 dark:text-rose-200 text-xs font-medium flex items-start gap-2.5">
+              <AlertCircle size={16} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Unavailable Items in Bag</p>
+                <p className="opacity-80 mt-0.5">
+                  Please remove {outOfStockItems.map((i) => i.product_name).join(', ')} to continue.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div role="alert" className="mb-4 p-3 rounded-[14px] bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
+              {error}
+            </div>
+          )}
+
+          {!items.length ? (
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[24px] py-16 px-6 text-center shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06] max-w-md mx-auto my-6">
+              <div className="size-14 mx-auto mb-3.5 rounded-[16px] bg-[#F5F5F7] dark:bg-[#2C2C2E] grid place-items-center text-[#86868B]">
+                <ShoppingBag size={24} />
+              </div>
+              <h2 className="text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                Your bag is empty
+              </h2>
+              <p className="mt-1 text-xs text-[#86868B] max-w-xs mx-auto leading-relaxed">
+                Explore fresh daily groceries and household essentials curated for quick delivery.
+              </p>
+              <Link
+                to="/products"
+                className="mt-5 inline-flex items-center justify-center rounded-[14px] bg-[#1D1D1F] hover:bg-black/85 dark:bg-white dark:hover:bg-white/90 text-white dark:text-[#1D1D1F] px-6 h-10 text-xs font-semibold transition-all active:scale-95"
+              >
+                Shop Groceries
+              </Link>
+            </div>
+          ) : (
+            <div className="lg:grid lg:grid-cols-12 lg:gap-7 items-start">
+              {/* Left 7 Columns: Unified Apple Store Inset Grouped Sheet */}
+              <div className="lg:col-span-7">
+                <div className="bg-white dark:bg-[#1C1C1E] rounded-[24px] shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06] overflow-hidden divide-y divide-[#E5E5EA] dark:divide-[#38383A]">
+                  {items.map((item) => {
+                    const stockQty = item.stock_quantity ?? 999;
+                    const maxOrderQty = item.max_order_quantity ?? 0;
+                    const isItemOutOfStock = item.is_in_stock === false || stockQty <= 0;
+                    const maxAllowed = maxOrderQty > 0 ? Math.min(stockQty, maxOrderQty) : stockQty;
+                    const isMaxReached = isItemOutOfStock || item.quantity >= maxAllowed;
+                    const unitPriceNum = parseFloat(item.unit_price || 0);
+                    const itemLineTotal = (unitPriceNum * item.quantity).toFixed(2);
+                    const isRemoving = removingIds.has(item.id);
+                    const isAiAdded =
+                      Boolean(item.added_by_ai || item.is_ai_added) ||
+                      aiAddedIds.has(item.product) ||
+                      aiAddedIds.has(item.id);
+                    const firstLetter = (item.product_name || 'P').trim().charAt(0).toUpperCase();
+
+                    return (
+                      <article
+                        key={item.id}
+                        className={`p-4 sm:px-5 sm:py-4 flex items-center gap-3.5 sm:gap-4 transition-all duration-200 ${
+                          isRemoving ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100'
+                        } ${isItemOutOfStock ? 'bg-rose-50/30 dark:bg-rose-950/10' : ''}`}
+                      >
+                        {/* 56px Rounded Squircle Product Thumbnail or SF Monogram */}
+                        <div className="size-14 sm:size-16 rounded-[14px] bg-[#F5F5F7] dark:bg-[#2C2C2E] shrink-0 overflow-hidden flex items-center justify-center p-1.5">
+                          {item.product_image ? (
+                            <img
+                              src={item.product_image}
+                              alt={item.product_name}
+                              className={`w-full h-full object-contain ${
+                                isItemOutOfStock ? 'grayscale opacity-40' : ''
+                              }`}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-lg font-bold text-[#86868B] select-none">
+                              {firstLetter}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Product Info & Controls */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h2 className="text-[14px] sm:text-[15px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate tracking-tight">
+                              {item.product_name}
+                            </h2>
+                          </div>
+
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-[#86868B]">
+                            <span>
+                              {item.product_unit} · ₹{unitPriceNum.toFixed(0)}
+                            </span>
+
+                            {isAiAdded && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#0071E3]/10 dark:bg-[#0A84FF]/20 text-[#0071E3] dark:text-[#0A84FF]">
+                                Added by AI
+                              </span>
+                            )}
+
+                            {isItemOutOfStock && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                                Out of stock
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-2 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <span className="text-[14px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                                ₹{itemLineTotal}
+                              </span>
+                              {Number(item.regular_price) > unitPriceNum && (
+                                <span className="text-[11px] text-[#86868B] line-through tabular-nums">
+                                  ₹{(Number(item.regular_price) * item.quantity).toFixed(0)}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setBargainProduct({
+                                    id: item.product || item.id,
+                                    name: item.product_name,
+                                    price: unitPriceNum
+                                  })
+                                }
+                                className="text-[12px] font-medium text-[#0071E3] dark:text-[#0A84FF] hover:underline cursor-pointer"
+                              >
+                                Make Offer
+                              </button>
+                            </div>
+
+                            {/* Authentic iOS #F5F5F7 Capsule Stepper */}
+                            <div className="inline-flex items-center h-8 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] px-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleQuantityChange(item, item.quantity - 1)}
+                                disabled={item.quantity > 1 && isItemOutOfStock}
+                                title={item.quantity === 1 ? 'Remove item' : 'Decrease quantity'}
+                                aria-label={
+                                  item.quantity === 1
+                                    ? `Remove ${item.product_name}`
+                                    : `Decrease ${item.product_name}`
+                                }
+                                className="size-6 rounded-full grid place-items-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                {item.quantity === 1 ? (
+                                  <Trash2 size={12} className="text-rose-500" />
+                                ) : (
+                                  <Minus size={12} />
+                                )}
+                              </button>
+                              <span
+                                aria-label={`${item.product_name} quantity`}
+                                className="w-6 text-center text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums select-none"
+                              >
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleQuantityChange(item, item.quantity + 1)}
+                                disabled={isMaxReached || isItemOutOfStock}
+                                title="Increase quantity"
+                                aria-label={`Increase ${item.product_name}`}
+                                className="size-6 rounded-full grid place-items-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.06] dark:hover:bg-white/[0.08] active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                <Plus size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {/* Subtle Apple Blue Add More Items Link */}
+                <div className="mt-3.5 px-2">
+                  <Link
+                    to="/products"
+                    className="inline-flex items-center gap-1 text-[13px] font-medium text-[#0071E3] dark:text-[#0A84FF] hover:underline"
+                  >
+                    <Plus size={14} />
+                    <span>Add more items</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right 5 Columns: Sticky Apple Bag Summary Sheet (Desktop) */}
+              <aside className="hidden lg:block lg:col-span-5 sticky top-16">
+                <div className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-5 sm:p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06]">
+                  <h3 className="text-[17px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    Order Summary
+                  </h3>
+
+                  {/* iOS #34C759 Free Delivery Progress Bar */}
+                  {freeThreshold > 0 && (
+                    <div className="mt-2.5 mb-4">
+                      <p className="text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        {isFreeDeliveryUnlocked
+                          ? 'Free delivery unlocked'
+                          : `Add ₹${freeDeliveryGap.toFixed(0)} more for free delivery`}
+                      </p>
+                      <div className="mt-1.5 h-1.5 w-full rounded-full bg-[#E8E8ED] dark:bg-[#2C2C2E] overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-[#34C759] transition-all duration-500 ease-out"
+                          style={{ width: `${freeProgressPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hairline Financial Breakdown */}
+                  <div className="space-y-2.5 text-[13px] border-t border-[#E5E5EA] dark:border-[#38383A] pt-4">
+                    <div className="flex justify-between text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <span className="text-[#86868B]">Subtotal</span>
+                      <span className="font-medium tabular-nums">₹{mrpTotal.toFixed(2)}</span>
+                    </div>
+
+                    {discount > 0 && (
+                      <div className="flex justify-between text-[#34C759] dark:text-[#30D158]">
+                        <span>Store Savings</span>
+                        <span className="font-medium tabular-nums">-₹{discount.toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    {promoDiscount > 0 && (
+                      <div className="flex justify-between text-[#34C759] dark:text-[#30D158]">
+                        <span>Promo Discount</span>
+                        <span className="font-medium tabular-nums">-₹{promoDiscount.toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    {packagingFee > 0 && (
+                      <div className="flex justify-between text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        <span className="text-[#86868B]">Packaging</span>
+                        <span className="font-medium tabular-nums">₹{packagingFee.toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <span className="font-medium">Shipping</span>
+                      <span className="font-semibold">
+                        {isFreeDeliveryUnlocked ? 'FREE' : 'Calculated at checkout'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Total Line */}
+                  <div className="border-t border-[#E5E5EA] dark:border-[#38383A] mt-4 pt-4 flex items-baseline justify-between">
+                    <span className="text-[16px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      Total
+                    </span>
+                    <span className="text-[20px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums tracking-tight">
+                      ₹{totalPayable.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Primary Apple Pay Obsidian CTA */}
+                  <div className="mt-5">
+                    {storeSettings?.is_open === false || isClosedHours ? (
+                      <div className="w-full py-3 rounded-[14px] bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#86868B] font-semibold text-xs text-center">
+                        Store Closed
+                      </div>
+                    ) : isEmergencyPaused ? (
+                      <div className="w-full py-3 rounded-[14px] bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold text-xs text-center">
+                        Orders Paused
+                      </div>
+                    ) : hasOutOfStock ? (
+                      <div className="w-full py-3 rounded-[14px] bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-xs text-center">
+                        Remove Out of Stock Items
+                      </div>
+                    ) : isBelowMinOrder ? (
+                      <div className="w-full py-3 rounded-[14px] bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold text-xs text-center">
+                        Minimum Order ₹{minOrderAmount.toFixed(0)}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleProceedToCheckout}
+                        aria-label="Checkout"
+                        className="w-full h-11 rounded-[14px] bg-[#1D1D1F] hover:bg-black/85 dark:bg-white dark:hover:bg-white/90 text-white dark:text-[#1D1D1F] font-semibold text-[14px] flex items-center justify-center transition-all active:scale-[0.99] cursor-pointer"
+                      >
+                        Check Out
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </aside>
+            </div>
+          )}
+
+          {/* Mobile Sticky Bottom Frosted Apple Summary Sheet */}
+          {items.length > 0 && (
+            <aside className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/85 dark:bg-[#1C1C1E]/85 backdrop-blur-2xl border-t border-[#E5E5EA] dark:border-[#38383A]">
+              {/* Top 3px iOS Green Free Delivery Progress Line */}
+              {freeThreshold > 0 && (
+                <div className="h-[3px] w-full bg-[#E8E8ED] dark:bg-[#2C2C2E] overflow-hidden">
+                  <div
+                    className="h-full bg-[#34C759] transition-all duration-500"
+                    style={{ width: `${freeProgressPct}%` }}
+                  />
+                </div>
+              )}
+
+              {/* Expandable Bill Breakdown Drawer */}
+              {showBillDrawer && (
+                <div className="px-4 py-3.5 border-b border-[#E5E5EA] dark:border-[#38383A] space-y-2 text-xs">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-[#E5E5EA] dark:border-[#38383A]">
+                    <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      Order Summary
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowBillDrawer(false)}
+                      className="text-[#0071E3] dark:text-[#0A84FF] font-medium"
+                    >
+                      Done
+                    </button>
+                  </div>
+                  <div className="flex justify-between text-[#86868B]">
                     <span>Subtotal</span>
-                    <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
-                      Γé╣{mrpTotal > 0 ? mrpTotal.toFixed(2) : itemsTotal.toFixed(2)}
+                    <span className="font-medium text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                      ₹{mrpTotal.toFixed(2)}
                     </span>
                   </div>
-
                   {discount > 0 && (
-                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                    <div className="flex justify-between text-[#34C759]">
                       <span>Store Savings</span>
-                      <span className="font-semibold tabular-nums">-Γé╣{discount.toFixed(2)}</span>
+                      <span className="font-medium tabular-nums">-₹{discount.toFixed(2)}</span>
                     </div>
                   )}
-
                   {promoDiscount > 0 && (
-                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                    <div className="flex justify-between text-[#34C759]">
                       <span>Promo Discount</span>
-                      <span className="font-semibold tabular-nums">-Γé╣{promoDiscount.toFixed(2)}</span>
+                      <span className="font-medium tabular-nums">-₹{promoDiscount.toFixed(2)}</span>
                     </div>
                   )}
-
                   {packagingFee > 0 && (
-                    <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                      <span>Packaging & Handling</span>
-                      <span className="font-semibold text-slate-900 dark:text-white tabular-nums">Γé╣{packagingFee.toFixed(2)}</span>
+                    <div className="flex justify-between text-[#86868B]">
+                      <span>Packaging</span>
+                      <span className="font-medium text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                        ₹{packagingFee.toFixed(2)}
+                      </span>
                     </div>
                   )}
-
-                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                    <span>Delivery</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {isFreeDeliveryUnlocked ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">Free</span>
-                      ) : (
-                        <span>Calculated at checkout</span>
-                      )}
+                  <div className="flex justify-between text-[#86868B]">
+                    <span>Shipping</span>
+                    <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {isFreeDeliveryUnlocked ? 'FREE' : 'At checkout'}
                     </span>
                   </div>
+                </div>
+              )}
 
-                  <div className="flex justify-between text-base font-extrabold text-slate-900 dark:text-white pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                    <span>Total Payable</span>
-                    <span className="tabular-nums">Γé╣{totalPayable.toFixed(2)}</span>
+              {/* Bottom Dock Bar */}
+              <div className="px-4 py-2.5 pb-[calc(0.65rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between gap-3">
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowBillDrawer(!showBillDrawer)}
+                    className="flex items-center gap-1 text-[11px] font-medium text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white cursor-pointer"
+                  >
+                    <span>Total</span>
+                    {showBillDrawer ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                  </button>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums tracking-tight">
+                      ₹{totalPayable.toFixed(2)}
+                    </span>
+                    {discount > 0 && (
+                      <span className="text-[11px] font-semibold text-[#34C759]">
+                        Saved ₹{discount.toFixed(0)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Primary CTA on Desktop */}
-                {storeSettings?.is_open === false ? (
-                  <div className="w-full py-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs text-center">
+                {storeSettings?.is_open === false || isClosedHours ? (
+                  <div className="px-4 py-2 rounded-[12px] bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#86868B] font-semibold text-xs">
                     Store Closed
                   </div>
                 ) : isEmergencyPaused ? (
-                  <div className="w-full py-3 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-xs text-center">
+                  <div className="px-4 py-2 rounded-[12px] bg-amber-500/10 text-amber-700 font-semibold text-xs">
                     Orders Paused
                   </div>
-                ) : isClosedHours ? (
-                  <div className="w-full py-3 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-bold text-xs text-center">
-                    Store Closed
-                  </div>
                 ) : hasOutOfStock ? (
-                  <div className="w-full py-3 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-bold text-xs text-center">
-                    Remove Out of Stock
+                  <div className="px-4 py-2 rounded-[12px] bg-rose-500/10 text-rose-600 font-semibold text-xs">
+                    Remove Unavailable
                   </div>
                 ) : isBelowMinOrder ? (
-                  <div className="w-full py-3 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-xs text-center">
-                    Min Order Γé╣{minOrderAmount.toFixed(0)}
+                  <div className="px-4 py-2 rounded-[12px] bg-amber-500/10 text-amber-700 font-semibold text-xs">
+                    Min ₹{minOrderAmount.toFixed(0)}
                   </div>
                 ) : (
                   <button
+                    type="button"
                     onClick={handleProceedToCheckout}
                     aria-label="Checkout"
-                    className="w-full h-11 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md cursor-pointer"
+                    className="h-10 px-7 rounded-[12px] bg-[#1D1D1F] hover:bg-black/85 dark:bg-white dark:hover:bg-white/90 text-white dark:text-[#1D1D1F] font-semibold text-[13px] flex items-center justify-center active:scale-[0.98] transition-all cursor-pointer shrink-0"
                   >
-                    <span>Proceed to Checkout</span>
-                    <ArrowRight size={15} />
+                    Check Out
                   </button>
                 )}
               </div>
             </aside>
-          </div>
-        )}
+          )}
+        </main>
 
-        {/* Mobile Sticky Bottom Dock with Expandable Bill Drawer (lg:hidden) */}
-        {items.length > 0 && (
-          <aside className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-slate-800/80 shadow-2xl transition-all duration-300">
-            {/* Live Bill Breakdown Drawer */}
-            {showBillDrawer && (
-              <div className="px-4 py-3 bg-slate-50/95 dark:bg-slate-900/95 border-b border-slate-200/60 dark:border-slate-800/60 space-y-2 text-xs animate-in slide-in-from-bottom-2 duration-200">
-                <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                  <span>Subtotal</span>
-                  <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
-                    Γé╣{mrpTotal > 0 ? mrpTotal.toFixed(2) : itemsTotal.toFixed(2)}
-                  </span>
-                </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                    <span>Store Savings</span>
-                    <span className="font-semibold tabular-nums">-Γé╣{discount.toFixed(2)}</span>
-                  </div>
-                )}
-                {promoDiscount > 0 && (
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                    <span>Promo Discount</span>
-                    <span className="font-semibold tabular-nums">-Γé╣{promoDiscount.toFixed(2)}</span>
-                  </div>
-                )}
-                {packagingFee > 0 && (
-                  <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                    <span>Packaging & Handling</span>
-                    <span className="font-semibold text-slate-900 dark:text-white tabular-nums">Γé╣{packagingFee.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                  <span>Delivery</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">
-                    {isFreeDeliveryUnlocked ? (
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">Free</span>
-                    ) : (
-                      <span>Calculated at checkout</span>
-                    )}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Bottom Bar: Total Due + Expand Toggle + Primary CTA */}
-            <div className="px-4 py-2.5 pb-[calc(0.65rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between gap-3">
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setShowBillDrawer(!showBillDrawer)}
-                  className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hover:text-slate-900 dark:hover:text-white cursor-pointer select-none"
-                >
-                  <span>Bill Details</span>
-                  {showBillDrawer ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
-                </button>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">
-                    Γé╣{totalPayable.toFixed(2)}
-                  </span>
-                  {discount > 0 && (
-                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                      Saved Γé╣{discount.toFixed(0)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {storeSettings?.is_open === false ? (
-                <div className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs">
-                  Store Closed
-                </div>
-              ) : isEmergencyPaused ? (
-                <div className="px-4 py-2 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-xs">
-                  Orders Paused
-                </div>
-              ) : isClosedHours ? (
-                <div className="px-4 py-2 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-bold text-xs">
-                  Store Closed
-                </div>
-              ) : hasOutOfStock ? (
-                <div className="px-4 py-2 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-bold text-xs">
-                  Remove Out of Stock
-                </div>
-              ) : isBelowMinOrder ? (
-                <div className="px-4 py-2 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-xs">
-                  Min Order Γé╣{minOrderAmount.toFixed(0)}
-                </div>
-              ) : (
-                <button
-                  onClick={handleProceedToCheckout}
-                  aria-label="Checkout"
-                  className="h-10 px-6 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-md cursor-pointer shrink-0"
-                >
-                  <span>Review & Pay</span>
-                  <ArrowRight size={14} />
-                </button>
-              )}
-            </div>
-          </aside>
-        )}
-      </main>
+        {/* Bargain Modal */}
+        <BargainModal
+          isOpen={Boolean(bargainProduct)}
+          onClose={() => setBargainProduct(null)}
+          product={bargainProduct}
+          onDiscountApplied={() => {
+            if (refresh) refresh();
+          }}
+        />
+      </div>
     </CustomerLayout>
   );
 }
