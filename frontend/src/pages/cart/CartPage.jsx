@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from '../../router';
+import { Link, useNavigate, useLocation } from '../../router';
 import {
   Minus,
   Plus,
@@ -19,6 +19,7 @@ import BargainModal from '../../components/BargainModal';
 
 export function CartPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { cart, isCustomer, storeSettings, update, flushCartSync, refresh } = useCart();
   const [error, setError] = useState('');
   const [removingIds, setRemovingIds] = useState(new Set());
@@ -35,6 +36,20 @@ export function CartPage() {
   });
 
   const items = cart?.items || [];
+
+  function handleBack() {
+    const fromPath = location?.state?.from?.pathname || location?.state?.from;
+    if (
+      typeof fromPath === 'string' &&
+      fromPath.startsWith('/') &&
+      !fromPath.startsWith('/checkout') &&
+      !fromPath.startsWith('/cart')
+    ) {
+      navigate(fromPath);
+      return;
+    }
+    navigate('/products');
+  }
 
   if (!isCustomer) {
     return (
@@ -121,32 +136,31 @@ export function CartPage() {
   return (
     <CustomerLayout>
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-black text-[#1D1D1F] dark:text-[#F5F5F7] antialiased">
-        {/* Authentic iOS Translucent Frosted Top Bar */}
-        <header className="sticky top-0 z-20 h-12 w-full px-4 sm:px-6 lg:px-8 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-2xl border-b border-[#E5E5EA] dark:border-[#38383A] flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            aria-label="Back"
-            className="inline-flex items-center gap-0.5 -ml-1.5 px-2 py-1 rounded-lg text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] font-medium text-[14px] active:opacity-60 transition-all cursor-pointer"
-          >
-            <ChevronLeft size={19} className="stroke-[2.2]" />
-            <span>Back</span>
-          </button>
+        <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-4 pb-36 lg:pb-16">
+          {/* Authentic Apple HIG Bag Top Navigation Bar (Non-overlapping with CustomerHeader) */}
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#38383A]">
+            <button
+              type="button"
+              onClick={handleBack}
+              aria-label="Back to store"
+              className="inline-flex items-center gap-1 -ml-1.5 px-2.5 py-1.5 rounded-[10px] text-[#0071E3] dark:text-[#0A84FF] hover:bg-[#0071E3]/10 font-semibold text-[14px] active:scale-95 transition-all cursor-pointer"
+            >
+              <ChevronLeft size={18} className="stroke-[2.4]" />
+              <span>Continue Shopping</span>
+            </button>
 
-          <h1 className="text-[15px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
-            Bag
-          </h1>
-
-          <div className="min-w-[54px] text-right">
-            {items.length > 0 && (
-              <span className="text-xs font-medium text-[#86868B] tabular-nums">
-                {items.length} {items.length === 1 ? 'item' : 'items'}
-              </span>
-            )}
+            <div className="text-right">
+              <h1 className="text-[17px] sm:text-[19px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] leading-none">
+                Bag
+              </h1>
+              {items.length > 0 && (
+                <p className="text-[11px] font-medium text-[#86868B] tabular-nums mt-0.5">
+                  {items.length} {items.length === 1 ? 'item' : 'items'} · ₹{totalPayable.toFixed(2)}
+                </p>
+              )}
+            </div>
           </div>
-        </header>
 
-        <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-5 pb-36 lg:pb-16">
           {/* Store Constraint Alerts */}
           {isEmergencyPaused && (
             <div className="mb-4 p-3.5 rounded-[16px] bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-start gap-2.5">
@@ -357,7 +371,7 @@ export function CartPage() {
               </div>
 
               {/* Right 5 Columns: Sticky Apple Bag Summary Sheet (Desktop) */}
-              <aside className="hidden lg:block lg:col-span-5 sticky top-16">
+              <aside className="hidden lg:block lg:col-span-5 sticky top-20">
                 <div className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-5 sm:p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06]">
                   <h3 className="text-[17px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                     Order Summary
@@ -462,7 +476,7 @@ export function CartPage() {
 
           {/* Mobile Sticky Bottom Frosted Apple Summary Sheet */}
           {items.length > 0 && (
-            <aside className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/85 dark:bg-[#1C1C1E]/85 backdrop-blur-2xl border-t border-[#E5E5EA] dark:border-[#38383A]">
+            <aside className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/85 dark:bg-[#1C1C1E]/85 backdrop-blur-2xl border-t border-[#E5E5EA] dark:border-[#38383A]">
               {/* Top 3px iOS Green Free Delivery Progress Line */}
               {freeThreshold > 0 && (
                 <div className="h-[3px] w-full bg-[#E8E8ED] dark:bg-[#2C2C2E] overflow-hidden">

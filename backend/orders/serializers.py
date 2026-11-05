@@ -134,6 +134,20 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
 
+class OptionalCharField(serializers.CharField):
+    def __init__(self, **kwargs):
+        kwargs.setdefault('required', False)
+        kwargs.setdefault('allow_blank', True)
+        kwargs.setdefault('allow_null', True)
+        kwargs.setdefault('default', '')
+        super().__init__(**kwargs)
+
+    def to_internal_value(self, data):
+        if data in (None, '', 'null', 'undefined'):
+            return ''
+        return super().to_internal_value(data)
+
+
 class OptionalDateField(serializers.DateField):
     def to_internal_value(self, value):
         if value in (None, '', 'null', 'undefined'):
@@ -149,18 +163,22 @@ class OptionalDecimalField(serializers.DecimalField):
 
 
 class CheckoutSerializer(serializers.Serializer):
-    pickup_time = serializers.CharField(max_length=80, required=False, allow_blank=True)
-    customer_note = serializers.CharField(required=False, allow_blank=True)
-    use_wallet = serializers.BooleanField(default=False)
-    order_type = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    delivery_address = serializers.CharField(required=False, allow_blank=True)
-    delivery_pincode = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    pickup_time = OptionalCharField(max_length=80)
+    time_slot = OptionalCharField(max_length=100)
+    customer_note = OptionalCharField()
+    customer_notes = OptionalCharField()
+    use_wallet = serializers.BooleanField(default=False, required=False)
+    order_type = OptionalCharField(max_length=20, default="PICKUP")
+    delivery_address = OptionalCharField()
+    delivery_pincode = OptionalCharField(max_length=20)
     delivery_latitude = OptionalDecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     delivery_longitude = OptionalDecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     delivery_slot_date = OptionalDateField(required=False, allow_null=True)
-    delivery_slot_label = serializers.CharField(max_length=100, required=False, allow_blank=True)
-    payment_method = serializers.CharField(max_length=20, required=False, default="COD")
-    upi_transaction_id = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    slot_date = OptionalDateField(required=False, allow_null=True)
+    delivery_slot_label = OptionalCharField(max_length=100)
+    payment_method = OptionalCharField(max_length=20, default="COD")
+    upi_transaction_id = OptionalCharField(max_length=100)
+    paypal_order_id = OptionalCharField(max_length=120)
 
 
 class OrderStatusSerializer(serializers.Serializer):

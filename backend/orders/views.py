@@ -237,8 +237,8 @@ class OrderViewSet(ModelViewSet):
                 return Response({'detail': schedule_msg or 'The store is currently closed outside of operating hours.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check Delivery / Pickup Time Slot Capacity
-        chosen_slot_date = checkout.validated_data.get('delivery_slot_date')
-        chosen_slot_label = (checkout.validated_data.get('delivery_slot_label') or '').strip()
+        chosen_slot_date = checkout.validated_data.get('delivery_slot_date') or checkout.validated_data.get('slot_date')
+        chosen_slot_label = (checkout.validated_data.get('delivery_slot_label') or checkout.validated_data.get('time_slot') or '').strip()
         if getattr(settings, 'enable_time_slots', False) and chosen_slot_date and chosen_slot_label:
             max_slot_cap = getattr(settings, 'max_orders_per_slot', 15) or 15
             active_slot_orders = Order.objects.filter(
@@ -381,19 +381,20 @@ class OrderViewSet(ModelViewSet):
             'promo_discount': promo_discount,
             'wallet_discount': wallet_discount,
             'packaging_fee': packaging_fee,
-            'pickup_time': checkout.validated_data.get('pickup_time', ''),
-            'customer_note': checkout.validated_data.get('customer_note', ''),
+            'pickup_time': checkout.validated_data.get('pickup_time') or checkout.validated_data.get('time_slot') or '',
+            'customer_note': checkout.validated_data.get('customer_note') or checkout.validated_data.get('customer_notes') or '',
             'status': initial_status,
-            'order_type': order_type,
-            'delivery_address': delivery_address,
-            'delivery_pincode': delivery_pincode,
+            'order_type': order_type or 'PICKUP',
+            'delivery_address': delivery_address or '',
+            'delivery_pincode': delivery_pincode or '',
             'delivery_latitude': delivery_latitude,
             'delivery_longitude': delivery_longitude,
             'delivery_fee': delivery_fee,
-            'delivery_slot_date': checkout.validated_data.get('delivery_slot_date'),
-            'delivery_slot_label': checkout.validated_data.get('delivery_slot_label', ''),
-            'payment_method': checkout.validated_data.get('payment_method', 'COD'),
-            'upi_transaction_id': checkout.validated_data.get('upi_transaction_id', ''),
+            'delivery_slot_date': chosen_slot_date,
+            'delivery_slot_label': chosen_slot_label,
+            'payment_method': checkout.validated_data.get('payment_method') or 'COD',
+            'upi_transaction_id': checkout.validated_data.get('upi_transaction_id') or '',
+            'paypal_order_id': checkout.validated_data.get('paypal_order_id') or '',
             'delivery_otp': delivery_otp,
         }
 

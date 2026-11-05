@@ -1017,6 +1017,7 @@ function CustomerHeader({
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const isCartOrCheckout = location.pathname === "/cart" || location.pathname.startsWith("/checkout");
+  const isOrdersView = location.pathname.startsWith("/profile/orders") || location.pathname.startsWith("/orders/") || location.pathname.startsWith("/order/");
   const topRowRef = useRef(null);
 
   useEffect(() => {
@@ -1117,7 +1118,7 @@ function CustomerHeader({
       </div>
 
       {/* Mobile Row 2: Fixed-height sticky row — CartSettle glides down into left of Search Bar (hidden on Cart & Checkout) */}
-      {!isCartOrCheckout && (
+      {!isCartOrCheckout && !isOrdersView && (
         <div className="sm:hidden sticky top-0 z-30 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/90 dark:bg-[#0c1220]/90 backdrop-blur-xl px-3.5 py-2 shadow-xs">
           <div className="flex items-center w-full">
             <Link

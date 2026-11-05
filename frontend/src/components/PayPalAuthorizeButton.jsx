@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import { ShieldCheck, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
-const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'ASkjGQlH18H3ZtMpjKjAubYqkm1GlNbWbuiy2pYJTew6DnUgEcwNSamjCBokeZ3SrPwwc625VgtLMAB6';
+const PAYPAL_CLIENT_ID =
+  import.meta.env.VITE_PAYPAL_CLIENT_ID ||
+  'ASkjGQlH18H3ZtMpjKjAubYqkm1GlNbWbuiy2pYJTew6DnUgEcwNSamjCBokeZ3SrPwwc625VgtLMAB6';
 
 export default function PayPalAuthorizeButton({
   amount,
@@ -14,14 +16,19 @@ export default function PayPalAuthorizeButton({
   description = 'CartSettle Order'
 }) {
   const [loading, setLoading] = useState(false);
-  const [authorizedId, setAuthorizedId] = useState(null);
 
-  const initialOptions = {
-    'client-id': PAYPAL_CLIENT_ID,
-    currency: currency,
-    intent: 'authorize', // CRUCIAL for CartSettle Dynamic Capture
-    components: 'buttons'
-  };
+  const initialOptions = useMemo(
+    () => ({
+      'client-id': PAYPAL_CLIENT_ID,
+      clientId: PAYPAL_CLIENT_ID,
+      currency: currency,
+      intent: 'authorize',
+      components: 'buttons',
+      'disable-funding': 'card,credit,paylater',
+      disableFunding: 'card,credit,paylater'
+    }),
+    [currency]
+  );
 
   const handleCreateOrder = async () => {
     try {
@@ -45,13 +52,12 @@ export default function PayPalAuthorizeButton({
     }
   };
 
-  const handleApprove = async (data, actions) => {
+  const handleApprove = async (data) => {
     try {
       setLoading(true);
       const paypalOrderId = data.orderID;
-      setAuthorizedId(paypalOrderId);
-      toast.success('PayPal Pre-Authorization successful! Authorizing payment hold...');
-      
+      toast.success('PayPal authorization confirmed. Placing order...');
+
       if (onAuthorized) {
         await onAuthorized(paypalOrderId);
       }
@@ -64,46 +70,40 @@ export default function PayPalAuthorizeButton({
   };
 
   return (
-    <div className="w-full bg-linear-to-br from-indigo-50/70 via-white to-amber-50/50 dark:from-slate-900/60 dark:via-slate-900 dark:to-slate-800/80 rounded-2xl border border-indigo-200/60 dark:border-indigo-900/40 p-4 shadow-sm transition-all">
-      {/* Header Badge */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-indigo-600/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400">
-            <ShieldCheck className="w-5 h-5" />
+    <div className="relative z-0 isolate w-full rounded-[16px] bg-[#F5F5F7] dark:bg-[#2C2C2E] p-3.5 text-left border border-[#E5E5EA] dark:border-[#38383A] overflow-hidden">
+      {/* Apple Pay Style Header Row */}
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="size-7 rounded-[9px] bg-[#0071E3]/10 dark:bg-[#0A84FF]/20 text-[#0071E3] dark:text-[#0A84FF] grid place-items-center shrink-0">
+            <ShieldCheck size={15} />
           </div>
-          <div>
-            <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-              CartSettle Auto-Settlement
-              <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                <Sparkles className="w-3 h-3 mr-1" /> Zero-Risk
-              </span>
+          <div className="min-w-0">
+            <h4 className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+              CartSettle Dynamic Hold
             </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hold pre-authorized with PayPal: only packed items are charged.
+            <p className="text-[11px] text-[#86868B] truncate">
+              Only packed items are captured on dispatch
             </p>
           </div>
         </div>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#34C759]/15 text-[#34C759] text-[10px] font-semibold shrink-0">
+          <CheckCircle2 size={11} />
+          Zero-Risk
+        </span>
       </div>
 
-      {/* Info Pill */}
-      <div className="mb-4 text-xs bg-indigo-50/80 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50 flex items-start gap-2">
-        <CheckCircle2 className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5" />
-        <div>
-          <span className="font-semibold">How it works: </span>
-          PayPal places a temporary hold for <strong className="underline">${parseFloat(amount || 0).toFixed(2)}</strong>. When the store packs your bag, unavailable items are deducted and the difference is <em>instantly returned to your card/PayPal balance</em>.
-        </div>
-      </div>
-
-      {/* PayPal Button Container */}
-      <div className="relative">
+      {/* Isolated Stacking Container (z-0 isolate) prevents PayPal iframe from overlapping sticky bars on scroll */}
+      <div className="relative z-0 isolate max-w-full overflow-hidden rounded-[12px]">
         <PayPalScriptProvider options={initialOptions}>
           <PayPalButtons
+            fundingSource="paypal"
             style={{
               layout: 'vertical',
               color: 'gold',
-              shape: 'rect',
+              shape: 'pill',
               label: 'pay',
-              height: 44
+              height: 42,
+              tagline: false
             }}
             disabled={disabled || loading}
             createOrder={handleCreateOrder}
@@ -116,10 +116,10 @@ export default function PayPalAuthorizeButton({
         </PayPalScriptProvider>
 
         {loading && (
-          <div className="absolute inset-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xs flex items-center justify-center rounded-xl z-10">
-            <div className="flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">
-              <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              Securing PayPal Authorization...
+          <div className="absolute inset-0 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xs flex items-center justify-center rounded-[12px] z-10">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <div className="size-3.5 border-2 border-[#0071E3] border-t-transparent rounded-full animate-spin" />
+              Authorizing PayPal...
             </div>
           </div>
         )}

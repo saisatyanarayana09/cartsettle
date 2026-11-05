@@ -1,6 +1,19 @@
 import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { Link, useNavigate, useParams } from '../../router';
-import { ArrowLeft, Package, PackageSearch, Truck, Store, XCircle, CheckCircle2, MapPin, Calendar, CreditCard } from 'lucide-react';
+import {
+  ChevronLeft,
+  Package,
+  PackageSearch,
+  Truck,
+  Store,
+  XCircle,
+  CheckCircle2,
+  MapPin,
+  Calendar,
+  CreditCard,
+  ShieldCheck,
+  FileText
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { CustomerLayout } from '../../customer-layout';
@@ -16,17 +29,20 @@ export function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
 
-  const fetchOrder = useCallback((silent = false) => {
-    return api
-      .get(`/orders/${id}/`, { params: { t: Date.now() } })
-      .then((response) => {
-        setOrder(response.data);
-        setError('');
-      })
-      .catch(() => {
-        if (!silent) setError('Could not load this order.');
-      });
-  }, [id]);
+  const fetchOrder = useCallback(
+    (silent = false) => {
+      return api
+        .get(`/orders/${id}/`, { params: { t: Date.now() } })
+        .then((response) => {
+          setOrder(response.data);
+          setError('');
+        })
+        .catch(() => {
+          if (!silent) setError('Could not load this order.');
+        });
+    },
+    [id]
+  );
 
   const handleWsMessage = useCallback((data) => {
     if (!data || !data.type) return;
@@ -34,7 +50,9 @@ export function OrderDetailPage() {
     if (data.type === 'INITIAL_STATE' && data.order) {
       setOrder((prev) => ({ ...(prev || {}), ...data.order }));
     } else if (data.type === 'ORDER_STATUS_UPDATE') {
-      const formattedStatus = String(data.status || '').toLowerCase().replace(/_/g, ' ');
+      const formattedStatus = String(data.status || '')
+        .toLowerCase()
+        .replace(/_/g, ' ');
       toast.success(`Order status updated to ${formattedStatus}`);
       setOrder((prev) => {
         if (!prev) return prev;
@@ -42,7 +60,7 @@ export function OrderDetailPage() {
           ...prev,
           status: data.status,
           delivery_otp: data.delivery_otp || prev.delivery_otp,
-          updated_at: data.updated_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString()
         };
       });
     } else if (data.type === 'RIDER_LOCATION_UPDATE') {
@@ -61,8 +79,8 @@ export function OrderDetailPage() {
               current_lat: latNum,
               current_lng: lngNum,
               heading: data.heading,
-              speed: data.speed,
-            },
+              speed: data.speed
+            }
           };
         });
       }
@@ -72,7 +90,7 @@ export function OrderDetailPage() {
   const { isConnected: isWsConnected } = useWebSocket({
     path: `/ws/orders/${id}/tracking/`,
     enabled: Boolean(id),
-    onMessage: handleWsMessage,
+    onMessage: handleWsMessage
   });
 
   useEffect(() => {
@@ -90,347 +108,456 @@ export function OrderDetailPage() {
     PREPARING: 2,
     READY: 3,
     OUT_FOR_DELIVERY: 4,
-    COMPLETED: 5,
+    COMPLETED: 5
   };
 
   const getSteps = (type = 'DELIVERY') => [
-    { id: 'NEW', rank: 0, label: 'Order Placed', desc: 'We received your order', icon: CheckCircle2 },
-    { id: 'ACCEPTED', rank: 1, label: 'Order Accepted', desc: 'Store confirmed your order', icon: CheckCircle2 },
-    { id: 'PREPARING', rank: 2, label: 'Preparing', desc: 'Store is packing your items', icon: PackageSearch },
-    { id: 'READY', rank: 3, label: type === 'DELIVERY' ? 'Ready for Handover' : 'Ready for Pickup', desc: type === 'DELIVERY' ? 'Packed and awaiting rider' : 'Waiting for you at the store', icon: type === 'DELIVERY' ? Package : Store },
-    ...(type === 'DELIVERY' ? [{ id: 'OUT_FOR_DELIVERY', rank: 4, label: 'Out for Delivery', desc: 'Rider is on the way to you!', icon: Truck }] : []),
-    { id: 'COMPLETED', rank: 5, label: type === 'DELIVERY' ? 'Delivered' : 'Completed', desc: type === 'DELIVERY' ? 'Order delivered successfully' : 'Order picked up successfully', icon: CheckCircle2 }
+    { id: 'NEW', rank: 0, label: 'Order Placed', desc: 'Received by store', icon: CheckCircle2 },
+    { id: 'ACCEPTED', rank: 1, label: 'Accepted', desc: 'Confirmed by store', icon: CheckCircle2 },
+    { id: 'PREPARING', rank: 2, label: 'Packing', desc: 'Items being packed', icon: PackageSearch },
+    {
+      id: 'READY',
+      rank: 3,
+      label: type === 'DELIVERY' ? 'Ready for Rider' : 'Ready for Pickup',
+      desc: type === 'DELIVERY' ? 'Packed and awaiting dispatch' : 'Ready at counter',
+      icon: type === 'DELIVERY' ? Package : Store
+    },
+    ...(type === 'DELIVERY'
+      ? [{ id: 'OUT_FOR_DELIVERY', rank: 4, label: 'On the Way', desc: 'Rider en route to you', icon: Truck }]
+      : []),
+    {
+      id: 'COMPLETED',
+      rank: 5,
+      label: type === 'DELIVERY' ? 'Delivered' : 'Completed',
+      desc: type === 'DELIVERY' ? 'Delivered to doorstep' : 'Picked up at store',
+      icon: CheckCircle2
+    }
   ];
 
   return (
     <CustomerLayout>
-      <main className="mx-auto w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6 pb-24 md:pb-12">
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-4 flex items-center gap-2 text-sm font-bold text-primary-700 hover:underline bg-transparent border-none cursor-pointer py-2 px-1"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-black text-[#1D1D1F] dark:text-[#F5F5F7] antialiased">
+        <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-4 pb-28 md:pb-16">
+          {/* Apple HIG Top Navigation Bar */}
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#38383A]">
+            <button
+              type="button"
+              onClick={() => navigate('/profile/orders')}
+              aria-label="Back to Orders"
+              className="inline-flex items-center gap-1 -ml-1.5 px-2.5 py-1.5 rounded-[10px] text-[#0071E3] dark:text-[#0A84FF] hover:bg-[#0071E3]/10 font-semibold text-[14px] active:scale-95 transition-all cursor-pointer"
+            >
+              <ChevronLeft size={18} className="stroke-[2.4]" />
+              <span>Orders</span>
+            </button>
 
-        {error && <p className="rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
-        {!order && !error && <p className="text-slate-500">Loading order...</p>}
-
-        {order && (
-          <>
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex-1">
-                <p className="text-sm font-bold text-primary-700">Order confirmed</p>
-                <h1 className="mt-1 text-3xl font-extrabold">{order.id}</h1>
-              </div>
-              {order.status === 'COMPLETED' && (
+            <div className="flex items-center gap-2.5">
+              {order?.status === 'COMPLETED' && (
                 <Link
                   to={`/orders/${order.id}/invoice`}
-                  className="px-4 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition block text-center shadow-sm"
+                  className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[10px] bg-[#1D1D1F] hover:bg-black/85 dark:bg-white text-white dark:text-[#1D1D1F] text-xs font-semibold transition-all"
                 >
-                  View Invoice
+                  <FileText size={13} />
+                  <span>Invoice</span>
                 </Link>
               )}
             </div>
+          </div>
 
-            {/* Delivery OTP Card for Customer Verification */}
-            {order.order_type === 'DELIVERY' && order.delivery_otp && order.status !== 'COMPLETED' && (
-              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-emerald-950/40 rounded-2xl p-4 sm:p-5 border border-emerald-500/30 mb-6 flex items-center justify-between gap-4 shadow-sm">
-                <div>
-                  <p className="text-xs uppercase font-black tracking-wider text-emerald-700 dark:text-emerald-400">
-                    Delivery Verification OTP
-                  </p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-                    Share this OTP with your delivery partner upon arrival:
-                  </p>
-                  {order.delivery_partner_name && (
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">
-                      🛵 Rider: {order.delivery_partner_name} {order.delivery_partner_phone ? `(${order.delivery_partner_phone})` : ''}
-                    </p>
+          {error && (
+            <div className="rounded-[16px] bg-rose-500/10 border border-rose-500/20 p-3.5 text-xs font-semibold text-rose-600 dark:text-rose-400">
+              {error}
+            </div>
+          )}
+
+          {!order && !error && (
+            <div className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-8 text-center text-xs text-[#86868B] animate-pulse">
+              Loading order details...
+            </div>
+          )}
+
+          {order && (
+            <div className="lg:grid lg:grid-cols-12 lg:gap-7 items-start space-y-5 lg:space-y-0">
+              {/* Left 7 Columns: Order Status Timeline, Live Map & Items */}
+              <div className="lg:col-span-7 space-y-4">
+                {/* Order Header & Status Sheet */}
+                <section className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-5 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06] space-y-4">
+                  <div className="flex items-start justify-between gap-3 pb-3.5 border-b border-[#E5E5EA] dark:border-[#38383A]">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#86868B]">
+                        {order.created_at
+                          ? new Date(order.created_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : 'Order Confirmed'}
+                      </p>
+                      <h1 className="text-xl sm:text-2xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight mt-0.5">
+                        {order.id}
+                      </h1>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide ${
+                        order.status === 'COMPLETED'
+                          ? 'bg-[#34C759]/15 text-[#34C759]'
+                          : order.status === 'REJECTED'
+                          ? 'bg-rose-500/12 text-rose-600'
+                          : 'bg-[#0071E3]/12 text-[#0071E3] dark:text-[#0A84FF]'
+                      }`}
+                    >
+                      {String(order.status || 'NEW').replace(/_/g, ' ')}
+                    </span>
+                  </div>
+
+                  {/* Delivery OTP Banner */}
+                  {order.order_type === 'DELIVERY' && order.delivery_otp && order.status !== 'COMPLETED' && (
+                    <div className="p-3.5 rounded-[16px] bg-[#34C759]/10 border border-[#34C759]/25 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                          Delivery Verification PIN
+                        </p>
+                        <p className="text-[11px] text-[#86868B] mt-0.5">
+                          Share this code with your rider at the doorstep
+                          {order.delivery_partner_name ? ` · ${order.delivery_partner_name}` : ''}
+                        </p>
+                      </div>
+                      <div className="px-3.5 py-1.5 rounded-[12px] bg-white dark:bg-[#1C1C1E] border border-[#34C759]/40 font-mono text-lg font-bold tracking-widest text-[#34C759] shrink-0">
+                        {order.delivery_otp}
+                      </div>
+                    </div>
                   )}
-                </div>
-                <div className="bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-2xl px-4 py-2 text-center shadow-md shrink-0">
-                  <span className="text-2xl sm:text-3xl font-mono font-black tracking-widest text-emerald-600 dark:text-emerald-400">
-                    {order.delivery_otp}
-                  </span>
-                </div>
-              </div>
-            )}
 
-            {/* Live OpenStreetMap Route & Delivery Tracking */}
-            {order.order_type === 'DELIVERY' && (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-100 dark:border-slate-800 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                      <MapPin size={18} className="text-emerald-600" /> Live Delivery Route & Tracking
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      OpenStreetMap road navigation between CartSettle and your doorstep
-                    </p>
-                  </div>
-                </div>
-                <Suspense fallback={<div className="h-64 flex items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-b-2xl animate-pulse text-sm text-slate-500 font-medium">Loading Route Map...</div>}>
-                  <OrderTrackingMap order={order} storeSettings={storeSettings} />
-                </Suspense>
-              </div>
-            )}
+                  {/* Tracking Steps */}
+                  {order.status === 'REJECTED' ? (
+                    <div className="flex items-center gap-3 p-3.5 rounded-[16px] bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs">
+                      <XCircle size={20} className="shrink-0" />
+                      <div>
+                        <p className="font-semibold">Order Cancelled</p>
+                        <p className="opacity-85 mt-0.5">
+                          This order was cancelled and any wallet or authorized balance has been released.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative pl-1 pt-1">
+                      <div className="space-y-3.5 relative">
+                        {getSteps(order.order_type).map((step) => {
+                          const currentRank = statusRankMap[order.status] ?? 0;
+                          const isCompleted = currentRank >= step.rank;
+                          const isActive = currentRank === step.rank;
+                          const Icon = step.icon || CheckCircle2;
 
-            {/* Tracking Timeline UI */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 mb-6">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-5">Track Order</h2>
-              {order.status === 'REJECTED' ? (
-                <div className="flex items-center gap-4 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 p-4 rounded-xl border border-red-100 dark:border-red-900">
-                  <XCircle className="w-8 h-8 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-bold text-lg">Order Cancelled</h3>
-                    <p className="text-sm opacity-90">This order was cancelled and any wallet balance has been refunded.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative">
-                  {/* Vertical Line */}
-                  <div className="absolute left-[19px] top-4 bottom-4 w-[2px] bg-slate-100 dark:bg-slate-800"></div>
+                          return (
+                            <div
+                              key={step.id}
+                              className={`flex items-center gap-3 ${!isCompleted ? 'opacity-40' : ''}`}
+                            >
+                              <div
+                                className={`size-8 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                                  isCompleted
+                                    ? isActive
+                                      ? 'bg-[#0071E3] text-white ring-4 ring-[#0071E3]/15'
+                                      : 'bg-[#34C759] text-white'
+                                    : 'bg-[#F5F5F7] dark:bg-[#2C2C2E] text-[#86868B]'
+                                }`}
+                              >
+                                <Icon size={15} strokeWidth={2.3} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className={`text-xs font-semibold ${
+                                    isActive
+                                      ? 'text-[#0071E3] dark:text-[#0A84FF]'
+                                      : 'text-[#1D1D1F] dark:text-[#F5F5F7]'
+                                  }`}
+                                >
+                                  {step.label}
+                                </p>
+                                <p className="text-[11px] text-[#86868B]">{step.desc}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </section>
 
-                  <div className="space-y-6 relative">
-                    {getSteps(order.order_type).map((step) => {
-                      const currentRank = statusRankMap[order.status] ?? 0;
-                      const isCompleted = currentRank >= step.rank;
-                      const isActive = currentRank === step.rank;
-                      const Icon = step.icon || CheckCircle2;
-
-                      return (
-                        <div key={step.id} className={`flex gap-4 items-start ${!isCompleted ? 'opacity-40' : ''}`}>
-                          <div
-                            className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900 shadow-sm transition-colors duration-500 ${
-                              isCompleted
-                                ? 'bg-emerald-600 text-white'
-                                : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                            } ${isActive ? 'ring-4 ring-emerald-100 dark:ring-emerald-950/60' : ''}`}
-                          >
-                            <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                {/* Live OpenStreetMap Delivery Route */}
+                {order.order_type === 'DELIVERY' && (
+                  <section className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-4 sm:p-5 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06]">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MapPin size={15} className="text-[#0071E3]" />
+                      <h2 className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        Live Delivery Route
+                      </h2>
+                    </div>
+                    <div className="rounded-[16px] overflow-hidden relative z-0 isolate">
+                      <Suspense
+                        fallback={
+                          <div className="h-52 flex items-center justify-center bg-[#F5F5F7] dark:bg-[#2C2C2E] rounded-[16px] animate-pulse text-xs text-[#86868B]">
+                            Loading route map...
                           </div>
-                          <div className="pt-2 flex-1">
-                            <h4 className={`text-sm font-bold ${isActive ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
-                              {step.label}
-                            </h4>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">{step.desc}</p>
+                        }
+                      >
+                        <OrderTrackingMap order={order} storeSettings={storeSettings} />
+                      </Suspense>
+                    </div>
+                  </section>
+                )}
+
+                {/* Order Items Apple Inset Sheet */}
+                <section className="bg-white dark:bg-[#1C1C1E] rounded-[24px] shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06] overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-[#E5E5EA] dark:border-[#38383A] flex items-center justify-between">
+                    <h2 className="text-[14px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      Items in Order
+                    </h2>
+                    <span className="text-xs text-[#86868B] tabular-nums">
+                      {(order.items || []).length} {(order.items || []).length === 1 ? 'item' : 'items'}
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-[#E5E5EA] dark:divide-[#38383A]">
+                    {(order.items || []).map((item) => (
+                      <div key={item.id} className="px-5 py-3 flex items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="size-10 rounded-[10px] bg-[#F5F5F7] dark:bg-[#2C2C2E] shrink-0 overflow-hidden flex items-center justify-center p-1">
+                            {item.product_image ? (
+                              <img
+                                src={item.product_image}
+                                alt=""
+                                className="w-full h-full object-contain"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <Package size={15} className="text-[#86868B]" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p
+                              className={`font-semibold truncate ${
+                                item.status === 'REJECTED'
+                                  ? 'line-through text-[#86868B]'
+                                  : 'text-[#1D1D1F] dark:text-[#F5F5F7]'
+                              }`}
+                            >
+                              {item.product_name_snapshot || item.product_name}
+                            </p>
+                            <p className="text-[11px] text-[#86868B] mt-0.5">
+                              Qty: {item.quantity} {item.unit_snapshot ? `· ${item.unit_snapshot}` : ''}
+                              {item.status === 'REJECTED' && (
+                                <span className="ml-2 text-rose-500 font-semibold">Unavailable</span>
+                              )}
+                            </p>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
 
-            {order.customer_note && (
-              <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
-                <p className="text-xs font-extrabold uppercase text-slate-500 dark:text-slate-400 mb-1">Your Note</p>
-                <p className="text-sm text-slate-800 dark:text-slate-200">{order.customer_note}</p>
+                        <span
+                          className={`font-semibold tabular-nums shrink-0 ${
+                            item.status === 'REJECTED'
+                              ? 'line-through text-[#86868B]'
+                              : 'text-[#1D1D1F] dark:text-[#F5F5F7]'
+                          }`}
+                        >
+                          ₹{parseFloat(item.subtotal || item.price || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               </div>
-            )}
-            {order.owner_note && (
-              <div className="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl">
-                <p className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 mb-1">Store Reply</p>
-                <p className="text-sm text-emerald-900 dark:text-emerald-200">{order.owner_note}</p>
-              </div>
-            )}
 
-            {/* PayPal Zero-Risk Settlement Card */}
-            {(order.paypal_authorization_id || order.payment_method === 'PAYPAL') && (
-              <div className="mb-6 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-amber-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/40 p-5 border border-indigo-200 dark:border-indigo-900/60 shadow-xs">
-                <div className="flex items-center justify-between pb-3 border-b border-indigo-100 dark:border-indigo-900/40">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm">
-                      P
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                        PayPal Zero-Risk Dynamic Settlement
-                      </h3>
-                      <p className="text-[11px] text-slate-500 font-mono">
-                        Auth ID: {order.paypal_authorization_id || order.paypal_order_id || 'Active'}
-                      </p>
-                    </div>
-                  </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                    order.paypal_capture_id 
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' 
-                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 animate-pulse'
-                  }`}>
-                    {order.paypal_capture_id ? 'Settled & Captured' : 'Pre-Authorization Hold Active'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 pt-3 text-center">
-                  <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700">
-                    <div className="text-[11px] text-slate-500">Card Hold</div>
-                    <div className="text-sm font-bold font-mono text-slate-800 dark:text-slate-200">
-                      ${parseFloat(order.authorized_amount || order.total_amount || 0).toFixed(2)}
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
-                    <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">Final Charged</div>
-                    <div className="text-sm font-bold font-mono text-indigo-700 dark:text-indigo-300">
-                      ${parseFloat(order.captured_amount || (order.paypal_capture_id ? order.total_amount : 0)).toFixed(2)}
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
-                    <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Auto-Released</div>
-                    <div className="text-sm font-bold font-mono text-emerald-700 dark:text-emerald-300">
-                      {parseFloat(order.released_amount || 0) > 0 ? `-$${parseFloat(order.released_amount).toFixed(2)}` : '$0.00'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Live PayPal Invoice v2 and Tracking Buttons */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 mt-3 border-t border-indigo-100 dark:border-indigo-900/40">
-                  {order.paypal_invoice_url ? (
-                    <a
-                      href={order.paypal_invoice_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
-                    >
-                      📄 View Official PayPal Invoice (Invoicing v2) ↗
-                    </a>
-                  ) : (
-                    <span className="text-[11px] text-slate-500">
-                      Invoice will be generated when store packs verified items.
-                    </span>
-                  )}
-
-                  {order.paypal_tracking_number && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-mono text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                      🚚 {order.shipping_carrier || 'Express'}: {order.paypal_tracking_number}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="rounded-xl bg-white dark:bg-slate-900 p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
-                Order Items
-              </h2>
-              {(order.items || []).map((item) => (
-                <div key={item.id} className="flex justify-between py-2 text-sm">
-                  <span className={item.status === 'REJECTED' ? 'line-through text-slate-400' : 'text-slate-800 dark:text-slate-200 font-medium'}>
-                    {item.quantity} x {item.product_name_snapshot}
-                    {item.status === 'REJECTED' && (
-                      <span className="ml-2 text-xs font-bold text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
-                        Unavailable
+              {/* Right 5 Columns: Sticky Apple Pay Receipt & Settlement Summary */}
+              <aside className="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
+                {/* PayPal Dynamic Settlement Card */}
+                {(order.paypal_authorization_id || order.payment_method === 'PAYPAL') && (
+                  <section className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-5 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06] space-y-3">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#E5E5EA] dark:border-[#38383A]">
+                      <div className="flex items-center gap-2">
+                        <div className="size-7 rounded-[9px] bg-[#0071E3]/10 text-[#0071E3] grid place-items-center">
+                          <ShieldCheck size={15} />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                            PayPal Dynamic Settlement
+                          </h3>
+                          <p className="text-[10px] text-[#86868B] font-mono">
+                            {order.paypal_authorization_id || order.paypal_order_id || 'Pre-Authorized'}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          order.paypal_capture_id
+                            ? 'bg-[#34C759]/15 text-[#34C759]'
+                            : 'bg-[#0071E3]/12 text-[#0071E3]'
+                        }`}
+                      >
+                        {order.paypal_capture_id ? 'Captured' : 'Hold Active'}
                       </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="p-2.5 rounded-[12px] bg-[#F5F5F7] dark:bg-[#2C2C2E]">
+                        <p className="text-[10px] text-[#86868B]">Authorized</p>
+                        <p className="font-bold tabular-nums mt-0.5">
+                          ${parseFloat(order.authorized_amount || order.total_amount || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="p-2.5 rounded-[12px] bg-[#F5F5F7] dark:bg-[#2C2C2E]">
+                        <p className="text-[10px] text-[#0071E3]">Captured</p>
+                        <p className="font-bold tabular-nums text-[#0071E3] mt-0.5">
+                          $
+                          {parseFloat(
+                            order.captured_amount || (order.paypal_capture_id ? order.total_amount : 0)
+                          ).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="p-2.5 rounded-[12px] bg-[#34C759]/10">
+                        <p className="text-[10px] text-[#34C759]">Released</p>
+                        <p className="font-bold tabular-nums text-[#34C759] mt-0.5">
+                          ${parseFloat(order.released_amount || 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {order.paypal_invoice_url && (
+                      <a
+                        href={order.paypal_invoice_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-9 rounded-[10px] bg-[#0071E3] text-white text-xs font-semibold flex items-center justify-center gap-1.5"
+                      >
+                        View Official PayPal Invoice
+                      </a>
                     )}
-                  </span>
-                  <span className={item.status === 'REJECTED' ? 'line-through text-slate-400' : 'text-slate-800 dark:text-slate-200 font-bold'}>
-                    ₹{item.subtotal}
-                  </span>
-                </div>
-              ))}
+                  </section>
+                )}
 
-              <div className="mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Billing Summary</h2>
-                <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400 font-medium">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span className="text-slate-900 dark:text-white">
-                      ₹
-                      {(order.items || []).reduce(
-                        (sum, item) => sum + (item.status !== 'REJECTED' ? parseFloat(item.subtotal || 0) : 0),
-                        0
-                      ).toFixed(2)}
-                    </span>
+                {/* Billing & Fulfillment Summary Sheet */}
+                <section className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-5 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06] space-y-4">
+                  <h2 className="text-[15px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    Order Summary
+                  </h2>
+
+                  <div className="space-y-2 text-xs border-t border-[#E5E5EA] dark:border-[#38383A] pt-3.5">
+                    <div className="flex justify-between">
+                      <span className="text-[#86868B]">Subtotal</span>
+                      <span className="font-medium tabular-nums">
+                        ₹
+                        {(order.items || [])
+                          .reduce(
+                            (sum, item) =>
+                              sum +
+                              (item.status !== 'REJECTED'
+                                ? parseFloat(item.subtotal || item.price || 0)
+                                : 0),
+                            0
+                          )
+                          .toFixed(2)}
+                      </span>
+                    </div>
+
+                    {parseFloat(order.discount_applied || 0) > 0 && (
+                      <div className="flex justify-between text-[#34C759]">
+                        <span>Store Savings</span>
+                        <span className="font-medium tabular-nums">-₹{order.discount_applied}</span>
+                      </div>
+                    )}
+
+                    {parseFloat(order.promo_discount || 0) > 0 && (
+                      <div className="flex justify-between text-[#34C759]">
+                        <span>Promo Discount</span>
+                        <span className="font-medium tabular-nums">-₹{order.promo_discount}</span>
+                      </div>
+                    )}
+
+                    {parseFloat(order.packaging_fee || 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-[#86868B]">Packaging</span>
+                        <span className="font-medium tabular-nums">₹{order.packaging_fee}</span>
+                      </div>
+                    )}
+
+                    {parseFloat(order.delivery_fee || 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-[#86868B]">Shipping</span>
+                        <span className="font-medium tabular-nums">₹{order.delivery_fee}</span>
+                      </div>
+                    )}
+
+                    {parseFloat(order.wallet_discount || 0) > 0 && (
+                      <div className="flex justify-between text-[#34C759]">
+                        <span>Wallet Applied</span>
+                        <span className="font-medium tabular-nums">-₹{order.wallet_discount}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-sm font-bold pt-3 border-t border-[#E5E5EA] dark:border-[#38383A]">
+                      <span>{order.status === 'COMPLETED' ? 'Total Paid' : 'Total Due'}</span>
+                      <span className="text-base tabular-nums">
+                        ₹{parseFloat(order.total_amount || 0).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                  {parseFloat(order.discount_applied || 0) > 0 && (
-                    <div className="flex justify-between text-emerald-700 dark:text-emerald-400">
-                      <span>Product Savings</span>
-                      <span>- ₹{order.discount_applied}</span>
-                    </div>
-                  )}
-                  {parseFloat(order.promo_discount || 0) > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-bold">
-                      <span>Promo Discount</span>
-                      <span>- ₹{order.promo_discount}</span>
-                    </div>
-                  )}
-                  {parseFloat(order.packaging_fee || 0) > 0 && (
-                    <div className="flex justify-between">
-                      <span>Packaging Fee</span>
-                      <span className="text-slate-900 dark:text-white">₹{order.packaging_fee}</span>
-                    </div>
-                  )}
-                  {parseFloat(order.delivery_fee || 0) > 0 && (
-                    <div className="flex justify-between">
-                      <span>Delivery Fee</span>
-                      <span className="text-slate-900 dark:text-white">₹{order.delivery_fee}</span>
-                    </div>
-                  )}
-                  {parseFloat(order.wallet_discount || 0) > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-bold">
-                      <span>Wallet Applied</span>
-                      <span>- ₹{order.wallet_discount}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex justify-between font-extrabold text-lg pt-3 mt-3 border-t border-slate-100 dark:border-slate-800">
-                  <span className="text-slate-900 dark:text-white">
-                    {order.status === 'COMPLETED' ? 'Total Amount Paid' : 'Total Due'}
-                  </span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-black">₹{order.total_amount}</span>
-                </div>
-              </div>
-            </div>
 
-            <div className="mt-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-sm text-slate-600 dark:text-slate-400 text-center font-medium shadow-sm">
-              {order.order_type === 'DELIVERY' ? (
-                <>
-                  <Truck className="w-5 h-5 mx-auto mb-2 text-slate-400" />
-                  Delivery to: <br />
-                  <strong className="text-slate-800 dark:text-slate-200">{order.delivery_address || 'Home Delivery'}</strong>
-                  {order.delivery_pincode && (
-                    <>
-                      <br />
-                      Pincode: {order.delivery_pincode}
-                    </>
+                  {/* Fulfillment Metadata */}
+                  <div className="p-3.5 rounded-[16px] bg-[#F5F5F7] dark:bg-[#2C2C2E] space-y-2 text-xs">
+                    <div className="flex items-start gap-2">
+                      {order.order_type === 'DELIVERY' ? (
+                        <Truck size={14} className="text-[#86868B] shrink-0 mt-0.5" />
+                      ) : (
+                        <Store size={14} className="text-[#86868B] shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <p className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                          {order.order_type === 'DELIVERY' ? 'Home Delivery' : 'In-Store Pickup'}
+                        </p>
+                        <p className="text-[#86868B] mt-0.5">
+                          {order.order_type === 'DELIVERY'
+                            ? `${order.delivery_address || ''}${
+                                order.delivery_pincode ? ` · ${order.delivery_pincode}` : ''
+                              }`
+                            : order.pickup_time || 'Ready in 25–30 mins'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {order.delivery_slot_label && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-[#E5E5EA] dark:border-[#38383A] text-[#86868B]">
+                        <Calendar size={13} className="shrink-0" />
+                        <span>
+                          {order.delivery_slot_date ? `${order.delivery_slot_date} · ` : ''}
+                          {order.delivery_slot_label}
+                        </span>
+                      </div>
+                    )}
+
+                    {order.payment_method && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-[#E5E5EA] dark:border-[#38383A] text-[#86868B]">
+                        <CreditCard size={13} className="shrink-0" />
+                        <span>
+                          Payment: <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">{order.payment_method}</strong>
+                          {order.upi_transaction_id ? ` (UTR: ${order.upi_transaction_id})` : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {order.customer_note && (
+                    <div className="p-3 rounded-[14px] bg-[#F5F5F7] dark:bg-[#2C2C2E] text-xs">
+                      <p className="text-[10px] font-semibold uppercase text-[#86868B]">Delivery Note</p>
+                      <p className="mt-0.5 text-[#1D1D1F] dark:text-[#F5F5F7]">{order.customer_note}</p>
+                    </div>
                   )}
-                </>
-              ) : (
-                <>
-                  <Store className="w-5 h-5 mx-auto mb-2 text-slate-400" />
-                  Pickup: <strong className="text-slate-800 dark:text-slate-200">{order.pickup_time || 'As soon as possible'}</strong> <br />
-                  Pay at store
-                </>
-              )}
-              {order.delivery_slot_label && (
-                <div className="mt-2.5 pt-2.5 border-t border-slate-200 dark:border-slate-700/60 text-xs flex items-center justify-center gap-1.5">
-                  <Calendar size={14} className="text-slate-400" />
-                  <span>
-                    <span className="font-bold">Scheduled Slot:</span> {order.delivery_slot_date ? `${order.delivery_slot_date} • ` : ''}
-                    {order.delivery_slot_label}
-                  </span>
-                </div>
-              )}
-              {order.payment_method && (
-                <div className="mt-1 text-xs flex items-center justify-center gap-1.5">
-                  <CreditCard size={14} className="text-slate-400" />
-                  <span>
-                    <span className="font-bold">Payment Method:</span>{' '}
-                    {order.payment_method === 'UPI'
-                      ? 'UPI / Online'
-                      : order.payment_method === 'WALLET'
-                      ? 'Wallet Balance'
-                      : 'Cash on Delivery'}
-                    {order.upi_transaction_id ? ` (Ref: ${order.upi_transaction_id})` : ''}
-                  </span>
-                </div>
-              )}
+                </section>
+              </aside>
             </div>
-          </>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
     </CustomerLayout>
   );
 }

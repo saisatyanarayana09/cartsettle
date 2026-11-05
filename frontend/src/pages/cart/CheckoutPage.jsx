@@ -164,9 +164,10 @@ export function CheckoutPage() {
     if (selectedAddressId) {
       const addr = addresses.find((a) => a.id === selectedAddressId);
       if (addr) {
-        const formatted = [addr.street, addr.landmark, addr.city, addr.state].filter(Boolean).join(', ');
-        setDeliveryAddress(formatted);
-        setDeliveryPincode(addr.zip_code || '');
+        const street = addr.street || addr.address_line || '';
+        const formatted = [street, addr.landmark, addr.city, addr.state].filter(Boolean).join(', ');
+        setDeliveryAddress(formatted || street);
+        setDeliveryPincode(String(addr.zip_code || addr.pincode || ''));
       }
     }
   }, [selectedAddressId, addresses]);
@@ -320,31 +321,53 @@ export function CheckoutPage() {
       const isPickup = orderType === 'PICKUP';
       const chosenSlotDate =
         enableTimeSlots && allTimeSlots.length > 0 ? (slotDay === 'today' ? todayStr : tomorrowStr) : null;
-      const chosenSlotLabel = enableTimeSlots && allTimeSlots.length > 0 ? selectedSlotLabel : null;
+      const chosenSlotLabel = enableTimeSlots && allTimeSlots.length > 0 ? selectedSlotLabel : '';
       const effectivePaymentMethod = finalTotal === 0 ? 'WALLET' : paymentMethod;
 
+      const selectedAddrObj = selectedAddressId ? addresses.find((a) => a.id === selectedAddressId) : null;
+      const resolvedAddress = isPickup
+        ? 'In-Store Pickup'
+        : deliveryAddress ||
+          (selectedAddrObj
+            ? [
+                selectedAddrObj.street || selectedAddrObj.address_line,
+                selectedAddrObj.landmark,
+                selectedAddrObj.city,
+                selectedAddrObj.state
+              ]
+                .filter(Boolean)
+                .join(', ')
+            : '');
+      const resolvedPincode = isPickup
+        ? '000000'
+        : String(deliveryPincode || selectedAddrObj?.zip_code || selectedAddrObj?.pincode || '000000');
+
       const payload = {
-        order_type: orderType,
-        delivery_address: isPickup ? 'In-Store Pickup' : deliveryAddress,
-        delivery_pincode: isPickup ? '000000' : deliveryPincode,
+        order_type: orderType || 'PICKUP',
+        delivery_address: resolvedAddress || 'In-Store Pickup',
+        delivery_pincode: resolvedPincode || '000000',
         delivery_latitude: isPickup
           ? null
-          : selectedAddressId
-          ? addresses.find((a) => a.id === selectedAddressId)?.latitude
-          : addressForm.latitude,
+          : selectedAddrObj?.latitude != null
+          ? selectedAddrObj.latitude
+          : addressForm.latitude ?? null,
         delivery_longitude: isPickup
           ? null
-          : selectedAddressId
-          ? addresses.find((a) => a.id === selectedAddressId)?.longitude
-          : addressForm.longitude,
-        time_slot: chosenSlotLabel || time,
-        slot_date: chosenSlotDate,
-        customer_notes: note,
-        payment_method: effectivePaymentMethod,
-        use_wallet: useWallet,
-        upi_transaction_id: effectivePaymentMethod === 'UPI' ? upiTransactionId : null,
-        paypal_order_id: customPaypalOrderId || null
+          : selectedAddrObj?.longitude != null
+          ? selectedAddrObj.longitude
+          : addressForm.longitude ?? null,
+        pickup_time: String(chosenSlotLabel || time || 'As soon as possible'),
+        delivery_slot_label: String(chosenSlotLabel || ''),
+        delivery_slot_date: chosenSlotDate || null,
+        customer_note: String(note || ''),
+        payment_method: String(effectivePaymentMethod || 'COD'),
+        use_wallet: Boolean(useWallet),
+        upi_transaction_id: effectivePaymentMethod === 'UPI' ? String(upiTransactionId || '') : ''
       };
+
+      if (customPaypalOrderId) {
+        payload.paypal_order_id = String(customPaypalOrderId);
+      }
 
       // Delivery radius validation
       if (
@@ -374,6 +397,13 @@ export function CheckoutPage() {
       }
 
       const response = await api.post('/orders/', payload);
+      if (customPaypalOrderId && response.data?.id) {
+        api
+          .post(`/orders/${response.data.id}/authorize_paypal/`, {
+            paypal_order_id: String(customPaypalOrderId)
+          })
+          .catch(() => {});
+      }
       clearCart();
       await refresh();
       toast.success('Order placed successfully');
@@ -484,26 +514,29 @@ export function CheckoutPage() {
   return (
     <CustomerLayout>
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-black text-[#1D1D1F] dark:text-[#F5F5F7] antialiased">
-        {/* Authentic iOS Translucent Frosted Top Bar */}
-        <header className="sticky top-0 z-20 h-12 w-full px-4 sm:px-6 lg:px-8 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-2xl border-b border-[#E5E5EA] dark:border-[#38383A] flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate('/cart')}
-            aria-label="Back to Bag"
-            className="inline-flex items-center gap-0.5 -ml-1.5 px-2 py-1 rounded-lg text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] font-medium text-[14px] active:opacity-60 transition-all cursor-pointer"
-          >
-            <ChevronLeft size={19} className="stroke-[2.2]" />
-            <span>Bag</span>
-          </button>
+        <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-4 pb-36 lg:pb-16">
+          {/* Authentic Apple Pay Top Navigation Bar (Non-overlapping with CustomerHeader) */}
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#38383A]">
+            <button
+              type="button"
+              onClick={() => navigate('/cart', { replace: true })}
+              aria-label="Back to Bag"
+              className="inline-flex items-center gap-1 -ml-1.5 px-2.5 py-1.5 rounded-[10px] text-[#0071E3] dark:text-[#0A84FF] hover:bg-[#0071E3]/10 font-semibold text-[14px] active:scale-95 transition-all cursor-pointer"
+            >
+              <ChevronLeft size={18} className="stroke-[2.4]" />
+              <span>Bag</span>
+            </button>
 
-          <h1 className="text-[15px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
-            Checkout
-          </h1>
+            <div className="text-right">
+              <h1 className="text-[17px] sm:text-[19px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] leading-none">
+                Checkout
+              </h1>
+              <p className="text-[11px] font-medium text-[#86868B] tabular-nums mt-0.5">
+                Total Due · ₹{finalTotal.toFixed(2)}
+              </p>
+            </div>
+          </div>
 
-          <div className="w-12" />
-        </header>
-
-        <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-5 pb-36 lg:pb-16">
           {/* Global Constraint Alerts */}
           {isEmergencyPaused && (
             <div className="mb-4 p-3.5 rounded-[16px] bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-medium flex items-start gap-2.5">
@@ -643,12 +676,15 @@ export function CheckoutPage() {
                       <div className="space-y-2">
                         {addresses.map((addr) => {
                           const isSelected = selectedAddressId === addr.id;
+                          const addrTitle = addr.title || addr.label || 'Home';
+                          const addrStreet = addr.street || addr.address_line || '';
+                          const addrZip = addr.zip_code || addr.pincode || '';
                           return (
                             <div
                               key={addr.id}
                               role="radio"
                               aria-checked={isSelected}
-                              aria-label={`${addr.title}: ${addr.street}`}
+                              aria-label={`${addrTitle}: ${addrStreet}`}
                               onClick={() => {
                                 setSelectedAddressId(addr.id);
                                 setShowNewAddressForm(false);
@@ -678,16 +714,16 @@ export function CheckoutPage() {
                                           : 'text-[#1D1D1F] dark:text-[#F5F5F7]'
                                       }`}
                                     >
-                                      {addr.title}
+                                      {addrTitle}
                                     </span>
                                     <span className="text-[#1D1D1F] dark:text-[#F5F5F7] font-medium">
                                       {' '}
-                                      · {addr.street}
+                                      · {addrStreet}
                                     </span>
                                   </p>
-                                  {(addr.city || addr.zip_code) && (
+                                  {(addr.city || addrZip) && (
                                     <p className="text-[11px] text-[#86868B] truncate mt-0.5">
-                                      {[addr.landmark, addr.city, addr.zip_code].filter(Boolean).join(', ')}
+                                      {[addr.landmark, addr.city, addrZip].filter(Boolean).join(', ')}
                                     </p>
                                   )}
                                 </div>
@@ -699,7 +735,7 @@ export function CheckoutPage() {
                                   onClick={(e) => handleDeleteAddress(addr.id, e)}
                                   className="text-[#86868B] hover:text-rose-500 transition-colors p-1 rounded-lg cursor-pointer"
                                   title="Delete"
-                                  aria-label={`Delete ${addr.title} address`}
+                                  aria-label={`Delete ${addrTitle} address`}
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -998,12 +1034,9 @@ export function CheckoutPage() {
                       </button>
                     </div>
 
-                    {/* PayPal Inline Stage */}
+                    {/* PayPal Inline Stage (Isolated Stacking Context prevents overlap on scroll) */}
                     {paymentMethod === 'PAYPAL' && (
-                      <div className="p-4 rounded-[16px] bg-[#F5F5F7] dark:bg-[#2C2C2E] text-center space-y-2.5">
-                        <p className="text-xs text-[#86868B]">
-                          Authorize payment hold with PayPal. Funds are captured upon order dispatch.
-                        </p>
+                      <div className="relative z-0 isolate">
                         <PayPalAuthorizeButton
                           amount={finalTotal}
                           onAuthorized={async (paypalOrderId) => {
@@ -1097,7 +1130,7 @@ export function CheckoutPage() {
             </div>
 
             {/* Right 5 Columns: Sticky Apple Pay Receipt Sheet (Desktop) */}
-            <aside className="hidden lg:block lg:col-span-5 sticky top-16">
+            <aside className="hidden lg:block lg:col-span-5 sticky top-20">
               <div className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-5 sm:p-6 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06] space-y-4">
                 {/* Promo Code Row */}
                 <div className="pb-4 border-b border-[#E5E5EA] dark:border-[#38383A]">
@@ -1203,7 +1236,7 @@ export function CheckoutPage() {
         </main>
 
         {/* Mobile Sticky Bottom Frosted Apple Pay Dock */}
-        <aside className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/85 dark:bg-[#1C1C1E]/85 backdrop-blur-2xl border-t border-[#E5E5EA] dark:border-[#38383A]">
+        <aside className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/85 dark:bg-[#1C1C1E]/85 backdrop-blur-2xl border-t border-[#E5E5EA] dark:border-[#38383A]">
           {showMobileBill && (
             <div className="px-4 py-3.5 border-b border-[#E5E5EA] dark:border-[#38383A] space-y-3">
               {/* Mobile Promo Input */}
