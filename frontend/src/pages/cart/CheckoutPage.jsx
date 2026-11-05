@@ -1,4 +1,4 @@
-import React, { useEffect, useState, lazy, Suspense } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { Link, useNavigate } from '../../router';
 import { 
   ArrowLeft, 
@@ -165,9 +165,18 @@ export function CheckoutPage() {
     }
   }, [selectedAddressId, addresses]);
 
+  const userPickedOrderType = useRef(false);
+  const confirmationRef = useRef(null);
+
+  useEffect(() => {
+    if (successOrderId) {
+      confirmationRef.current?.focus();
+    }
+  }, [successOrderId]);
+
   // Set default fulfillment method
   useEffect(() => {
-    if (storeSettings) {
+    if (storeSettings && !userPickedOrderType.current) {
       if (storeSettings.delivery_mode === 'DELIVERY' || storeSettings.is_home_delivery_active) {
         setOrderType('DELIVERY');
       } else {
@@ -262,6 +271,7 @@ export function CheckoutPage() {
   const upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiPayee)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=Order`;
 
   async function submit(customPaypalOrderId = null) {
+    if (!cart?.items?.length) return;
     const hasOutOfStock = (cart?.items || []).some(item => item.is_in_stock === false || (item.stock_quantity !== undefined && item.stock_quantity <= 0));
     if (hasOutOfStock) {
       toast.error('Your cart contains out-of-stock items. Please remove them to proceed.');
@@ -393,17 +403,16 @@ export function CheckoutPage() {
     );
   };
 
-  return (
-    <CustomerLayout>
-      {/* Order Success Full-Screen Modal */}
-      {successOrderId && (
-        <div className="fixed inset-0 z-[100] bg-white dark:bg-slate-900 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in duration-300">
+  if (successOrderId) {
+    return (
+      <CustomerLayout>
+        <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
           <div className="size-20 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center mb-6">
             <Check size={40} className="text-emerald-600 dark:text-emerald-400 stroke-[3]" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight text-center">
-            Order Placed Successfully
-          </h1>
+          <h2 tabIndex={-1} ref={confirmationRef} className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight text-center outline-none">
+            Order placed
+          </h2>
           <p className="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400 text-center max-w-sm">
             Your order has been confirmed and forwarded to the store for packing.
           </p>
@@ -422,7 +431,12 @@ export function CheckoutPage() {
             </Link>
           </div>
         </div>
-      )}
+      </CustomerLayout>
+    );
+  }
+
+  return (
+    <CustomerLayout>
 
       {/* Flush Sticky Top Header */}
       <div className="sticky top-0 z-20 w-full px-4 sm:px-6 lg:px-8 py-2.5 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between shadow-2xs">
@@ -519,9 +533,12 @@ export function CheckoutPage() {
                           toast.error('Home delivery is currently unavailable');
                           return;
                         }
+                        userPickedOrderType.current = true;
                         setOrderType('DELIVERY');
                       }}
                       disabled={!isHomeDeliveryActive}
+                      aria-label="Delivery"
+                      aria-pressed={orderType === 'DELIVERY' ? 'true' : 'false'}
                       className={`h-9 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         orderType === 'DELIVERY'
                           ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
@@ -534,8 +551,12 @@ export function CheckoutPage() {
 
                     <button
                       type="button"
-                      onClick={() => setOrderType('PICKUP')}
+                      onClick={() => {
+                        userPickedOrderType.current = true;
+                        setOrderType('PICKUP');
+                      }}
                       aria-label="Pickup"
+                      aria-pressed={orderType === 'PICKUP' ? 'true' : 'false'}
                       className={`h-9 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         orderType === 'PICKUP'
                           ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
@@ -597,6 +618,9 @@ export function CheckoutPage() {
                             return (
                               <div
                                 key={addr.id}
+                                role="radio"
+                                aria-checked={isSelected}
+                                aria-label={`${addr.title}: ${addr.street}`}
                                 onClick={() => {
                                   setSelectedAddressId(addr.id);
                                   setShowNewAddressForm(false);
@@ -622,6 +646,7 @@ export function CheckoutPage() {
                                   onClick={(e) => handleDeleteAddress(addr.id, e)}
                                   className="text-slate-400 hover:text-rose-500 transition-colors p-1"
                                   title="Delete"
+                                  aria-label={`Delete ${addr.title} address`}
                                 >
                                   <Trash2 size={13} />
                                 </button>
@@ -945,7 +970,7 @@ export function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => setPaymentMethod('COD')}
-                        aria-label="Pay at Store"
+                        aria-label={orderType === 'DELIVERY' ? 'Cash' : 'Pay at Store'}
                         className={`h-10 rounded-lg text-xs font-bold flex flex-col items-center justify-center transition-all cursor-pointer ${
                           paymentMethod === 'COD'
                             ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
@@ -1145,10 +1170,10 @@ export function CheckoutPage() {
             ) : (
               <button
                 type="button"
-                aria-label="Place order"
+                aria-label={loading ? 'Placing order…' : (cart?.items?.length > 0 && finalTotal > 0 && paymentMethod === 'PAYPAL' ? 'Authorize PayPal' : 'Place order')}
                 onClick={() => {
                   if (paymentMethod === 'PAYPAL' && finalTotal > 0) {
-                    toast('Please authorize payment using the PayPal button above.', { icon: 'Γä╣∩╕Å' });
+                    toast('Please authorize payment using the PayPal button above.', { icon: 'ℹ️' });
                     setActiveStep(3);
                     return;
                   }
@@ -1157,6 +1182,7 @@ export function CheckoutPage() {
                 disabled={
                   loading || 
                   isOrderBlocked || 
+                  !cart?.items?.length ||
                   isDeliveryUnderMin || 
                   (orderType === 'DELIVERY' && !selectedAddressId && (!deliveryAddress || !deliveryPincode)) ||
                   (enableTimeSlots && allTimeSlots.length > 0 && !selectedSlotLabel)
@@ -1165,9 +1191,9 @@ export function CheckoutPage() {
               >
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
-                    <RefreshCw className="animate-spin" size={14} /> Processing...
+                    <RefreshCw className="animate-spin" size={14} /> Placing order…
                   </span>
-                ) : finalTotal > 0 ? (
+                ) : finalTotal > 0 && cart?.items?.length > 0 ? (
                   paymentMethod === 'PAYPAL' ? (
                     'Authorize PayPal'
                   ) : paymentMethod === 'UPI' ? (
@@ -1178,7 +1204,7 @@ export function CheckoutPage() {
                     'Place Order'
                   )
                 ) : (
-                  'Place Order (Wallet)'
+                  'Place Order'
                 )}
               </button>
             )}
@@ -1218,10 +1244,10 @@ export function CheckoutPage() {
           ) : (
             <button
               type="button"
-              aria-label="Place order"
+              aria-label={loading ? 'Placing order…' : (cart?.items?.length > 0 && finalTotal > 0 && paymentMethod === 'PAYPAL' ? 'Authorize PayPal' : 'Place order')}
               onClick={() => {
                 if (paymentMethod === 'PAYPAL' && finalTotal > 0) {
-                  toast('Please authorize payment using the PayPal button above.', { icon: 'Γä╣∩╕Å' });
+                  toast('Please authorize payment using the PayPal button above.', { icon: 'ℹ️' });
                   setActiveStep(3);
                   return;
                 }
@@ -1230,6 +1256,7 @@ export function CheckoutPage() {
               disabled={
                 loading || 
                 isOrderBlocked || 
+                !cart?.items?.length ||
                 isDeliveryUnderMin || 
                 (orderType === 'DELIVERY' && !selectedAddressId && (!deliveryAddress || !deliveryPincode)) ||
                 (enableTimeSlots && allTimeSlots.length > 0 && !selectedSlotLabel)
@@ -1238,9 +1265,9 @@ export function CheckoutPage() {
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">
-                  <RefreshCw className="animate-spin" size={14} /> Processing...
+                  <RefreshCw className="animate-spin" size={14} /> Placing order…
                 </span>
-              ) : finalTotal > 0 ? (
+              ) : finalTotal > 0 && cart?.items?.length > 0 ? (
                 paymentMethod === 'PAYPAL' ? (
                   'Authorize PayPal'
                 ) : paymentMethod === 'UPI' ? (
@@ -1251,7 +1278,7 @@ export function CheckoutPage() {
                   'Place Order'
                 )
               ) : (
-                'Place Order (Wallet)'
+                'Place Order'
               )}
             </button>
           )}

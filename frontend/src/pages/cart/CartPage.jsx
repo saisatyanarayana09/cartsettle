@@ -303,7 +303,7 @@ export function CartPage() {
                         <div className="flex items-center h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 px-1 shadow-2xs">
                           <button
                             onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                            disabled={isItemOutOfStock}
+                            disabled={item.quantity > 1 && isItemOutOfStock}
                             title={item.quantity === 1 ? 'Remove item' : 'Decrease quantity'}
                             aria-label={item.quantity === 1 ? `Remove ${item.product_name}` : `Decrease ${item.product_name}`}
                             className="size-6 rounded-full grid place-items-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
