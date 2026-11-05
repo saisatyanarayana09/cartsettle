@@ -977,7 +977,10 @@ function MaintenanceModeOverlay({ settings }) {
 }
 
 /* =========================================================================
-   CustomerHeader Component: Isolated state prevents CustomerLayout & bottom <nav> from re-rendering on scroll
+   CustomerHeader Component: Native CSS sticky composition ("Imperceptible Transition")
+   - Mobile: Row 1 (Brand & Actions) scrolls away naturally; Row 2 (Search Bar) sticks smoothly at top:0
+   - Desktop: Unified single-row sticky header with Brand, Wide Search, Account & Cart
+   - 0 JS scroll listeners, 0 layout jumps, 0 flicker!
    ========================================================================= */
 function CustomerHeader({
   storeSettings,
@@ -990,194 +993,49 @@ function CustomerHeader({
   setIsSearchActive,
   location,
 }) {
-  const [isHeaderCompact, setIsHeaderCompact] = useState(false);
-  const isCompactRef = useRef(false);
-  const isTransitioningRef = useRef(false);
-
-  useEffect(() => {
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          // If a transition is currently in flight, lock scroll handling to prevent oscillation
-          if (isTransitioningRef.current) {
-            ticking = false;
-            return;
-          }
-
-          const y = window.scrollY;
-
-          // 45px Directional Hysteresis Buffer + 350ms Transition Lock:
-          // Downward scroll > 60px smoothly collapses header into compact single-line
-          // Upward scroll < 15px (near top) smoothly expands back to 2 rows
-          // This eliminates all threshold oscillation, layout shift, and navbar flicker!
-          if (y > 60 && !isCompactRef.current) {
-            isCompactRef.current = true;
-            isTransitioningRef.current = true;
-            setIsHeaderCompact(true);
-            setTimeout(() => {
-              isTransitioningRef.current = false;
-            }, 350);
-          } else if (y < 15 && isCompactRef.current) {
-            isCompactRef.current = false;
-            isTransitioningRef.current = true;
-            setIsHeaderCompact(false);
-            setTimeout(() => {
-              isTransitioningRef.current = false;
-            }, 350);
-          }
-
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
-    <header
-      style={{ overflowAnchor: "none" }}
-      className="sticky top-0 z-30 border-b border-slate-200/50 dark:border-slate-800/60 bg-white/85 dark:bg-[#0c1220]/85 backdrop-blur-2xl shadow-xs transition-colors duration-200"
-    >
-      <div
-        className={`mx-auto flex w-full transition-all duration-300 ease-out sm:flex-row sm:items-center sm:justify-between px-3 sm:px-6 sm:py-3 lg:px-8 xl:px-12 sm:gap-6 ${
-          isHeaderCompact
-            ? "flex-row items-center justify-between py-1.5 gap-2.5"
-            : "flex-col py-2.5 gap-2.5"
-        }`}
-      >
-        {/* Top Row on Mobile / Left Group on Desktop */}
-        <div
-          className={`flex items-center transition-all duration-300 ease-out ${
-            isHeaderCompact
-              ? "w-auto shrink-0 gap-0"
-              : "w-full justify-between sm:w-auto shrink-0"
-          }`}
+    <>
+      {/* Mobile Row 1: Static Top Brand & Actions (scrolls away naturally with page) */}
+      <div className="sm:hidden flex items-center justify-between px-3.5 py-2.5 bg-white/95 dark:bg-[#0d1322]/95 border-b border-slate-100 dark:border-slate-800/40">
+        {/* Brand Logo with Jewel Dot */}
+        <Link
+          to="/"
+          className="flex items-center tracking-tight whitespace-nowrap shrink-0 drop-shadow-xs hover:opacity-90 transition-opacity text-xl font-black group"
         >
-          {/* Brand Logo with Jewel Dot */}
-          <Link
-            to="/"
-            className={`flex items-center tracking-tight whitespace-nowrap shrink-0 drop-shadow-xs hover:opacity-90 transition-all duration-300 group ${
-              isHeaderCompact
-                ? "text-lg sm:text-2xl lg:text-3xl"
-                : "text-xl sm:text-2xl lg:text-3xl"
-            }`}
-          >
-            <span className="font-black text-slate-900 dark:text-white">Cart</span>
-            <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
-            <span className="inline-block size-1.5 rounded-full bg-emerald-500 ml-0.5 mb-1.5 shadow-xs shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
-          </Link>
+          <span className="font-black text-slate-900 dark:text-white">Cart</span>
+          <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
+          <span className="inline-block size-1.5 rounded-full bg-emerald-500 ml-0.5 mb-1.5 shadow-xs shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
+        </Link>
 
-          {/* Mobile Header Actions (Notifications + Profile Avatar / Sign In) */}
-          <div
-            className={`relative flex items-center transition-all duration-300 ease-out sm:hidden ${
-              isHeaderCompact
-                ? "max-w-0 opacity-0 pointer-events-none scale-75 overflow-hidden -mr-2"
-                : "max-w-xs opacity-100 scale-100 gap-2"
-            }`}
-          >
-            {isCustomer ? (
-              <>
-                <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="grid size-9 place-items-center rounded-full bg-slate-100/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-90 relative cursor-pointer shrink-0 border border-slate-200/60 dark:border-slate-700/60 shadow-xs"
-                  title="Notifications"
-                  aria-label="Notifications"
-                >
-                  <Bell size={17} />
-                  {notifications?.some((n) => !n.is_read) && (
-                    <span className="absolute right-0.5 top-0.5 size-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
-                  )}
-                </button>
-                <NotificationPopup
-                  isOpen={showNotifications}
-                  onClose={() => setShowNotifications(false)}
-                />
-
-                <Link
-                  to="/profile"
-                  className={`grid size-9 place-items-center rounded-full bg-slate-100/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border transition-all active:scale-90 overflow-hidden shadow-xs cursor-pointer shrink-0 ${
-                    location.pathname.startsWith("/profile") && !location.pathname.startsWith("/profile/orders")
-                      ? "border-emerald-500 ring-2 ring-emerald-500/30 dark:ring-emerald-400/30"
-                      : "border-slate-200/80 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500"
-                  }`}
-                  title="My Profile"
-                  aria-label="My Profile"
-                >
-                  {user?.avatar ||
-                  user?.customer_profile?.avatar ||
-                  user?.customer_profile?.avatar_url ||
-                  user?.customer_profile?.profile_picture ? (
-                    <img
-                      src={
-                        user?.avatar ||
-                        user?.customer_profile?.avatar ||
-                        user?.customer_profile?.avatar_url ||
-                        user?.customer_profile?.profile_picture
-                      }
-                      alt="Avatar"
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <div className="size-full grid place-items-center bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
-                      <User size={17} />
-                    </div>
-                  )}
-                </Link>
-              </>
-            ) : (
-              <Link
-                to="/login"
-                className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs shrink-0 active:scale-95"
-                aria-label="Sign in"
-              >
-                <User size={14} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Sign in</span>
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* Center Search Bar with Smooth Upward Glide & Docking Sheen */}
-        <div
-          className={`transition-all duration-300 ease-out origin-top ${
-            isHeaderCompact
-              ? "flex-1 min-w-0 sm:max-w-2xl sm:mx-2 md:mx-4 ring-1 ring-emerald-500/30 dark:ring-emerald-400/30 rounded-xl sm:rounded-2xl shadow-xs"
-              : "w-full sm:flex-1 sm:max-w-2xl sm:mx-2 md:mx-4"
-          }`}
-        >
-          <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
-        </div>
-
-        {/* Right Controls (Desktop Only - Mobile navigation is handled by bottom bar) */}
-        <div className="hidden sm:flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Mobile Header Actions (Notifications + Profile Avatar / Sign In) */}
+        <div className="relative flex items-center gap-2">
           {isCustomer ? (
             <>
-              <div className="relative">
-                <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="grid size-9 sm:size-10 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition relative cursor-pointer"
-                  title="Notifications"
-                >
-                  <Bell size={18} />
-                  {notifications?.some((n) => !n.is_read) && (
-                    <span className="absolute right-0 top-0 size-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
-                  )}
-                </button>
-                <NotificationPopup
-                  isOpen={showNotifications}
-                  onClose={() => setShowNotifications(false)}
-                />
-              </div>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="grid size-9 place-items-center rounded-full bg-slate-100/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-90 relative cursor-pointer shrink-0 border border-slate-200/60 dark:border-slate-700/60 shadow-xs"
+                title="Notifications"
+                aria-label="Notifications"
+              >
+                <Bell size={17} />
+                {notifications?.some((n) => !n.is_read) && (
+                  <span className="absolute right-0.5 top-0.5 size-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
+                )}
+              </button>
+              <NotificationPopup
+                isOpen={showNotifications}
+                onClose={() => setShowNotifications(false)}
+              />
 
-              {/* My Account Pill */}
               <Link
                 to="/profile"
-                className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition ml-1 shadow-xs"
+                className={`grid size-9 place-items-center rounded-full bg-slate-100/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 border transition-all active:scale-90 overflow-hidden shadow-xs cursor-pointer shrink-0 ${
+                  location.pathname.startsWith("/profile") && !location.pathname.startsWith("/profile/orders")
+                    ? "border-emerald-500 ring-2 ring-emerald-500/30 dark:ring-emerald-400/30"
+                    : "border-slate-200/80 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500"
+                }`}
+                title="My Profile"
+                aria-label="My Profile"
               >
                 {user?.avatar ||
                 user?.customer_profile?.avatar ||
@@ -1191,43 +1049,127 @@ function CustomerHeader({
                       user?.customer_profile?.profile_picture
                     }
                     alt="Avatar"
-                    className="size-6 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                    className="size-full object-cover"
                   />
                 ) : (
-                  <div className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 rounded-full p-1">
-                    <User size={16} />
+                  <div className="size-full grid place-items-center bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
+                    <User size={17} />
                   </div>
                 )}
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 pr-1">
-                  My Account
-                </span>
               </Link>
             </>
           ) : (
             <Link
               to="/login"
-              className="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline px-2 py-1"
+              className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition shadow-2xs shrink-0 active:scale-95"
+              aria-label="Sign in"
             >
-              Sign in
+              <User size={14} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Sign in</span>
             </Link>
           )}
-
-          {/* Previous Rectangular Cart Button with Badge */}
-          <Link
-            to="/cart"
-            aria-label="Cart"
-            className="relative flex h-11 w-16 items-center justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all ml-2 shadow-sm hover:shadow active:scale-95 group cursor-pointer"
-          >
-            <ShoppingCart size={20} strokeWidth={2.5} className="mt-0.5" />
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 flex h-[22px] min-w-[22px] px-1.5 items-center justify-center rounded-lg bg-slate-900 text-[11px] font-black text-white shadow-sm ring-2 ring-white dark:ring-slate-900">
-                {cartCount > 99 ? "99+" : cartCount}
-              </span>
-            )}
-          </Link>
         </div>
       </div>
-    </header>
+
+      {/* Mobile Row 2: Sticky Full-Width Search Bar (pins seamlessly at top:0 with frosted glass) */}
+      <div className="sm:hidden sticky top-0 z-30 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/90 dark:bg-[#0c1220]/90 backdrop-blur-xl px-3.5 py-2 shadow-xs">
+        <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+      </div>
+
+      {/* Desktop: Unified Single-Row Sticky Header */}
+      <header className="hidden sm:block sticky top-0 z-30 border-b border-slate-200/50 dark:border-slate-800/60 bg-white/85 dark:bg-[#0c1220]/85 backdrop-blur-2xl shadow-xs transition-colors duration-200">
+        <div className="mx-auto flex w-full items-center justify-between px-6 py-3 lg:px-8 xl:px-12 gap-6">
+          {/* Brand Logo with Jewel Dot */}
+          <Link
+            to="/"
+            className="flex items-center tracking-tight whitespace-nowrap shrink-0 drop-shadow-xs hover:opacity-90 transition-opacity text-2xl lg:text-3xl font-black group"
+          >
+            <span className="font-black text-slate-900 dark:text-white">Cart</span>
+            <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
+            <span className="inline-block size-1.5 rounded-full bg-emerald-500 ml-0.5 mb-1.5 shadow-xs shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
+          </Link>
+
+          {/* Center Search Bar */}
+          <div className="flex-1 max-w-2xl mx-2 md:mx-4">
+            <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+          </div>
+
+          {/* Desktop Controls (Notifications + My Account + Cart) */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {isCustomer ? (
+              <>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="grid size-10 place-items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition relative cursor-pointer"
+                    title="Notifications"
+                  >
+                    <Bell size={18} />
+                    {notifications?.some((n) => !n.is_read) && (
+                      <span className="absolute right-0 top-0 size-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
+                    )}
+                  </button>
+                  <NotificationPopup
+                    isOpen={showNotifications}
+                    onClose={() => setShowNotifications(false)}
+                  />
+                </div>
+
+                {/* My Account Pill */}
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition ml-1 shadow-xs"
+                >
+                  {user?.avatar ||
+                  user?.customer_profile?.avatar ||
+                  user?.customer_profile?.avatar_url ||
+                  user?.customer_profile?.profile_picture ? (
+                    <img
+                      src={
+                        user?.avatar ||
+                        user?.customer_profile?.avatar ||
+                        user?.customer_profile?.avatar_url ||
+                        user?.customer_profile?.profile_picture
+                      }
+                      alt="Avatar"
+                      className="size-6 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                    />
+                  ) : (
+                    <div className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 rounded-full p-1">
+                      <User size={16} />
+                    </div>
+                  )}
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200 pr-1">
+                    My Account
+                  </span>
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:underline px-2 py-1"
+              >
+                Sign in
+              </Link>
+            )}
+
+            {/* Previous Rectangular Cart Button with Badge */}
+            <Link
+              to="/cart"
+              aria-label="Cart"
+              className="relative flex h-11 w-16 items-center justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all ml-2 shadow-sm hover:shadow active:scale-95 group cursor-pointer"
+            >
+              <ShoppingCart size={20} strokeWidth={2.5} className="mt-0.5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 flex h-[22px] min-w-[22px] px-1.5 items-center justify-center rounded-lg bg-slate-900 text-[11px] font-black text-white shadow-sm ring-2 ring-white dark:ring-slate-900">
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              )}
+            </Link>
+          </div>
+        </div>
+      </header>
+    </>
   );
 }
 
