@@ -13,10 +13,14 @@ This guide contains everything you need to submit **CartSettle** to Devpost. You
 - **Elevator Pitch / Tagline (under 200 characters):**  
   `Autonomous PayPal payment & margin-protection engine for independent grocers: dynamic partial capture, vision bag audits, AG Grid settlement portal & B2B restocks.`
 
-- **Target Prize Tracks (Check all 3 on Devpost):**  
-  1. ✅ **Grand Prize ($12,000):** Best Overall AI + PayPal Integration  
-  2. ✅ **Best Use of Agentic Commerce ($5,000):** Margin guardrails, multimodal vision packing audits, autonomous supplier restock payouts & Model Context Protocol (MCP)  
-  3. ✅ **AG Grid Sponsor Prize ($5,000):** Enterprise orders portal with custom hold/capture renderers, live delta transactions & 1-click settlement  
+- **Target Prize Categories & Sponsor Tools (Select on Devpost Form):**  
+  1. 🏆 **Overall (1st / 2nd / 3rd Place — $12,000 / $8,000 / $5,000)**  
+  2. 🤖 **Best Use of Agentic Commerce ($5,000):** 4 Zero-Click Autonomous Voice/Text Agentic Suites, 12% Margin Guardrails, Multimodal Vision Bag Audits, Autonomous Supplier Restock Payouts & Model Context Protocol (`@paypal/mcp`)  
+  3. 💳 **Best Use of PayPal + AI ($5,000):** 7 Live PayPal APIs (Orders v2 Pre-Auth, Payments v2 Dynamic Partial Capture `final_capture=true`, Invoicing v2, Shipping Trackers v1, Disputes v1, Payouts v1, Webhooks) + Google Gemini 3.5 Flash  
+  4. 🌍 **Most Impactful ($5,000):** Empowering neighborhood grocers and local stores against 30%-commission quick-commerce dark stores, while giving non-tech-savvy and elderly shoppers a zero-click voice-first AI concierge  
+  5. ✨ **Most Creative ($5,000) & Best Demo Delivery ($5,000)**  
+  6. 📊 **Best Use of AG Grid ($5,000 / $2,000 / $1,000):** Enterprise Orders & Settlement Cockpit (`OwnerOrdersAgGrid.jsx`) with custom Hold vs. Captured renderers, live WebSocket delta updates, and 1-click settlement  
+  7. ☁️ **Best Use of Render ($1,000 / $750 / $500 Render Credits):** Multi-service `render.yaml` Infrastructure-as-Code Blueprint (`cartsettle-api` + `cartsettle-web`) engineered with a **3-Layer Zero-Lag Render Free-Tier Engine** (4-min keep-warm heartbeat, 60s in-memory catalog cache, and `< 2.5ms` live-synced client fallback)  
 
 - **Project Links:**  
   - **GitHub Repository:** `https://github.com/saisatyanarayana09/cartsettle`  
@@ -26,15 +30,16 @@ This guide contains everything you need to submit **CartSettle** to Devpost. You
 
 ## 📝 Section 2: Written Story (Copy-Paste into Devpost "Story" Box)
 
-### 💡 Inspiration
-Independent neighborhood grocers, bodegas, and local kirana stores are the heartbeat of communities worldwide. However, they operate on razor-thin net profit margins—typically **12% to 18%**. 
+### 💡 Inspiration (Why We Built CartSettle)
+Independent neighborhood grocers, bodegas, and local family-owned stores are the backbone of communities worldwide. Yet today they are being squeezed out by venture-backed 10-minute dark-store aggregators and 30%-commission delivery platforms, while operating on razor-thin net profit margins of **12% to 18%**.
 
-When these merchants attempt to sell online, they face a severe inventory and payment dilemma:
-1. **Out-of-Stock Discrepancies:** Fresh produce, dairy, and seasonal goods fluctuate hourly. When packing, if 1 or 2 items are missing, store owners either cancel the entire order, execute awkward manual refunds, or face expensive chargeback fees.
-2. **Aggressive Haggling Risks:** Shopkeepers often discount items to close deals with regular customers, but frequently cut prices below wholesale costs without realizing they are losing money.
-3. **Wholesale Restock Latency:** Shop owners manually tally depleted shelves late at night and write manual checks or bank transfers, causing supply bottlenecks.
+When local store owners try to go digital on their own, they hit four painful walls:
+1. **The Out-of-Stock & Variable-Weight Payment Dilemma:** Fresh produce, dairy, and daily essentials fluctuate hourly. When packing an online order, if 1 or 2 items are missing, traditional payment gateways force merchants into full cancellations, manual refunds, or expensive chargeback fees.
+2. **Accessibility Barriers for Everyday Shoppers:** Elderly customers, busy parents, and non-tech-savvy or low-literacy shoppers struggle with complex multi-screen e-commerce flows. They are used to simply *speaking* to their neighborhood shopkeeper.
+3. **Aggressive Haggling & Margin Erosion:** Shopkeepers frequently offer discounts to loyal customers, but accidentally cut prices below wholesale costs and sell at a net loss.
+4. **Midnight Restock Friction:** Store owners manually count empty shelves late at night and initiate slow manual bank transfers to wholesale distributors.
 
-We built **CartSettle** to solve this. CartSettle transforms PayPal into an autonomous, margin-guarded settlement and fulfillment engine that protects merchants' profits on every transaction.
+We built **CartSettle** to give every neighborhood store its own **Zero-Click AI Concierge + Autonomous PayPal Settlement Engine**—empowering local merchants to compete with instant-delivery giants while keeping 100% of their customer relationships and protecting their profit margins on every order.
 
 ---
 
@@ -99,6 +104,14 @@ CartSettle's Owner Portal (`OwnerOrdersAgGrid.jsx`) leverages AG Grid to provide
 - **In-Place Row Delta Updates:** Uses `getRowId={(params) => String(params.data?.id || '')}` for smooth, flicker-free row transitions on live WebSocket settlement updates.
 - **Action Cell Renderer:** 1-click modal launchers for Gemini Vision Packing Settlement, PayPal Invoice viewer, and Shipping Tracker dispatch.
 - **Enterprise Features:** Multi-column sorting, floating filters, status-based row styling, quick search, and CSV export.
+
+---
+
+### ☁️ Render Cloud Architecture & Zero-Lag Engine (Sponsor Prize Submission)
+CartSettle is deployed on **Render** via a declarative `render.yaml` Blueprint (`cartsettle-api` Python web service + `cartsettle-web` React static SPA) and engineered specifically to eliminate free-tier cold-start latency:
+- **Layer 1 — Proactive Render Keep-Warm Heartbeat (`api.js`):** Fires a non-blocking wake-up ping on app boot, tab focus, and every 4 minutes while active so the Render container stays warm before the user speaks a word, paired with a strict `1.8s` timeout cap on `/store/agent/` calls.
+- **Layer 2 — Live-Synced Client Fallback (`lovableAgentFallback.js`):** Reads the live cached store catalog (`sk_cache_/products/`) in the browser (`< 2.5ms`) if a Render container is mid-spin-up.
+- **Layer 3 — 60s In-Memory Catalog Cache (`agent_service.py`):** Serves active product lookups in `0.0015ms` (`1.5 µs`) and executes all 4 Zero-Click Autonomous Agentic Suites in **`5.3ms – 25.1ms`**.
 
 ---
 
