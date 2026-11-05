@@ -996,6 +996,7 @@ function CustomerHeader({
   location,
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
+  const isCartOrCheckout = location.pathname === "/cart" || location.pathname.startsWith("/checkout");
   const topRowRef = useRef(null);
 
   useEffect(() => {
@@ -1095,28 +1096,30 @@ function CustomerHeader({
         </div>
       </div>
 
-      {/* Mobile Row 2: Fixed-height sticky row — CartSettle glides down into left of Search Bar */}
-      <div className="sm:hidden sticky top-0 z-30 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/90 dark:bg-[#0c1220]/90 backdrop-blur-xl px-3.5 py-2 shadow-xs">
-        <div className="flex items-center w-full">
-          <Link
-            to="/"
-            aria-hidden={!isScrolled}
-            tabIndex={isScrolled ? 0 : -1}
-            className={`flex items-center tracking-tight whitespace-nowrap shrink-0 font-black text-lg overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              isScrolled
-                ? "max-w-[115px] opacity-100 translate-y-0 mr-2.5"
-                : "max-w-0 opacity-0 -translate-y-2.5 mr-0 pointer-events-none"
-            }`}
-          >
-            <span className="font-black text-slate-900 dark:text-white">Cart</span>
-            <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
-          </Link>
+      {/* Mobile Row 2: Fixed-height sticky row — CartSettle glides down into left of Search Bar (hidden on Cart & Checkout) */}
+      {!isCartOrCheckout && (
+        <div className="sm:hidden sticky top-0 z-30 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/90 dark:bg-[#0c1220]/90 backdrop-blur-xl px-3.5 py-2 shadow-xs">
+          <div className="flex items-center w-full">
+            <Link
+              to="/"
+              aria-hidden={!isScrolled}
+              tabIndex={isScrolled ? 0 : -1}
+              className={`flex items-center tracking-tight whitespace-nowrap shrink-0 font-black text-lg overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                isScrolled
+                  ? "max-w-[115px] opacity-100 translate-y-0 mr-2.5"
+                  : "max-w-0 opacity-0 -translate-y-2.5 mr-0 pointer-events-none"
+              }`}
+            >
+              <span className="font-black text-slate-900 dark:text-white">Cart</span>
+              <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
+            </Link>
 
-          <div className="flex-1 min-w-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
-            <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+            <div className="flex-1 min-w-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
+              <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Desktop: Unified Single-Row Sticky Header */}
       <header className="hidden sm:block sticky top-0 z-30 border-b border-slate-200/50 dark:border-slate-800/60 bg-white/85 dark:bg-[#0c1220]/85 backdrop-blur-2xl shadow-xs transition-colors duration-200">
@@ -1130,9 +1133,11 @@ function CustomerHeader({
             <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
           </Link>
 
-          {/* Center Search Bar */}
+          {/* Center Search Bar (hidden on Cart & Checkout for funnel focus) */}
           <div className="flex-1 max-w-2xl mx-2 md:mx-4">
-            <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+            {!isCartOrCheckout && (
+              <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+            )}
           </div>
 
           {/* Desktop Controls (Notifications + My Account + Cart) */}
