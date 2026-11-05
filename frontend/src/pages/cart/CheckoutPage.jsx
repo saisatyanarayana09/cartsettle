@@ -10,7 +10,6 @@ import {
   Calendar, 
   QrCode, 
   RefreshCw, 
-  ShieldCheck, 
   Check, 
   Copy, 
   Tag, 
@@ -19,8 +18,8 @@ import {
   Wallet,
   Truck,
   Store,
-  CreditCard,
-  Plus
+  Plus,
+  ArrowRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -53,7 +52,7 @@ export function CheckoutPage() {
     try {
       await applyPromo(promoInput.trim());
       setPromoInput('');
-      toast.success('Promo code applied successfully');
+      toast.success('Promo code applied');
     } catch (err) {
       setPromoError(extractErrorMessage(err) || 'Invalid promo code');
     } finally {
@@ -89,7 +88,6 @@ export function CheckoutPage() {
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('PAYPAL'); // 'PAYPAL' | 'COD' | 'UPI'
-  const [qrViewMode, setQrViewMode] = useState('dynamic'); // 'dynamic' | 'standee'
   const [upiTransactionId, setUpiTransactionId] = useState('');
   const [successOrderId, setSuccessOrderId] = useState(null);
 
@@ -250,6 +248,7 @@ export function CheckoutPage() {
     }
   }
 
+  const packagingFee = parseFloat(cart?.packaging_fee || 0);
   const cartTotal = parseFloat(cart?.total || 0) + deliveryFee;
   const maxWalletPercentage = storeSettings?.max_wallet_usage_percentage != null && Number(storeSettings.max_wallet_usage_percentage) > 0 
     ? Number(storeSettings.max_wallet_usage_percentage) 
@@ -261,7 +260,6 @@ export function CheckoutPage() {
   const upiId = storeSettings?.upi_id || 'narendrakirana@okaxis';
   const upiPayee = storeSettings?.upi_payee_name || storeSettings?.store_name || 'CartSettle';
   const upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiPayee)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=Order`;
-  const dynamicQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiUri)}`;
 
   async function submit(customPaypalOrderId = null) {
     const hasOutOfStock = (cart?.items || []).some(item => item.is_in_stock === false || (item.stock_quantity !== undefined && item.stock_quantity <= 0));
@@ -340,6 +338,58 @@ export function CheckoutPage() {
   const selectedAddrObj = addresses.find(a => a.id === selectedAddressId);
   const totalSavings = discount + parseFloat(cart?.promo_discount || 0);
 
+  // Common Order Summary Breakdown Block
+  const OrderSummaryBreakdown = () => (
+    <div className="space-y-2 text-xs">
+      <div className="flex justify-between text-slate-500 dark:text-slate-400">
+        <span>Item MRP Total</span>
+        <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
+          ₹{mrpTotal.toFixed(2)}
+        </span>
+      </div>
+
+      {discount > 0 && (
+        <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+          <span>Store Discount</span>
+          <span className="font-semibold tabular-nums">-₹{discount.toFixed(2)}</span>
+        </div>
+      )}
+
+      {parseFloat(cart?.promo_discount || 0) > 0 && (
+        <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+          <span>Promo Discount</span>
+          <span className="font-semibold tabular-nums">-₹{parseFloat(cart.promo_discount).toFixed(2)}</span>
+        </div>
+      )}
+
+      {packagingFee > 0 && (
+        <div className="flex justify-between text-slate-500 dark:text-slate-400">
+          <span>Packaging & Handling</span>
+          <span className="font-semibold text-slate-900 dark:text-white tabular-nums">₹{packagingFee.toFixed(2)}</span>
+        </div>
+      )}
+
+      <div className="flex justify-between text-slate-500 dark:text-slate-400">
+        <span>Delivery Fee</span>
+        <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
+          {deliveryFee === 0 ? <span className="text-emerald-600 dark:text-emerald-400">Free</span> : `₹${deliveryFee.toFixed(2)}`}
+        </span>
+      </div>
+
+      {walletApplied > 0 && (
+        <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+          <span>Wallet Applied</span>
+          <span className="font-semibold tabular-nums">-₹{walletApplied.toFixed(2)}</span>
+        </div>
+      )}
+
+      <div className="flex justify-between text-sm sm:text-base font-extrabold text-slate-900 dark:text-white pt-2 border-t border-slate-100 dark:border-slate-800">
+        <span>Total Due</span>
+        <span className="tabular-nums">₹{finalTotal.toFixed(2)}</span>
+      </div>
+    </div>
+  );
+
   return (
     <CustomerLayout>
       {/* Order Success Full-Screen Modal */}
@@ -371,28 +421,28 @@ export function CheckoutPage() {
         </div>
       )}
 
-      <main className="mx-auto max-w-2xl px-2.5 sm:px-4 py-2 pb-32">
-        {/* Highlighted Top Back Bar */}
-        <div className="sticky top-0 z-20 -mx-2.5 sm:-mx-4 -mt-2 px-3 sm:px-4 py-2.5 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between mb-3 shadow-2xs">
-          <button
-            onClick={() => navigate('/cart')}
-            aria-label="Back to Cart"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs active:scale-95 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700/80 shadow-2xs"
-          >
-            <ArrowLeft size={14} className="stroke-[2.5]" />
-            <span>Back to Cart</span>
-          </button>
-          
-          <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Checkout
-          </h1>
-          
-          <div className="w-20" />
-        </div>
+      {/* Flush Sticky Top Header */}
+      <div className="sticky top-0 z-20 w-full px-4 sm:px-6 lg:px-8 py-2.5 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between shadow-2xs">
+        <button
+          onClick={() => navigate('/cart')}
+          aria-label="Back to Cart"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs active:scale-95 transition-all cursor-pointer border border-slate-200/80 dark:border-slate-700/80 shadow-2xs"
+        >
+          <ArrowLeft size={14} className="stroke-[2.5]" />
+          <span>Back to Cart</span>
+        </button>
+        
+        <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
+          Checkout
+        </h1>
+        
+        <div className="w-14" />
+      </div>
 
+      <main className="mx-auto max-w-6xl px-3 sm:px-6 lg:px-8 py-3 pb-36 lg:pb-16">
         {/* Global Warning Banners */}
         {isEmergencyPaused && (
-          <div className="my-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-semibold flex items-start gap-2 shadow-xs">
+          <div className="mb-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-semibold flex items-start gap-2 shadow-xs">
             <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
               <span className="block font-bold uppercase tracking-wider text-[10px] text-amber-800 dark:text-amber-300">Ordering Paused</span>
@@ -402,7 +452,7 @@ export function CheckoutPage() {
         )}
 
         {isClosedHours && (
-          <div className="my-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs font-semibold flex items-start gap-2 shadow-xs">
+          <div className="mb-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs font-semibold flex items-start gap-2 shadow-xs">
             <Clock size={16} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
             <div>
               <span className="block font-bold uppercase tracking-wider text-[10px] text-rose-800 dark:text-rose-300">Store Closed</span>
@@ -412,151 +462,152 @@ export function CheckoutPage() {
         )}
 
         {error && (
-          <div className="my-2.5 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-xs font-semibold flex items-start gap-2">
+          <div className="mb-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-xs font-semibold flex items-start gap-2">
             <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
             <p>{error}</p>
           </div>
         )}
 
-        {/* Progressive Accordion Stack */}
-        <div className="space-y-3">
-          {/* STEP 1: FULFILLMENT (Delivery / Pickup) */}
-          <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-2xs transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
-            <header
-              onClick={() => setActiveStep(activeStep === 1 ? 0 : 1)}
-              className="p-3.5 sm:p-4 flex items-center justify-between cursor-pointer select-none bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100/50 dark:hover:bg-slate-800/60 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className={`size-6 rounded-full text-xs font-black grid place-items-center transition-colors ${
-                  activeStep === 1 ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'bg-emerald-600 text-white'
-                }`}>
-                  {activeStep > 1 ? <Check size={13} className="stroke-[3]" /> : '1'}
-                </span>
-                <div>
-                  <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                    Fulfillment Method
-                  </h2>
-                  {activeStep !== 1 && (
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[240px] sm:max-w-md">
-                      {orderType === 'DELIVERY'
-                        ? selectedAddrObj ? `${selectedAddrObj.title} · ${selectedAddrObj.street}` : 'Home Delivery'
-                        : 'Store Pickup'}
-                    </p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {activeStep !== 1 && (
-                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Edit</span>
-                )}
-                {activeStep === 1 ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
-              </div>
-            </header>
-
-            {activeStep === 1 && (
-              <div className="p-3.5 sm:p-4 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3.5 animate-in fade-in duration-200">
-                {/* Delivery vs Pickup Switcher */}
-                <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!isHomeDeliveryActive) {
-                        toast.error('Home delivery is currently unavailable');
-                        return;
-                      }
-                      setOrderType('DELIVERY');
-                    }}
-                    disabled={!isHomeDeliveryActive}
-                    className={`h-9 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      orderType === 'DELIVERY'
-                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                        : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 disabled:opacity-40'
-                    }`}
-                  >
-                    <Truck size={14} />
-                    <span>Home Delivery</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setOrderType('PICKUP')}
-                    className={`h-9 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      orderType === 'PICKUP'
-                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                        : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
-                    }`}
-                  >
-                    <Store size={14} />
-                    <span>Store Pickup</span>
-                  </button>
-                </div>
-
-                {orderType === 'DELIVERY' && (
-                  <div className="space-y-2.5">
-                    {/* Minimum delivery amount warning */}
-                    {isDeliveryUnderMin && (
-                      <p className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-xs font-semibold border border-amber-200 dark:border-amber-800">
-                        Home Delivery requires a minimum cart total of ₹{storeSettings.min_delivery_order_amount}.
+        {/* Expansive 2-Column Desktop Grid */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
+          {/* Left Column: Progressive Accordion (Steps 1, 2, 3) */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-3">
+            {/* STEP 1: FULFILLMENT */}
+            <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-2xs transition-all duration-300">
+              <header
+                onClick={() => setActiveStep(activeStep === 1 ? 0 : 1)}
+                className="p-3.5 sm:p-4 flex items-center justify-between cursor-pointer select-none bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100/50 dark:hover:bg-slate-800/60 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`size-6 rounded-full text-xs font-black grid place-items-center transition-colors ${
+                    activeStep === 1 ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'bg-emerald-600 text-white'
+                  }`}>
+                    {activeStep > 1 ? <Check size={13} className="stroke-[3]" /> : '1'}
+                  </span>
+                  <div>
+                    <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                      Fulfillment Method
+                    </h2>
+                    {activeStep !== 1 && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate max-w-[240px] sm:max-w-md">
+                        {orderType === 'DELIVERY'
+                          ? selectedAddrObj ? `${selectedAddrObj.title} · ${selectedAddrObj.street}` : 'Home Delivery'
+                          : 'Store Pickup'}
                       </p>
                     )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {activeStep !== 1 && (
+                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Edit</span>
+                  )}
+                  {activeStep === 1 ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
+                </div>
+              </header>
 
-                    {/* Saved Addresses List */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          Saved Addresses
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingAddressId(null);
-                            setAddressForm({
-                              title: 'Home',
-                              street: '',
-                              landmark: '',
-                              city: '',
-                              state: '',
-                              zip_code: '',
-                              latitude: null,
-                              longitude: null,
-                              is_default: false
-                            });
-                            setShowNewAddressForm(!showNewAddressForm);
-                          }}
-                          className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
-                        >
-                          <Plus size={13} />
-                          <span>{showNewAddressForm ? 'Cancel' : 'Add New'}</span>
-                        </button>
-                      </div>
+              {activeStep === 1 && (
+                <div className="p-3.5 sm:p-4 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3.5 animate-in fade-in duration-200">
+                  {/* Delivery vs Pickup Switcher */}
+                  <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isHomeDeliveryActive) {
+                          toast.error('Home delivery is currently unavailable');
+                          return;
+                        }
+                        setOrderType('DELIVERY');
+                      }}
+                      disabled={!isHomeDeliveryActive}
+                      className={`h-9 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        orderType === 'DELIVERY'
+                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                          : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 disabled:opacity-40'
+                      }`}
+                    >
+                      <Truck size={14} />
+                      <span>Home Delivery</span>
+                    </button>
 
-                      {addresses.length === 0 && !showNewAddressForm && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 py-3 text-center border border-dashed rounded-xl border-slate-200 dark:border-slate-800">
-                          No saved addresses found. Please add a delivery address.
+                    <button
+                      type="button"
+                      onClick={() => setOrderType('PICKUP')}
+                      className={`h-9 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        orderType === 'PICKUP'
+                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                          : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+                      }`}
+                    >
+                      <Store size={14} />
+                      <span>Store Pickup</span>
+                    </button>
+                  </div>
+
+                  {orderType === 'DELIVERY' && (
+                    <div className="space-y-2.5">
+                      {isDeliveryUnderMin && (
+                        <p className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-xs font-semibold border border-amber-200 dark:border-amber-800">
+                          Home Delivery requires a minimum cart total of ₹{storeSettings.min_delivery_order_amount}.
                         </p>
                       )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {addresses.map((addr) => {
-                          const isSelected = selectedAddressId === addr.id;
-                          return (
-                            <div
-                              key={addr.id}
-                              onClick={() => {
-                                setSelectedAddressId(addr.id);
-                                setShowNewAddressForm(false);
-                              }}
-                              className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex flex-col justify-between ${
-                                isSelected
-                                  ? 'border-emerald-600 bg-emerald-50/20 dark:bg-emerald-950/20 ring-1 ring-emerald-600'
-                                  : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 bg-white dark:bg-slate-900'
-                              }`}
-                            >
-                              <div>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-slate-900 dark:text-white capitalize">{addr.title}</span>
-                                  {isSelected && <Check size={14} className="text-emerald-600 stroke-[3]" />}
+                      {/* Saved Addresses List */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Saved Addresses
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingAddressId(null);
+                              setAddressForm({
+                                title: 'Home',
+                                street: '',
+                                landmark: '',
+                                city: '',
+                                state: '',
+                                zip_code: '',
+                                latitude: null,
+                                longitude: null,
+                                is_default: false
+                              });
+                              setShowNewAddressForm(!showNewAddressForm);
+                            }}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                          >
+                            <Plus size={13} />
+                            <span>{showNewAddressForm ? 'Cancel' : 'Add New'}</span>
+                          </button>
+                        </div>
+
+                        {addresses.length === 0 && !showNewAddressForm && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 py-3 text-center border border-dashed rounded-xl border-slate-200 dark:border-slate-800">
+                            No saved addresses found. Please add a delivery address.
+                          </p>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {addresses.map((addr) => {
+                            const isSelected = selectedAddressId === addr.id;
+                            return (
+                              <div
+                                key={addr.id}
+                                onClick={() => {
+                                  setSelectedAddressId(addr.id);
+                                  setShowNewAddressForm(false);
+                                }}
+                                className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex flex-col justify-between ${
+                                  isSelected
+                                    ? 'border-emerald-600 bg-emerald-50/20 dark:bg-emerald-950/20 ring-1 ring-emerald-600'
+                                    : 'border-slate-200/80 dark:border-slate-800 hover:border-slate-300 bg-white dark:bg-slate-900'
+                                }`}
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-900 dark:text-white capitalize">{addr.title}</span>
+                                    {isSelected && <Check size={14} className="text-emerald-600 stroke-[3]" />}
                                 </div>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">
                                   {[addr.street, addr.landmark, addr.city, addr.zip_code].filter(Boolean).join(', ')}
@@ -578,7 +629,6 @@ export function CheckoutPage() {
                       </div>
                     </div>
 
-                    {/* New Address Drawer / Form */}
                     {showNewAddressForm && (
                       <form onSubmit={handleSaveAddress} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2.5">
                         <div className="flex items-center justify-between">
@@ -592,7 +642,6 @@ export function CheckoutPage() {
                           </button>
                         </div>
 
-                        {/* Interactive Leaflet Map Location Pin */}
                         <Suspense fallback={<div className="h-40 bg-slate-100 rounded-xl animate-pulse" />}>
                           <MapLocationPicker
                             storeSettings={storeSettings}
@@ -685,7 +734,7 @@ export function CheckoutPage() {
             )}
           </section>
 
-          {/* STEP 2: SCHEDULE & INSTRUCTIONS (if enabled) */}
+          {/* STEP 2: SCHEDULE (if enabled) */}
           {enableTimeSlots && (
             <section className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-2xs transition-all duration-300">
               <header
@@ -720,7 +769,6 @@ export function CheckoutPage() {
 
               {activeStep === 2 && (
                 <div className="p-3.5 sm:p-4 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3.5 animate-in fade-in duration-200">
-                  {/* Day Selector */}
                   <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 gap-1">
                     <button
                       type="button"
@@ -746,7 +794,6 @@ export function CheckoutPage() {
                     </button>
                   </div>
 
-                  {/* Slot chips */}
                   {activeSlotList.length === 0 ? (
                     <p className="p-3 text-center rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-xs font-semibold">
                       All slots for today have closed. Please choose tomorrow.
@@ -928,7 +975,6 @@ export function CheckoutPage() {
                     {/* Dynamic UPI Section */}
                     {paymentMethod === 'UPI' && (
                       <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 flex flex-col items-center text-center animate-in fade-in duration-200">
-                        {/* Dynamic QR Code Frame */}
                         <div className="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-xs mb-3">
                           <QRCodeSVG value={upiUri} size={150} level="M" />
                         </div>
@@ -984,13 +1030,66 @@ export function CheckoutPage() {
             )}
           </section>
 
-          {/* PROMO CODE SECTION */}
-          <section className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+          {/* Mobile-only Order Summary & Promo */}
+          <div className="lg:hidden space-y-3">
+            {/* Promo Code Input Card */}
+            <section className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+              {cart?.applied_promo ? (
+                <div className="flex items-center justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                  <div className="flex items-center gap-1.5">
+                    <Tag size={14} />
+                    <span>Promo: {cart.applied_promo} (-₹{parseFloat(cart?.promo_discount || 0).toFixed(2)})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemovePromo}
+                    disabled={promoApplying}
+                    className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleApplyPromo} className="flex gap-2">
+                  <input
+                    placeholder="Enter Promo Code"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                    className="flex-1 h-9 px-3 text-xs uppercase font-bold tracking-wider rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none focus:border-emerald-600"
+                  />
+                  <button
+                    type="submit"
+                    disabled={promoApplying || !promoInput.trim()}
+                    className="h-9 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs transition-all disabled:opacity-40 cursor-pointer"
+                  >
+                    {promoApplying ? 'Applying...' : 'Apply'}
+                  </button>
+                </form>
+              )}
+              {promoError && (
+                <p className="mt-1 text-[11px] font-bold text-rose-600 dark:text-rose-400">{promoError}</p>
+              )}
+            </section>
+
+            {/* Mobile Order Summary */}
+            <section className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-2 text-xs">
+              <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] pb-1 border-b border-slate-100 dark:border-slate-800">
+                Order Summary
+              </h3>
+              <OrderSummaryBreakdown />
+            </section>
+          </div>
+        </div>
+
+        {/* Right Column: Desktop Sticky Order Summary Card (hidden on mobile, sticky on desktop) */}
+        <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 sticky top-16 space-y-3.5">
+          {/* Desktop Promo Code Card */}
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
             {cart?.applied_promo ? (
               <div className="flex items-center justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
                 <div className="flex items-center gap-1.5">
                   <Tag size={14} />
-                  <span>Promo code applied: {cart.applied_promo} (-₹{parseFloat(cart?.promo_discount || 0).toFixed(2)})</span>
+                  <span>Promo: {cart.applied_promo} (-₹{parseFloat(cart?.promo_discount || 0).toFixed(2)})</span>
                 </div>
                 <button
                   type="button"
@@ -1003,14 +1102,12 @@ export function CheckoutPage() {
               </div>
             ) : (
               <form onSubmit={handleApplyPromo} className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    placeholder="Enter Promo Code"
-                    value={promoInput}
-                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                    className="w-full h-9 px-3 text-xs uppercase font-bold tracking-wider rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none focus:border-emerald-600"
-                  />
-                </div>
+                <input
+                  placeholder="Enter Promo Code"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  className="flex-1 h-9 px-3 text-xs uppercase font-bold tracking-wider rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 outline-none focus:border-emerald-600"
+                />
                 <button
                   type="submit"
                   disabled={promoApplying || !promoInput.trim()}
@@ -1023,90 +1120,27 @@ export function CheckoutPage() {
             {promoError && (
               <p className="mt-1 text-[11px] font-bold text-rose-600 dark:text-rose-400">{promoError}</p>
             )}
-          </section>
+          </div>
 
-          {/* ORDER SUMMARY BREAKDOWN */}
-          <section className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-2 text-xs">
-            <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] pb-1 border-b border-slate-100 dark:border-slate-800">
+          {/* Desktop Order Summary & Primary CTA */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+            <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] pb-2 border-b border-slate-100 dark:border-slate-800">
               Order Summary
             </h3>
 
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>Item MRP Total</span>
-              <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
-                ₹{mrpTotal.toFixed(2)}
-              </span>
-            </div>
+            <OrderSummaryBreakdown />
 
-            {discount > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                <span>Store Discount</span>
-                <span className="font-semibold tabular-nums">-₹{discount.toFixed(2)}</span>
-              </div>
-            )}
-
-            {parseFloat(cart?.promo_discount || 0) > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                <span>Promo Discount</span>
-                <span className="font-semibold tabular-nums">-₹{parseFloat(cart.promo_discount).toFixed(2)}</span>
-              </div>
-            )}
-
-            {packagingFee > 0 && (
-              <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                <span>Packaging & Handling</span>
-                <span className="font-semibold text-slate-900 dark:text-white tabular-nums">₹{packagingFee.toFixed(2)}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>Delivery Fee</span>
-              <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
-                {deliveryFee === 0 ? <span className="text-emerald-600 dark:text-emerald-400">Free</span> : `₹${deliveryFee.toFixed(2)}`}
-              </span>
-            </div>
-
-            {walletApplied > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-                <span>Wallet Balance Applied</span>
-                <span className="font-semibold tabular-nums">-₹{walletApplied.toFixed(2)}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between text-sm font-extrabold text-slate-900 dark:text-white pt-2 border-t border-slate-100 dark:border-slate-800">
-              <span>Total Due</span>
-              <span className="tabular-nums">₹{finalTotal.toFixed(2)}</span>
-            </div>
-          </section>
-        </div>
-
-        {/* Flush Sticky Bottom Viewport Dock */}
-        <aside className="fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-8 py-2.5 pb-[calc(0.65rem+env(safe-area-inset-bottom,0px))] shadow-lg">
-          <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Due</p>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">
-                  ₹{finalTotal.toFixed(2)}
-                </span>
-                {totalSavings > 0 && (
-                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                    Saved ₹{totalSavings.toFixed(0)}
-                  </span>
-                )}
-              </div>
-            </div>
-
+            {/* Desktop Action CTA */}
             {storeSettings?.is_open === false ? (
-              <div className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs">
+              <div className="w-full py-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs text-center">
                 Store Closed
               </div>
             ) : isEmergencyPaused ? (
-              <div className="px-4 py-2 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-xs">
+              <div className="w-full py-3 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-xs text-center">
                 Orders Paused
               </div>
             ) : isClosedHours ? (
-              <div className="px-4 py-2 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-bold text-xs">
+              <div className="w-full py-3 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-bold text-xs text-center">
                 Store Closed
               </div>
             ) : (
@@ -1127,7 +1161,7 @@ export function CheckoutPage() {
                   (orderType === 'DELIVERY' && !selectedAddressId && (!deliveryAddress || !deliveryPincode)) ||
                   (enableTimeSlots && allTimeSlots.length > 0 && !selectedSlotLabel)
                 }
-                className="h-10 sm:h-11 px-7 sm:px-9 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 active:scale-[0.98]"
+                className="w-full h-11 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
               >
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
@@ -1150,9 +1184,81 @@ export function CheckoutPage() {
             )}
           </div>
         </aside>
-      </main>
-    </CustomerLayout>
-  );
+      </div>
+
+      {/* Mobile Sticky Bottom Viewport Dock (lg:hidden) */}
+      <aside className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-8 py-2.5 pb-[calc(0.65rem+env(safe-area-inset-bottom,0px))] shadow-lg">
+        <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Due</p>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tight">
+                ₹{finalTotal.toFixed(2)}
+              </span>
+              {totalSavings > 0 && (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                  Saved ₹{totalSavings.toFixed(0)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {storeSettings?.is_open === false ? (
+            <div className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-xs">
+              Store Closed
+            </div>
+          ) : isEmergencyPaused ? (
+            <div className="px-4 py-2 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-bold text-xs">
+              Orders Paused
+            </div>
+          ) : isClosedHours ? (
+            <div className="px-4 py-2 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-bold text-xs">
+              Store Closed
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (paymentMethod === 'PAYPAL' && finalTotal > 0) {
+                  toast('Please authorize payment using the PayPal button above.', { icon: 'ℹ️' });
+                  setActiveStep(3);
+                  return;
+                }
+                submit();
+              }}
+              disabled={
+                loading || 
+                isOrderBlocked || 
+                isDeliveryUnderMin || 
+                (orderType === 'DELIVERY' && !selectedAddressId && (!deliveryAddress || !deliveryPincode)) ||
+                (enableTimeSlots && allTimeSlots.length > 0 && !selectedSlotLabel)
+              }
+              className="h-10 px-6 sm:px-8 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 text-white font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 active:scale-[0.98]"
+            >
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <RefreshCw className="animate-spin" size={14} /> Processing...
+                </span>
+              ) : finalTotal > 0 ? (
+                paymentMethod === 'PAYPAL' ? (
+                  'Authorize PayPal'
+                ) : paymentMethod === 'UPI' ? (
+                  'Place Order (UPI)'
+                ) : orderType === 'DELIVERY' ? (
+                  'Place Order (COD)'
+                ) : (
+                  'Place Order'
+                )
+              ) : (
+                'Place Order (Wallet)'
+              )}
+            </button>
+          )}
+        </div>
+      </aside>
+    </main>
+  </CustomerLayout>
+);
 }
 
 export default CheckoutPage;
