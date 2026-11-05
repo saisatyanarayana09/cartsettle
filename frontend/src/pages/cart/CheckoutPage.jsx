@@ -339,56 +339,59 @@ export function CheckoutPage() {
   const totalSavings = discount + parseFloat(cart?.promo_discount || 0);
 
   // Common Order Summary Breakdown Block
-  const OrderSummaryBreakdown = () => (
-    <div className="space-y-2 text-xs">
-      <div className="flex justify-between text-slate-500 dark:text-slate-400">
-        <span>Item MRP Total</span>
-        <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
-          ₹{mrpTotal.toFixed(2)}
-        </span>
-      </div>
-
-      {discount > 0 && (
-        <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-          <span>Store Discount</span>
-          <span className="font-semibold tabular-nums">-₹{discount.toFixed(2)}</span>
-        </div>
-      )}
-
-      {parseFloat(cart?.promo_discount || 0) > 0 && (
-        <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-          <span>Promo Discount</span>
-          <span className="font-semibold tabular-nums">-₹{parseFloat(cart.promo_discount).toFixed(2)}</span>
-        </div>
-      )}
-
-      {packagingFee > 0 && (
+  const OrderSummaryBreakdown = () => {
+    const pkgFee = parseFloat(cart?.packaging_fee || packagingFee || 0);
+    return (
+      <div className="space-y-2 text-xs">
         <div className="flex justify-between text-slate-500 dark:text-slate-400">
-          <span>Packaging & Handling</span>
-          <span className="font-semibold text-slate-900 dark:text-white tabular-nums">₹{packagingFee.toFixed(2)}</span>
+          <span>Item MRP Total</span>
+          <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
+            ₹{mrpTotal.toFixed(2)}
+          </span>
         </div>
-      )}
 
-      <div className="flex justify-between text-slate-500 dark:text-slate-400">
-        <span>Delivery Fee</span>
-        <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
-          {deliveryFee === 0 ? <span className="text-emerald-600 dark:text-emerald-400">Free</span> : `₹${deliveryFee.toFixed(2)}`}
-        </span>
-      </div>
+        {discount > 0 && (
+          <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+            <span>Store Discount</span>
+            <span className="font-semibold tabular-nums">-₹{discount.toFixed(2)}</span>
+          </div>
+        )}
 
-      {walletApplied > 0 && (
-        <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-          <span>Wallet Applied</span>
-          <span className="font-semibold tabular-nums">-₹{walletApplied.toFixed(2)}</span>
+        {parseFloat(cart?.promo_discount || 0) > 0 && (
+          <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+            <span>Promo Discount</span>
+            <span className="font-semibold tabular-nums">-₹{parseFloat(cart.promo_discount).toFixed(2)}</span>
+          </div>
+        )}
+
+        {pkgFee > 0 && (
+          <div className="flex justify-between text-slate-500 dark:text-slate-400">
+            <span>Packaging & Handling</span>
+            <span className="font-semibold text-slate-900 dark:text-white tabular-nums">₹{pkgFee.toFixed(2)}</span>
+          </div>
+        )}
+
+        <div className="flex justify-between text-slate-500 dark:text-slate-400">
+          <span>Delivery Fee</span>
+          <span className="font-semibold text-slate-900 dark:text-white tabular-nums">
+            {deliveryFee === 0 ? <span className="text-emerald-600 dark:text-emerald-400">Free</span> : `₹${deliveryFee.toFixed(2)}`}
+          </span>
         </div>
-      )}
 
-      <div className="flex justify-between text-sm sm:text-base font-extrabold text-slate-900 dark:text-white pt-2 border-t border-slate-100 dark:border-slate-800">
-        <span>Total Due</span>
-        <span className="tabular-nums">₹{finalTotal.toFixed(2)}</span>
+        {walletApplied > 0 && (
+          <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+            <span>Wallet Applied</span>
+            <span className="font-semibold tabular-nums">-₹{walletApplied.toFixed(2)}</span>
+          </div>
+        )}
+
+        <div className="flex justify-between text-sm sm:text-base font-extrabold text-slate-900 dark:text-white pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span>Total Due</span>
+          <span className="tabular-nums">₹{finalTotal.toFixed(2)}</span>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <CustomerLayout>
