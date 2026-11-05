@@ -1225,10 +1225,7 @@ export function CustomerLayout({ children }) {
     if (isShopperAgentOpen) setShopperAgentLoaded(true);
   }, [isShopperAgentOpen]);
   const location = useLocation();
-  const cartCount =
-    cart?.items?.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0) ||
-    cart?.items?.length ||
-    0;
+  const cartCount = cart?.items?.length || 0;
 
   useEffect(() => {
     if (contextSettings) {
@@ -1335,7 +1332,7 @@ export function CustomerLayout({ children }) {
               <div className="relative">
                 <ShoppingCart size={19} className={location.pathname === "/cart" ? "stroke-[2.5]" : "stroke-2"} />
                 {cartCount > 0 && (
-                  <span className="absolute -right-2.5 -top-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-emerald-600 text-[9px] font-black text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs animate-bounce">
+                  <span className="absolute -right-2.5 -top-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-emerald-600 text-[9px] font-black text-white flex items-center justify-center ring-2 ring-white dark:ring-slate-900 shadow-xs">
                     {cartCount > 99 ? "99+" : cartCount}
                   </span>
                 )}
