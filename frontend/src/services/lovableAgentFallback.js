@@ -684,7 +684,14 @@ export function handleLovableAgentFallback(config) {
     ['swap', 'cheaper alternative', 'cheaper option', 'replace with cheaper', 'lower cost alternative'].some((k) => lower.includes(k))
   ) {
     const catalog = getLiveCatalog();
-    const targetProd = matchSingleProduct(prompt) || [...catalog].sort((a, b) => b.price - a.price)[0];
+    const clientCart = Array.isArray(body.cart_items) ? body.cart_items : [];
+    const highestCartItem = clientCart.length
+      ? [...clientCart].sort((a, b) => Number(b.price || 0) - Number(a.price || 0))[0]
+      : null;
+    const cartMatchedProd = highestCartItem
+      ? catalog.find((p) => Number(p.id) === Number(highestCartItem.id)) || matchSingleProduct(highestCartItem.name || '')
+      : null;
+    const targetProd = matchSingleProduct(prompt) || cartMatchedProd || [...catalog].sort((a, b) => b.price - a.price)[0];
     const cheaperCandidates = catalog.filter((p) => p.id !== targetProd.id && p.price < targetProd.price);
     const cheaperProd = cheaperCandidates.length
       ? cheaperCandidates.sort((a, b) => a.price - b.price)[0]

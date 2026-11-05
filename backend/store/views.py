@@ -538,8 +538,9 @@ class AgentChatView(views.APIView):
             return response.Response({'detail': 'Prompt is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         persona = self._resolve_persona(request)
+        cart_items = request.data.get('cart_items', [])
         from services.agent_service import agent_service
-        result = agent_service.chat(prompt=prompt, session_id=session_id, history=history, persona=persona, mode=mode)
+        result = agent_service.chat(prompt=prompt, session_id=session_id, history=history, persona=persona, mode=mode, cart_items=cart_items)
         return response.Response(result, status=status.HTTP_200_OK)
 
 

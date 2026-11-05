@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   X, 
   Check, 
@@ -27,28 +27,58 @@ export default function PackingSettlementModal({
   onClose,
   onSettled
 }) {
-  if (!isOpen || !order) return null;
-
-  const [itemsState, setItemsState] = useState(() => {
-    return (order.items || []).map(item => ({
-      id: item.id,
-      name: item.product_name_snapshot,
-      unit: item.unit_snapshot,
-      price: parseFloat(item.price_snapshot || 0),
-      cost: parseFloat(item.item_cost_price || item.price_snapshot * 0.8),
-      ordered_qty: item.quantity,
-      packed_qty: item.packed_quantity || item.quantity,
-      is_accepted: item.status !== 'REJECTED' && item.is_packed !== false,
-      ai_verified: false,
-      ai_notes: ''
-    }));
-  });
-
+  const [itemsState, setItemsState] = useState([]);
   const [loading, setLoading] = useState(false);
   const [visionScanning, setVisionScanning] = useState(false);
   const [visionResult, setVisionResult] = useState(null);
   const [settlementReceipt, setSettlementReceipt] = useState(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (order?.items) {
+      setItemsState(
+        order.items.map(item => ({
+          id: item.id,
+          name: item.product_name_snapshot,
+          unit: item.unit_snapshot,
+          price: parseFloat(item.price_snapshot || 0),
+          cost: parseFloat(item.item_cost_price || item.price_snapshot * 0.8),
+          ordered_qty: item.quantity,
+          packed_qty: item.packed_quantity || item.quantity,
+          is_accepted: item.status !== 'REJECTED' && item.is_packed !== false,
+          ai_verified: false,
+          ai_notes: ''
+        }))
+      );
+    }
+  }, [order]);
+
+  // Compute live totals
+  const { packedSubtotal, authorizedAmount, finalTotal, autoReleasedAmount } = useMemo(() => {
+    if (!order) {
+      return { packedSubtotal: 0, authorizedAmount: 0, finalTotal: 0, autoReleasedAmount: 0 };
+    }
+    const subtotal = itemsState.reduce((sum, item) => {
+      return sum + (item.is_accepted ? item.price * item.packed_qty : 0);
+    }, 0);
+
+    const delivery = parseFloat(order.delivery_fee || 0);
+    const packaging = parseFloat(order.packaging_fee || 0);
+    const discount = parseFloat(order.discount_applied || 0) + parseFloat(order.promo_discount || 0) + parseFloat(order.wallet_discount || 0);
+
+    const total = Math.max(0, subtotal + delivery + packaging - discount);
+    const authAmt = parseFloat(order.authorized_amount || order.total_amount || 0);
+    const released = Math.max(0, authAmt - total);
+
+    return {
+      packedSubtotal: subtotal,
+      authorizedAmount: authAmt,
+      finalTotal: total,
+      autoReleasedAmount: released
+    };
+  }, [itemsState, order]);
+
+  if (!isOpen || !order) return null;
 
   // Toggle item accepted / rejected
   const toggleItem = (index) => {
@@ -121,28 +151,6 @@ export default function PackingSettlementModal({
       setVisionScanning(false);
     }
   };
-
-  // Compute live totals
-  const { packedSubtotal, authorizedAmount, finalTotal, autoReleasedAmount } = useMemo(() => {
-    const subtotal = itemsState.reduce((sum, item) => {
-      return sum + (item.is_accepted ? item.price * item.packed_qty : 0);
-    }, 0);
-
-    const delivery = parseFloat(order.delivery_fee || 0);
-    const packaging = parseFloat(order.packaging_fee || 0);
-    const discount = parseFloat(order.discount_applied || 0) + parseFloat(order.promo_discount || 0) + parseFloat(order.wallet_discount || 0);
-
-    const total = Math.max(0, subtotal + delivery + packaging - discount);
-    const authAmt = parseFloat(order.authorized_amount || order.total_amount || 0);
-    const released = Math.max(0, authAmt - total);
-
-    return {
-      packedSubtotal: subtotal,
-      authorizedAmount: authAmt,
-      finalTotal: total,
-      autoReleasedAmount: released
-    };
-  }, [itemsState, order]);
 
   // Execute Dynamic Settlement via Backend
   const handleSettle = async () => {

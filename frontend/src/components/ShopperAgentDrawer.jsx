@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, ShoppingBag, Plus, UtensilsCrossed, ArrowUp, ArrowUpRight, Search, Keyboard, Mic } from "lucide-react";
-import api, { invalidateCache } from "../services/api";
+import * as apiModule from "../services/api";
 import toast from "react-hot-toast";
+
+const api = apiModule.default || apiModule;
 import { useCart } from "../cart-context";
 import { useNavigate } from "../router";
 import { Button } from "@/components/ui/button";
@@ -64,7 +66,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     toggleFavorite,
     flushCartSync,
     cart,
-    storeSettings,
   } = useCart() || {};
   const navigate = useNavigate();
 
@@ -117,13 +118,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   };
 
   const panelRef = useRef(null);
-  const [confirmClear, setConfirmClear] = useState(false);
 
   // Persist shopper chat to localStorage on every update
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_SHOPPER, JSON.stringify(messages.slice(-40)));
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [messages]);
@@ -141,7 +141,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         })
         .catch(() => {});
     }
-  }, []);
+  }, [messages.length]);
 
   const clearShopperHistory = () => {
     setMessages([
@@ -153,12 +153,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     setAddedItems({});
     localStorage.removeItem(STORAGE_KEY_SHOPPER);
     api.delete(`/store/agent/chat/?session_id=${SESSION_ID}&persona=shopper`).catch(() => {});
-  };
-
-  const handleResetChat = () => {
-    clearShopperHistory();
-    setConfirmClear(false);
-    toast.success("Cleared previous conversation");
   };
 
   const executeAutoCheckout = async (act) => {
@@ -217,7 +211,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     }
 
     clearCart?.();
-    invalidateCache();
+    apiModule.invalidateCache?.();
     toast.success(`Order #${orderId} placed!`);
     return {
       type: "ORDER_PLACED",
@@ -245,6 +239,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         session_id: SESSION_ID,
         persona: "shopper",
         ...(requestMode === "voice" ? { mode: "voice" } : {}),
+        cart_items: (cart?.items || []).map((ci) => ({
+          id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
+          name: ci.product_name || ci.name || "Item",
+          price: Number(ci.unit_price ?? ci.price ?? 0),
+          quantity: Number(ci.quantity || 1),
+        })),
         history: newMessages.map((m) => ({ role: m.role, content: m.content })),
       });
 
@@ -286,7 +286,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             finalActions.push(act);
           } else if (type === "UPDATE_CART_QTY") {
             const targetId = Number(act.product_id || act.item?.id);
-            const qty = Math.max(0, Number(act.quantity || 1));
+            const qty = Math.max(0, Number(act.quantity ?? 1));
             const existing = (cart?.items || []).find(
               (ci) => Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id) === targetId,
             );
@@ -312,7 +312,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             const oid = act.order_id;
             if (oid) {
               api.post(`/orders/${oid}/cancel/`).catch(() => {});
-              invalidateCache();
+              apiModule.invalidateCache?.();
               toast.success(`Cancelled Order #${oid}`);
             }
             finalActions.push(act);
@@ -320,6 +320,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             const label = act.label || "Home";
             try {
               localStorage.setItem("cartsettle_preferred_address_label", label);
+              window.dispatchEvent(new CustomEvent("cartsettle:address-switched", { detail: { label } }));
             } catch {}
             toast.success(`Delivery address switched to ${label}`);
             finalActions.push(act);
@@ -410,8 +411,9 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     const prodObj = {
       id: item.id,
       name: item.name,
-      regular_price: item.price || item.regular_price,
+      regular_price: item.regular_price || item.price,
       offer_price: item.price || item.regular_price,
+      price: item.price || item.regular_price,
       unit: item.unit || "1 unit",
       image: item.image || item.thumbnail,
       stock_quantity: 99,
@@ -430,8 +432,9 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         {
           id: it.id,
           name: it.name,
-          regular_price: it.price,
-          offer_price: it.price,
+          regular_price: it.regular_price || it.price,
+          offer_price: it.price || it.regular_price,
+          price: it.price || it.regular_price,
           unit: it.unit || "1 unit",
           stock_quantity: 99,
           added_by_ai: true,
@@ -447,10 +450,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     active: isOpen && mode === "voice",
     onPrompt: (text) => handleSend(text, "voice"),
   });
-  const changeMode = (next) => {
-    voice.stop();
-    setMode(next);
-  };
   const latestReply = [...messages].reverse().find((message) => message.role === "assistant");
 
   useEffect(() => {
@@ -462,7 +461,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     const onKey = (event) => {
       if (event.key === "Escape") {
         voice.stop();
-        setConfirmClear(false);
         onClose();
       }
       if (event.key !== "Tab") return;
@@ -495,7 +493,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const close = () => {
     voice.stop();
     clearShopperHistory();
-    setConfirmClear(false);
     onClose();
   };
   const isWelcome = messages.length === 1;

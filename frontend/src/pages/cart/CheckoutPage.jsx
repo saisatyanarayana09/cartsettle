@@ -143,12 +143,35 @@ export function CheckoutPage() {
         const data = res.data.results || res.data || [];
         setAddresses(data);
         if (data && data.length > 0 && !selectedAddressId) {
-          const defaultAddr = data.find((a) => a.is_default) || data[0];
+          let prefLabel = '';
+          try {
+            prefLabel = localStorage.getItem('cartsettle_preferred_address_label') || '';
+          } catch {}
+          const prefAddr = prefLabel
+            ? data.find(
+                (a) =>
+                  String(a.label || a.address_type || '').toLowerCase() === prefLabel.toLowerCase(),
+              )
+            : null;
+          const defaultAddr = prefAddr || data.find((a) => a.is_default) || data[0];
           setSelectedAddressId(defaultAddr.id);
         }
       })
       .catch(console.error);
   };
+
+  useEffect(() => {
+    const onSwitchAddress = (e) => {
+      const label = e.detail?.label;
+      if (!label || !addresses.length) return;
+      const found = addresses.find(
+        (a) => String(a.label || a.address_type || '').toLowerCase() === String(label).toLowerCase(),
+      );
+      if (found) setSelectedAddressId(found.id);
+    };
+    window.addEventListener('cartsettle:address-switched', onSwitchAddress);
+    return () => window.removeEventListener('cartsettle:address-switched', onSwitchAddress);
+  }, [addresses]);
 
   useEffect(() => {
     if (isCustomer) {

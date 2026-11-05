@@ -4,17 +4,11 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function DisputesModal({ isOpen, onClose }) {
-  if (!isOpen) return null;
-
   const [disputes, setDisputes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [evidenceNotes, setEvidenceNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    fetchDisputes();
-  }, []);
 
   const fetchDisputes = async () => {
     try {
@@ -43,6 +37,14 @@ export default function DisputesModal({ isOpen, onClose }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchDisputes();
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleProvideEvidence = async () => {
     if (!selectedDispute) return;

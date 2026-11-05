@@ -4,11 +4,11 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function BargainModal({ isOpen, onClose, product, onDiscountApplied }) {
-  if (!isOpen || !product) return null;
-
   const [requestedPct, setRequestedPct] = useState(10);
   const [loading, setLoading] = useState(false);
   const [bargainResponse, setBargainResponse] = useState(null);
+
+  if (!isOpen || !product) return null;
 
   const price = parseFloat(product.price || product.unit_price || product.selling_price || 10.0);
 

@@ -1329,7 +1329,7 @@ class AgentService:
             return voice_reply, voice_reply
         return clean, voice_reply
 
-    def chat(self, prompt: str, session_id: str = "default_session", history: list = None, persona: str = "owner", mode: str = "chat") -> dict:
+    def chat(self, prompt: str, session_id: str = "default_session", history: list = None, persona: str = "owner", mode: str = "chat", cart_items: list = None) -> dict:
         """
         Persistent Multi-Turn AI Execution:
         1. Normalizes spoken transcripts & resolves contextual pronouns ("it", "that order")
@@ -1361,7 +1361,7 @@ class AgentService:
         })
 
         # --- Fast-Path Intent Router (< 50ms) ---
-        fast_reply = self._check_fast_path(resolved_prompt, persona, session_id)
+        fast_reply = self._check_fast_path(resolved_prompt, persona, session_id, cart_items=cart_items)
         if fast_reply:
             clean_rep, voice_rep = self._to_concise_human_reply(fast_reply.get("reply", "Done."), mode=mode)
             fast_reply["reply"] = clean_rep
@@ -1766,7 +1766,7 @@ class AgentService:
 
         return [extracted[pid] for pid in order_list]
 
-    def _check_fast_path(self, prompt: str, persona: str, session_id: str) -> dict:
+    def _check_fast_path(self, prompt: str, persona: str, session_id: str, cart_items: list = None) -> dict:
         """Sub-50ms instant execution for all shop operations while strictly blocking Settings."""
         lower = prompt.lower().strip()
 
@@ -2452,6 +2452,11 @@ class AgentService:
             if any(k in lower for k in ["swap", "cheaper alternative", "cheaper option", "replace with cheaper", "lower cost alternative"]):
                 active_prods = [p for p in _get_cached_active_products() if p.stock_quantity > 0]
                 target_prod = self._match_product_from_text(lower)
+                if not target_prod and cart_items and isinstance(cart_items, list):
+                    sorted_ci = sorted(cart_items, key=lambda x: float(x.get("price") or 0), reverse=True)
+                    top_ci = sorted_ci[0] if sorted_ci else None
+                    if top_ci:
+                        target_prod = next((p for p in active_prods if p.id == top_ci.get("id")), None) or self._match_product_from_text(str(top_ci.get("name") or ""))
                 if not target_prod and active_prods:
                     target_prod = max(active_prods, key=lambda x: float(x.offer_price or x.regular_price))
                 if target_prod and active_prods:
