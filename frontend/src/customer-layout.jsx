@@ -38,8 +38,9 @@ import { useSpeechRecognition, useTextToSpeech } from "./hooks/useVoice";
 import api from "./services/api";
 import WelcomeSequence from "./components/welcome/WelcomeSequence";
 import { readWelcomeName } from "./components/welcome/welcome-lifecycle";
+import { showIdleAssistant } from "./components/shopper/search-control.ts";
 
-function GlobalSearchBar({ settings, onActiveChange }) {
+function GlobalSearchBar({ settings, onActiveChange, onOpenAssistant }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -142,6 +143,7 @@ function GlobalSearchBar({ settings, onActiveChange }) {
 
   // Display value combines committed query + live interim voice speech
   const displayValue = isListening && interimTranscript ? interimTranscript : query;
+  const showAskAI = showIdleAssistant({ enabled: Boolean(onOpenAssistant), focused: isFocused, query: displayValue, listening: isListening });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -207,7 +209,9 @@ function GlobalSearchBar({ settings, onActiveChange }) {
   };
 
   return (
-    <div ref={wrapperRef} className="relative w-full">
+    <div ref={wrapperRef} className="relative w-full" onBlurCapture={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) setIsFocused(false);
+    }}>
       <form
         onSubmit={handleSubmit}
         className={`relative flex items-center w-full bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl sm:rounded-2xl border transition-all duration-300 shadow-xs ${
@@ -233,9 +237,6 @@ function GlobalSearchBar({ settings, onActiveChange }) {
             setIsFocused(true);
             if (results.length > 0) setIsOpen(true);
           }}
-          onBlur={() => {
-            setIsFocused(false);
-          }}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") {
               e.preventDefault();
@@ -252,13 +253,15 @@ function GlobalSearchBar({ settings, onActiveChange }) {
             } else if (e.key === "Escape") {
               setIsOpen(false);
               setIsFocused(false);
+              e.currentTarget.blur();
             }
           }}
           placeholder={
             isListening ? "Listening... Speak now" : typewriterText || "Search rice, dal, snacks..."
           }
-          className={`w-full bg-transparent pl-2.5 sm:pl-3 ${
-            displayValue.trim().length > 0 ? "pr-16 sm:pr-24" : "pr-10 sm:pr-12"
+          aria-label="Search products"
+          className={`w-full min-w-0 bg-transparent pl-2.5 sm:pl-3 ${
+            displayValue.trim().length > 0 ? "pr-16 sm:pr-24" : onOpenAssistant ? "pr-10 sm:pr-12 md:pr-24" : "pr-10 sm:pr-12"
           } py-2 sm:py-2.5 outline-none text-xs sm:text-sm text-slate-900 dark:text-white font-medium ${
             isListening
               ? "placeholder:text-rose-500 placeholder:font-medium"
@@ -312,24 +315,40 @@ function GlobalSearchBar({ settings, onActiveChange }) {
           )}
 
           {/* Speech-to-Text Microphone Button inside Right Edge */}
-          <button
+          {showAskAI && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => { setIsOpen(false); onOpenAssistant?.(); }}
+              aria-label="Ask AI"
+              className="hidden md:inline-flex h-8 w-[72px] shrink-0 px-2 text-xs font-bold text-primary hover:bg-accent hover:text-accent-foreground"
+            >
+              Ask AI
+            </Button>
+          )}
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
+            onMouseDown={(event) => event.preventDefault()}
             onClick={handleVoiceToggle}
             title={isListening ? "Listening... Click to stop" : "Search by voice"}
-            className={`relative p-1.5 rounded-lg transition-all flex items-center justify-center ${
+            aria-label={isListening ? "Stop voice search" : "Search by voice"}
+            className={`relative h-8 w-8 shrink-0 p-1.5 rounded-lg transition-all items-center justify-center ${showAskAI ? "flex md:hidden" : "flex"} ${
               isListening
-                ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 scale-105"
-                : "text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-200/60 dark:hover:bg-slate-700"
+                ? "bg-destructive text-destructive-foreground shadow-md scale-105"
+                : "text-muted-foreground hover:text-primary hover:bg-accent"
             }`}
           >
             {isListening && (
-              <span className="absolute inset-0 rounded-lg bg-rose-400 animate-ping opacity-75" />
+              <span className="absolute inset-0 rounded-lg bg-destructive animate-ping opacity-75" />
             )}
             <Mic
               size={16}
-              className={`relative z-10 ${isListening ? "text-white animate-pulse" : ""}`}
+              className={`relative z-10 ${isListening ? "text-destructive-foreground animate-pulse" : ""}`}
             />
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -993,6 +1012,7 @@ function CustomerHeader({
   showNotifications,
   setShowNotifications,
   setIsSearchActive,
+  onOpenAssistant,
   location,
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -1134,9 +1154,9 @@ function CustomerHeader({
           </Link>
 
           {/* Center Search Bar (hidden on Cart & Checkout for funnel focus) */}
-          <div className="flex-1 max-w-2xl mx-2 md:mx-4">
+          <div className="flex-1 min-w-0 max-w-2xl mx-2 md:mx-4">
             {!isCartOrCheckout && (
-              <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+              <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} onOpenAssistant={onOpenAssistant} />
             )}
           </div>
 
@@ -1282,6 +1302,7 @@ export function CustomerLayout({ children }) {
         showNotifications={showNotifications}
         setShowNotifications={setShowNotifications}
         setIsSearchActive={setIsSearchActive}
+        onOpenAssistant={() => setIsShopperAgentOpen(true)}
         location={location}
       />
 
@@ -1362,15 +1383,6 @@ export function CustomerLayout({ children }) {
         </div>
       </nav>
       )}
-
-      {/* Store-themed Shopper Concierge launcher */}
-      <Button
-        onClick={() => setIsShopperAgentOpen(true)}
-        className="shopper-theme fixed hidden md:inline-flex md:bottom-6 right-4 md:right-6 z-40 h-12 gap-2 border border-border bg-background px-4 text-foreground shadow-lg hover:bg-accent"
-        title="Open Shopper AI Concierge"
-      >
-        <span>Ask AI Shopper</span>
-      </Button>
 
       {(isShopperAgentOpen || shopperAgentLoaded) && (
         <Suspense fallback={null}>
