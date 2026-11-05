@@ -977,10 +977,12 @@ function MaintenanceModeOverlay({ settings }) {
 }
 
 /* =========================================================================
-   CustomerHeader Component: Native CSS sticky composition ("Imperceptible Transition")
-   - Mobile: Row 1 (Brand & Actions) scrolls away naturally; Row 2 (Search Bar) sticks smoothly at top:0
+   CustomerHeader Component: Native CSS sticky composition + Horizontal Brand Glide
+   - Mobile Row 1: Static top row (Brand & Actions) that scrolls away naturally (fixed height)
+   - Mobile Row 2: Fixed-height sticky row where CartSettle glides down into the left side
+     of the search bar and search bar decreases width horizontally on scroll
    - Desktop: Unified single-row sticky header with Brand, Wide Search, Account & Cart
-   - 0 JS scroll listeners, 0 layout jumps, 0 flicker!
+   - Zero vertical height changes = 100% immune to scroll-anchoring jumps or flicker!
    ========================================================================= */
 function CustomerHeader({
   storeSettings,
@@ -993,18 +995,40 @@ function CustomerHeader({
   setIsSearchActive,
   location,
 }) {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const topRowRef = useRef(null);
+
+  useEffect(() => {
+    const el = topRowRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsScrolled(!entry.isIntersecting);
+      },
+      { threshold: 0.15 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
       {/* Mobile Row 1: Static Top Brand & Actions (scrolls away naturally with page) */}
-      <div className="sm:hidden flex items-center justify-between px-3.5 py-2.5 bg-white/95 dark:bg-[#0d1322]/95 border-b border-slate-100 dark:border-slate-800/40">
-        {/* Brand Logo with Jewel Dot */}
+      <div
+        ref={topRowRef}
+        className="sm:hidden flex items-center justify-between px-3.5 py-2.5 bg-white/95 dark:bg-[#0d1322]/95 border-b border-slate-100 dark:border-slate-800/40"
+      >
+        {/* Brand Logo (without dot) — glides down as Row 1 scrolls off */}
         <Link
           to="/"
-          className="flex items-center tracking-tight whitespace-nowrap shrink-0 drop-shadow-xs hover:opacity-90 transition-opacity text-xl font-black group"
+          className={`flex items-center tracking-tight whitespace-nowrap shrink-0 drop-shadow-xs hover:opacity-90 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] text-xl font-black ${
+            isScrolled ? "opacity-0 translate-y-2 pointer-events-none" : "opacity-100 translate-y-0"
+          }`}
         >
           <span className="font-black text-slate-900 dark:text-white">Cart</span>
           <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
-          <span className="inline-block size-1.5 rounded-full bg-emerald-500 ml-0.5 mb-1.5 shadow-xs shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
         </Link>
 
         {/* Mobile Header Actions (Notifications + Profile Avatar / Sign In) */}
@@ -1071,22 +1095,39 @@ function CustomerHeader({
         </div>
       </div>
 
-      {/* Mobile Row 2: Sticky Full-Width Search Bar (pins seamlessly at top:0 with frosted glass) */}
+      {/* Mobile Row 2: Fixed-height sticky row — CartSettle glides down into left of Search Bar */}
       <div className="sm:hidden sticky top-0 z-30 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/90 dark:bg-[#0c1220]/90 backdrop-blur-xl px-3.5 py-2 shadow-xs">
-        <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+        <div className="flex items-center w-full">
+          <Link
+            to="/"
+            aria-hidden={!isScrolled}
+            tabIndex={isScrolled ? 0 : -1}
+            className={`flex items-center tracking-tight whitespace-nowrap shrink-0 font-black text-lg overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              isScrolled
+                ? "max-w-[115px] opacity-100 translate-y-0 mr-2.5"
+                : "max-w-0 opacity-0 -translate-y-2.5 mr-0 pointer-events-none"
+            }`}
+          >
+            <span className="font-black text-slate-900 dark:text-white">Cart</span>
+            <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
+          </Link>
+
+          <div className="flex-1 min-w-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
+            <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+          </div>
+        </div>
       </div>
 
       {/* Desktop: Unified Single-Row Sticky Header */}
       <header className="hidden sm:block sticky top-0 z-30 border-b border-slate-200/50 dark:border-slate-800/60 bg-white/85 dark:bg-[#0c1220]/85 backdrop-blur-2xl shadow-xs transition-colors duration-200">
         <div className="mx-auto flex w-full items-center justify-between px-6 py-3 lg:px-8 xl:px-12 gap-6">
-          {/* Brand Logo with Jewel Dot */}
+          {/* Brand Logo (without dot) */}
           <Link
             to="/"
-            className="flex items-center tracking-tight whitespace-nowrap shrink-0 drop-shadow-xs hover:opacity-90 transition-opacity text-2xl lg:text-3xl font-black group"
+            className="flex items-center tracking-tight whitespace-nowrap shrink-0 drop-shadow-xs hover:opacity-90 transition-opacity text-2xl lg:text-3xl font-black"
           >
             <span className="font-black text-slate-900 dark:text-white">Cart</span>
             <span className="font-black text-emerald-600 dark:text-emerald-400">Settle</span>
-            <span className="inline-block size-1.5 rounded-full bg-emerald-500 ml-0.5 mb-1.5 shadow-xs shadow-emerald-500/50 group-hover:scale-125 transition-transform" />
           </Link>
 
           {/* Center Search Bar */}
