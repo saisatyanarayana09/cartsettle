@@ -227,8 +227,19 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     }
   };
 
+  const recordAiAdded = (productId) => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('cartsettle_ai_added_ids') || '[]');
+      if (!stored.includes(productId)) {
+        stored.push(productId);
+        localStorage.setItem('cartsettle_ai_added_ids', JSON.stringify(stored));
+      }
+    } catch {}
+  };
+
   const handleAddToCart = (item) => {
     if (!add || !item) return;
+    recordAiAdded(item.id);
     const prodObj = {
       id: item.id,
       name: item.name,
@@ -237,6 +248,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       unit: item.unit || "1 unit",
       image: item.image || item.thumbnail,
       stock_quantity: 99,
+      added_by_ai: true,
     };
     add(prodObj, item.quantity || 1);
     setAddedItems((prev) => ({ ...prev, [item.id]: true }));
@@ -246,6 +258,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const handleAddAllBasket = (items) => {
     if (!items || !add) return;
     items.forEach((it) => {
+      recordAiAdded(it.id);
       add(
         {
           id: it.id,
@@ -254,6 +267,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           offer_price: it.price,
           unit: it.unit || "1 unit",
           stock_quantity: 99,
+          added_by_ai: true,
         },
         1,
       );

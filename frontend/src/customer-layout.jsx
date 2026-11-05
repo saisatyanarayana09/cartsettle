@@ -1225,6 +1225,7 @@ export function CustomerLayout({ children }) {
     if (isShopperAgentOpen) setShopperAgentLoaded(true);
   }, [isShopperAgentOpen]);
   const location = useLocation();
+  const isCartOrCheckout = location.pathname === "/cart" || location.pathname.startsWith("/checkout");
   const cartCount = cart?.items?.length || 0;
 
   useEffect(() => {
@@ -1259,7 +1260,8 @@ export function CustomerLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-vacation-cream,#f7f5f0)] dark:bg-[#090d16] flex flex-col justify-start text-[var(--color-vacation-charcoal,#323232)] dark:text-slate-100 transition-colors duration-200 antialiased pb-20 md:pb-0">
+    <div className={`min-h-screen bg-[var(--color-vacation-cream,#f7f5f0)] dark:bg-[#090d16] flex flex-col justify-start text-[var(--color-vacation-charcoal,#323232)] dark:text-slate-100 transition-colors duration-200 antialiased ${isCartOrCheckout ? "pb-0" : "pb-20 md:pb-0"}`}>
+
       <TopAnnouncementMarquee settings={storeSettings} />
       <WelcomeScreen />
       <FestivePopupModal settings={storeSettings} />
@@ -1285,7 +1287,8 @@ export function CustomerLayout({ children }) {
         </div>
       </main>
 
-      {/* 54/44 Asymmetric Navigation Bar with Exact 48px Height Parity (strictly mobile & tablet: md:hidden) */}
+      {/* 54/44 Asymmetric Navigation Bar (hidden on Cart & Checkout for funnel focus) */}
+      {!isCartOrCheckout && (
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl px-2.5 sm:px-4 py-2 pb-[calc(0.55rem+env(safe-area-inset-bottom,0px))] shadow-[0_-8px_30px_rgba(0,0,0,0.08)] select-none">
         <div className="flex items-center justify-between w-full h-12">
           {/* Left 54%: Frosted Capsule with Exact h-12 (48px) Height */}
@@ -1353,6 +1356,7 @@ export function CustomerLayout({ children }) {
           </button>
         </div>
       </nav>
+      )}
 
       {/* Store-themed Shopper Concierge launcher */}
       <Button
