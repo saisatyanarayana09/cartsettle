@@ -25,7 +25,13 @@ export default function OrdersHistory() {
   const [error, setError] = useState('');
 
   // Search, Month Filter & Pagination (5 orders per page)
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(() => {
+    if (typeof window !== 'undefined' && window.location?.search) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('q') || '';
+    }
+    return '';
+  });
   const [selectedMonth, setSelectedMonth] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
 

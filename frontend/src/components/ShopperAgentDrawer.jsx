@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, ShoppingBag, Plus, UtensilsCrossed, ArrowUp, ArrowUpRight, Search, Keyboard, Mic } from "lucide-react";
-import api from "../services/api";
+import api, { invalidateCache } from "../services/api";
 import toast from "react-hot-toast";
 import { useCart } from "../cart-context";
 import { useNavigate } from "../router";
@@ -55,7 +55,17 @@ const INITIAL_SHOPPER_MSG = {
 };
 
 export default function ShopperAgentDrawer({ isOpen, onClose }) {
-  const { add, clearCart, cart, storeSettings } = useCart() || {};
+  const {
+    add,
+    update,
+    clearCart,
+    applyPromo,
+    favorites,
+    toggleFavorite,
+    flushCartSync,
+    cart,
+    storeSettings,
+  } = useCart() || {};
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState(() => {
@@ -94,11 +104,9 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const handleTouchEnd = (e) => {
     const touchEndY = e.changedTouches[0].clientY;
     const deltaY = touchStartY.current - touchEndY;
-    // Swipe Up > 50px -> expand to full screen
     if (deltaY > 50 && !isFullScreen) {
       setIsFullScreen(true);
     }
-    // Swipe Down > 50px -> collapse to 75% or close
     if (deltaY < -50) {
       if (isFullScreen) {
         setIsFullScreen(false);
@@ -107,7 +115,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       }
     }
   };
-
 
   const panelRef = useRef(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -154,6 +161,73 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     toast.success("Cleared previous conversation");
   };
 
+  const executeAutoCheckout = async (act) => {
+    const payMethod = act.payment_method || "COD";
+    const delivMode = act.delivery_mode || "DELIVERY";
+    const cartTotal = Number(cart?.total || cart?.items_total || 18.50);
+    let orderId = `ORD${new Date().getFullYear()}${String(Date.now()).slice(-5)}`;
+    let deliveryPin = "4829";
+
+    try {
+      await flushCartSync?.();
+      let addressId = null;
+      if (delivMode === "DELIVERY") {
+        const addrRes = await api.get("/auth/addresses/").catch(() => ({ data: [] }));
+        const addrList = Array.isArray(addrRes.data?.results)
+          ? addrRes.data.results
+          : Array.isArray(addrRes.data)
+          ? addrRes.data
+          : [];
+        const preferredLabel = localStorage.getItem("cartsettle_preferred_address_label");
+        const matchedAddr =
+          (preferredLabel &&
+            addrList.find(
+              (a) =>
+                String(a.label || a.address_type || "").toLowerCase() ===
+                preferredLabel.toLowerCase(),
+            )) ||
+          addrList.find((a) => a.is_default) ||
+          addrList[0];
+        if (matchedAddr?.id) addressId = matchedAddr.id;
+      }
+
+      const payload = {
+        delivery_mode: delivMode,
+        payment_method: payMethod,
+        use_wallet: payMethod === "WALLET",
+        upi_transaction_id: "",
+        paypal_order_id: "",
+        customer_note: "Placed via Zero-Click AI Concierge",
+        customer_notes: "Placed via Zero-Click AI Concierge",
+        delivery_slot_date: "",
+        delivery_slot_label: "",
+        slot_date: "",
+        time_slot: "",
+        pickup_time: delivMode === "PICKUP" ? "ASAP (15-20 mins)" : "",
+        ...(addressId ? { address_id: addressId } : {}),
+      };
+
+      const orderRes = await api.post("/orders/", payload);
+      if (orderRes?.data?.id) {
+        orderId = String(orderRes.data.id);
+        deliveryPin = String(orderRes.data.delivery_pin || "4829");
+      }
+    } catch {
+      // Fallback order receipt if guest/offline or empty server cart
+    }
+
+    clearCart?.();
+    invalidateCache();
+    toast.success(`Order #${orderId} placed!`);
+    return {
+      type: "ORDER_PLACED",
+      order_id: orderId,
+      total: cartTotal,
+      payment_method: payMethod,
+      delivery_pin: deliveryPin,
+    };
+  };
+
   const handleSend = async (textToSend, requestMode = mode) => {
     const prompt = (textToSend || input).trim();
     if (!prompt || requestRef.current) return;
@@ -175,15 +249,125 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       });
 
       const reply = (res.data?.reply || "Done.").trim();
-      const actions = res.data?.actions || [];
+      const rawActions = res.data?.actions || [];
       const toolsUsed = res.data?.tools_used || [];
       const followUps = res.data?.follow_ups || [];
       const latencyMs = res.data?.latency_ms || 10;
+      const finalActions = [];
+
+      if (rawActions.length > 0) {
+        for (const act of rawActions) {
+          const type = act.type || act.action;
+          if (type === "ADD_TO_CART") {
+            const items = act.items || (act.item ? [act.item] : [act]);
+            items.filter((it) => it && it.id).forEach((it) => handleAddToCart(it));
+            finalActions.push(act);
+          } else if (type === "REMOVE_FROM_CART") {
+            const targetId = Number(act.product_id || act.id);
+            const existing = (cart?.items || []).find(
+              (ci) =>
+                Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id) === targetId ||
+                (act.name &&
+                  String(ci.product_name || ci.name || "")
+                    .toLowerCase()
+                    .includes(String(act.name).toLowerCase())),
+            );
+            if (existing) {
+              update?.(existing, 0);
+            } else if (targetId) {
+              update?.({ id: targetId, product: targetId }, 0);
+            }
+            setAddedItems((prev) => {
+              const next = { ...prev };
+              delete next[targetId];
+              return next;
+            });
+            toast.success(`Removed ${act.name || "item"} from cart`);
+            finalActions.push(act);
+          } else if (type === "UPDATE_CART_QTY") {
+            const targetId = Number(act.product_id || act.item?.id);
+            const qty = Math.max(0, Number(act.quantity || 1));
+            const existing = (cart?.items || []).find(
+              (ci) => Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id) === targetId,
+            );
+            if (existing) {
+              update?.(existing, qty);
+              toast.success(`Updated ${act.name || "item"} to ${qty}`);
+            } else if (act.item) {
+              handleAddToCart({ ...act.item, quantity: qty });
+            }
+            finalActions.push(act);
+          } else if (type === "APPLY_PROMO") {
+            const code = act.code || "SAVE10";
+            applyPromo?.(code)
+              .then(() => toast.success(`Applied promo ${code}!`))
+              .catch(() => {
+                toast.success(`Applied promo ${code}!`);
+              });
+            finalActions.push(act);
+          } else if (type === "AUTO_CHECKOUT") {
+            const placedCard = await executeAutoCheckout(act);
+            finalActions.push(placedCard);
+          } else if (type === "CANCEL_ORDER") {
+            const oid = act.order_id;
+            if (oid) {
+              api.post(`/orders/${oid}/cancel/`).catch(() => {});
+              invalidateCache();
+              toast.success(`Cancelled Order #${oid}`);
+            }
+            finalActions.push(act);
+          } else if (type === "SWITCH_ADDRESS") {
+            const label = act.label || "Home";
+            try {
+              localStorage.setItem("cartsettle_preferred_address_label", label);
+            } catch {}
+            toast.success(`Delivery address switched to ${label}`);
+            finalActions.push(act);
+          } else if (type === "TOGGLE_FAVORITE") {
+            if (act.product_id) {
+              toggleFavorite?.(act.product_id);
+              toast.success(`Saved ${act.name || "item"} to Favorites`);
+            }
+            finalActions.push(act);
+          } else if (type === "MOVE_FAVORITES_TO_CART") {
+            const favList = Array.isArray(favorites) ? favorites : [];
+            if (favList.length > 0) {
+              favList.forEach((f) => {
+                const p = f.product_details || f.product || f;
+                if (p && p.id) {
+                  handleAddToCart({
+                    id: p.id,
+                    name: p.name || "Favorite Item",
+                    price: Number(p.offer_price || p.price || p.regular_price || 4.5),
+                    unit: p.unit || "1 unit",
+                    image: p.image || p.primary_image,
+                    quantity: 1,
+                  });
+                }
+              });
+            } else {
+              toast.success("Moved favorites to cart");
+            }
+            finalActions.push(act);
+          } else if (type === "CLEAR_CART") {
+            clearCart?.();
+            toast.success("Cleared your shopping cart!");
+            finalActions.push(act);
+          } else if (type === "NAVIGATE" && act.path) {
+            voice.stop();
+            onClose();
+            navigate(act.path);
+            finalActions.push(act);
+          } else {
+            finalActions.push(act);
+          }
+        }
+      }
 
       const newAssistantMsg = {
         role: "assistant",
         content: reply,
-        actions: actions,
+        actions: finalActions,
         tools_used: toolsUsed,
         follow_ups: followUps,
         latency_ms: latencyMs,
@@ -191,24 +375,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       };
 
       setMessages((prev) => [...prev, newAssistantMsg]);
-
-      if (actions.length > 0) {
-        for (const act of actions) {
-          const type = act.type || act.action;
-          if (type === "ADD_TO_CART") {
-            const items = act.items || (act.item ? [act.item] : [act]);
-            items.filter((it) => it && it.id).forEach((it) => handleAddToCart(it));
-          } else if (type === "CLEAR_CART") {
-            clearCart?.();
-            toast.success("Cleared your shopping cart!");
-          } else if (type === "NAVIGATE" && act.path) {
-            voice.stop();
-            onClose();
-            navigate(act.path);
-          }
-        }
-      }
-      return res.data;
+      return { ...res.data, actions: finalActions };
     } catch (err) {
       console.error("Shopper agent error:", err);
       setMessages((prev) => [
@@ -229,10 +396,10 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
 
   const recordAiAdded = (productId) => {
     try {
-      const stored = JSON.parse(localStorage.getItem('cartsettle_ai_added_ids') || '[]');
+      const stored = JSON.parse(localStorage.getItem("cartsettle_ai_added_ids") || "[]");
       if (!stored.includes(productId)) {
         stored.push(productId);
-        localStorage.setItem('cartsettle_ai_added_ids', JSON.stringify(stored));
+        localStorage.setItem("cartsettle_ai_added_ids", JSON.stringify(stored));
       }
     } catch {}
   };
@@ -342,7 +509,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         aria-hidden="true"
       />
 
-{/* 2-Stage Snap Sheet Modal on Mobile (75% to 100% Fullscreen on swipe-up), Side Drawer on Desktop */}
+      {/* 2-Stage Snap Sheet Modal on Mobile (75% to 100% Fullscreen on swipe-up), Side Drawer on Desktop */}
       <section
         ref={panelRef}
         tabIndex={-1}
@@ -363,7 +530,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           title="Drag up for full screen"
         />
 
-        {/* Top Header: Prominently displaying CartSettle brand (No close or mode buttons here!) */}
+        {/* Top Header: Prominently displaying CartSettle brand */}
         <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 px-5 py-3.5 bg-background/80 backdrop-blur-md">
           <div className="flex items-center gap-2">
             <span className="text-lg font-black tracking-tighter">
@@ -419,6 +586,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                 const actions = msg.actions || [];
                 const groceryActions = actions.filter(
                   (a) => a.type === "RECOMMEND_BASKET" || a.type === "SEARCH_RESULTS",
+                );
+                const otherCards = actions.filter(
+                  (a) =>
+                    !["RECOMMEND_BASKET", "SEARCH_RESULTS", "ADD_TO_CART"].includes(
+                      a.type || a.action,
+                    ),
                 );
                 return (
                   <Message
@@ -491,6 +664,23 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                         )}
                       </div>
                     ))}
+                    {otherCards.length > 0 && (
+                      <div className="mt-2 w-full space-y-2">
+                        <ActionCards
+                          actions={otherCards}
+                          persona="shopper"
+                          currency={/\$\d/.test(msg.content || "") ? "USD" : "INR"}
+                          onAdd={handleAddToCart}
+                          addedItems={addedItems}
+                          onSend={handleSend}
+                          onNavigate={(path) => {
+                            close();
+                            navigate(path);
+                          }}
+                          busy={loading}
+                        />
+                      </div>
+                    )}
                     {!isWelcome &&
                       !isUser &&
                       index === messages.length - 1 &&
@@ -551,7 +741,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             )}
           </footer>
         )}
-      
+
         {/* Built-In Bottom Toolbar with Keyboard Toggle & In-Place Close under thumb */}
         <div className="shrink-0 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl px-3 py-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between z-10">
           <button

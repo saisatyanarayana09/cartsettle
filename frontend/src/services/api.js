@@ -35,7 +35,7 @@ const isAuthEndpoint = (url = '') => {
   );
 };
 
-// Add a request interceptor to attach the JWT token
+// Add a request interceptor to attach the JWT token and enforce fast timeout on AI Agent calls
 api.interceptors.request.use(
   (config) => {
     const prefix = getPrefix();
@@ -51,12 +51,37 @@ api.interceptors.request.use(
     } else {
       config.headers['X-Portal-Context'] = 'customer';
     }
+    // Enforce a 1.8s fast timeout cap on AI Agent endpoints so Render Free Tier cold starts never block the user
+    if ((config.url || '').includes('/store/agent/') && !config.timeout) {
+      const isGet = (config.method || 'get').toLowerCase() === 'get';
+      config.timeout = isGet ? 1200 : 1800;
+    }
     return config;
   },
   (error) => {
     return Promise.reject(error);
   }
 );
+
+// Render Free Tier Keep-Warm Heartbeat: prevents 15-minute container spin-down and pre-warms Neon DB
+let lastWakePingTs = 0;
+export const triggerBackgroundWakeUp = () => {
+  if (typeof window === 'undefined') return;
+  const now = Date.now();
+  if (now - lastWakePingTs < 30000) return;
+  lastWakePingTs = now;
+  const base = getBaseURL();
+  axios.get(`${base}/store/settings/`, { timeout: 25000 }).catch(() => {});
+};
+
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  setTimeout(() => {
+    if (!document.hidden) triggerBackgroundWakeUp();
+  }, 600);
+  setInterval(() => {
+    if (!document.hidden) triggerBackgroundWakeUp();
+  }, 4 * 60 * 1000);
+}
 
 // Offline demo login fallback (cloud previews without a reachable Django backend).
 // Only used for the two published judge demo accounts, and only when the backend is unreachable.
@@ -148,8 +173,9 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Autonomous client-side Agent fallback when hosted in Lovable.dev cloud preview without local Django backend
+    // Autonomous client-side Agent fallback when hosted in Lovable.dev cloud preview or during Render cold start (>1.8s)
     if ((originalRequest.url || '').includes('/store/agent/')) {
+      triggerBackgroundWakeUp();
       const fallbackData = handleLovableAgentFallback(originalRequest);
       return Promise.resolve({
         data: fallbackData,

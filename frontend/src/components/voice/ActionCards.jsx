@@ -222,6 +222,69 @@ function ActionContent({ action, currency, onAdd, addedItems, onSend, onNavigate
         </Button>
       </div>
     );
+  if (type === "BULK_SETTLED")
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <h3 className="font-semibold">{action.count || 0} orders settled</h3>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+            {money(action.total_captured, currency)}
+          </span>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/owner/orders")}>
+          Orders <ArrowUpRight />
+        </Button>
+      </div>
+    );
+  if (type === "ORDER_PLACED")
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <h3 className="font-semibold">Order #{action.order_id} placed</h3>
+          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            {action.payment_method || "COD"}
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Total: {money(action.total, currency)} · Delivery PIN: {action.delivery_pin || "4829"}
+        </p>
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/profile/orders")}>
+          Track Order <ArrowUpRight />
+        </Button>
+      </div>
+    );
+  if (type === "APPLY_PROMO")
+    return (
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <div>
+          <p className="font-semibold">Promo {action.code} applied</p>
+          <p className="text-xs text-muted-foreground">{action.discount_pct || 10}% savings unlocked</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/cart")}>
+          View Bag <ArrowUpRight />
+        </Button>
+      </div>
+    );
+  if (type === "SWAP_SUMMARY")
+    return (
+      <div className="space-y-1.5 text-sm">
+        <p className="font-semibold">
+          Swapped {action.removed?.name} → {action.added?.name}
+        </p>
+        <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+          Saved {money(action.savings, currency)} instantly
+        </p>
+      </div>
+    );
+  if (type === "CANCEL_ORDER")
+    return (
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <span className="font-semibold">Order #{action.order_id} cancelled</span>
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/profile/orders")}>
+          Orders <ArrowUpRight />
+        </Button>
+      </div>
+    );
   return null;
 }
 
@@ -238,6 +301,11 @@ const visibleTypes = new Set([
   "CATALOG_SUMMARY",
   "MARGIN_LIST",
   "PRODUCT_UPDATED",
+  "BULK_SETTLED",
+  "ORDER_PLACED",
+  "APPLY_PROMO",
+  "SWAP_SUMMARY",
+  "CANCEL_ORDER",
 ]);
 export function ActionCards({ actions = [], ...props }) {
   const reduced = useReducedMotion();

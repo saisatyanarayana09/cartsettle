@@ -81,9 +81,13 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
           navigate(action.path);
         }
         if (
-          ["REFRESH_DATA", "ORDER_SETTLED", "PRODUCT_UPDATED", "PAYOUT_RECEIPT"].includes(
-            action.type,
-          )
+          [
+            "REFRESH_DATA",
+            "ORDER_SETTLED",
+            "BULK_SETTLED",
+            "PRODUCT_UPDATED",
+            "PAYOUT_RECEIPT",
+          ].includes(action.type)
         ) {
           invalidateCache();
           window.dispatchEvent(new Event("focus"));

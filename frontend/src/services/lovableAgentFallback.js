@@ -48,6 +48,57 @@ const MODIFIER_WORDS = new Set([
   'bottle', 'jar', 'box', 'loaf',
 ]);
 
+function getLiveCatalog() {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('sk_cache_/products/')) {
+          const parsed = JSON.parse(localStorage.getItem(k));
+          const list = Array.isArray(parsed?.data?.results)
+            ? parsed.data.results
+            : Array.isArray(parsed?.data)
+            ? parsed.data
+            : null;
+          if (list && list.length > 0) {
+            return list.map((p) => {
+              const sell = Number(p.offer_price || p.price || p.regular_price || 4.99);
+              const reg = Number(p.regular_price || sell);
+              const cost = Number(p.cost_price || (sell * 0.78).toFixed(2));
+              const marginPct = sell > 0 ? Number((((sell - cost) / sell) * 100).toFixed(1)) : 20.0;
+              const minSafe = Number((cost / 0.88).toFixed(2));
+              const maxDisc = sell > 0 ? Math.max(0, Number((((sell - minSafe) / sell) * 100).toFixed(1))) : 10.0;
+              const stockQty = Number(p.stock_quantity ?? p.stock ?? 20);
+              return {
+                id: p.id,
+                name: p.name,
+                unit: p.unit || '1 unit',
+                price: sell,
+                regular_price: reg,
+                offer_price: sell,
+                cost_price: cost,
+                stock: stockQty,
+                stock_quantity: stockQty,
+                category: p.category_name || p.category?.name || (typeof p.category === 'string' ? p.category : 'Groceries'),
+                category_name: p.category_name || p.category?.name || 'Groceries',
+                margin_pct: marginPct,
+                max_safe_discount_pct: maxDisc,
+                best_deal_price: minSafe < sell ? minSafe : sell,
+                image: p.image || p.primary_image || p.thumbnail || null,
+                thumbnail: p.thumbnail || p.image || p.primary_image || null,
+                aliases: [],
+              };
+            });
+          }
+        }
+      }
+    } catch {
+      // ignore localStorage read errors
+    }
+  }
+  return DEMO_PRODUCTS;
+}
+
 function stemWord(w) {
   if (w.endsWith('ies') && w.length > 4) return `${w.slice(0, -3)}y`;
   if (w.endsWith('oes') && w.length > 4) return w.slice(0, -2);
@@ -61,8 +112,9 @@ function matchProductsFromText(text, limit = 6) {
   const qTokens = (lower.match(/[a-z]+/g) || []).filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
   if (qTokens.length === 0) return [];
 
+  const catalog = getLiveCatalog();
   const scored = [];
-  for (const p of DEMO_PRODUCTS) {
+  for (const p of catalog) {
     const pLower = p.name.toLowerCase();
     const pTokens = (pLower.match(/[a-z]+/g) || []).filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
     const allWords = [...pTokens, ...(p.aliases || [])];
@@ -398,40 +450,78 @@ export function handleLovableAgentFallback(config) {
     actions = [{ type: 'PENDING_ORDERS', orders: pending }];
     tools_used = [{ name: 'get_pending_packing_orders', args: {} }];
   }
-  // 4. Settle order
-  else if (lower.includes('settle') || lower.includes('capture')) {
-    const ordMatch = lower.match(/\b(ord\d+\w*)\b/i);
-    const targetId = ordMatch ? ordMatch[1].toUpperCase() : (mem.last_order_id || 'ORD202600002');
-    const found = DEMO_ORDERS.find((o) => o.id === targetId) || DEMO_ORDERS[3];
-    found.status = 'READY';
-    found.captured_amount = Number((found.total_amount * 0.92).toFixed(2));
-    found.released_amount = Number((found.authorized_amount - found.captured_amount).toFixed(2));
-    reply = `Order #${found.id} settled for $${found.captured_amount.toFixed(2)}.`;
-    actions = [
-      { type: 'ORDER_SETTLED', order_id: found.id, captured: found.captured_amount, released: found.released_amount },
-      { type: 'REFRESH_DATA' },
-    ];
-    tools_used = [{ name: 'auto_settle_order_packing', args: { order_id: found.id } }];
+  // 4. Settle order (Single or Bulk All Pending)
+  else if (lower.includes('settle') || lower.includes('capture') || lower.includes('pack all') || lower.includes('accept all pending')) {
+    if ((lower.includes('all') || lower.includes('pending orders')) && persona === 'owner') {
+      const pending = DEMO_ORDERS.filter((o) => ['NEW', 'ACCEPTED', 'PREPARING'].includes(o.status));
+      let totalCap = 0;
+      const settledIds = [];
+      for (const po of pending) {
+        po.status = 'READY';
+        po.captured_amount = Number((po.total_amount * 0.92).toFixed(2));
+        po.released_amount = Number((po.authorized_amount - po.captured_amount).toFixed(2));
+        totalCap += po.captured_amount;
+        settledIds.push(po.id);
+      }
+      reply = settledIds.length
+        ? `Settled ${settledIds.length} pending orders ($${totalCap.toFixed(2)} total PayPal captured).`
+        : 'All orders are already settled.';
+      actions = [
+        { type: 'BULK_SETTLED', count: settledIds.length, total_captured: Number(totalCap.toFixed(2)), orders: settledIds },
+        { type: 'REFRESH_DATA' },
+      ];
+      tools_used = [{ name: 'auto_settle_order_packing', args: { batch_count: settledIds.length } }];
+    } else {
+      const ordMatch = lower.match(/\b(ord\d+\w*)\b/i);
+      const targetId = ordMatch ? ordMatch[1].toUpperCase() : (mem.last_order_id || 'ORD202600002');
+      const found = DEMO_ORDERS.find((o) => o.id === targetId) || DEMO_ORDERS[3];
+      found.status = 'READY';
+      found.captured_amount = Number((found.total_amount * 0.92).toFixed(2));
+      found.released_amount = Number((found.authorized_amount - found.captured_amount).toFixed(2));
+      reply = `Order #${found.id} settled for $${found.captured_amount.toFixed(2)}.`;
+      actions = [
+        { type: 'ORDER_SETTLED', order_id: found.id, captured: found.captured_amount, released: found.released_amount },
+        { type: 'REFRESH_DATA' },
+      ];
+      tools_used = [{ name: 'auto_settle_order_packing', args: { order_id: found.id } }];
+    }
   }
-  // 5. Accept / Prepare / Dispatch / Deliver order
+  // 5. Accept / Prepare / Dispatch / Deliver / Cancel order
   else if (['accept', 'prepare', 'dispatch', 'deliver', 'reject', 'cancel'].some((w) => lower.includes(w)) && (lower.includes('order') || /ord\d+/i.test(lower))) {
     const ordMatch = lower.match(/\b(ord\d+\w*)\b/i);
     const targetId = ordMatch ? ordMatch[1].toUpperCase() : (mem.last_order_id || 'ORD202600002');
     const found = DEMO_ORDERS.find((o) => o.id === targetId) || DEMO_ORDERS[3];
-    if (lower.includes('accept')) found.status = 'ACCEPTED';
-    else if (lower.includes('prepare')) found.status = 'PREPARING';
-    else if (lower.includes('dispatch')) found.status = 'OUT_FOR_DELIVERY';
-    else if (lower.includes('deliver')) found.status = 'DELIVERED';
-    else found.status = 'REJECTED';
-    reply = `Order #${found.id} marked ${found.status}.`;
-    actions = [{ type: 'ORDER_CARD', order: found }, { type: 'REFRESH_DATA' }];
-    tools_used = [{ name: 'update_order_status', args: { order_id: found.id, new_status: found.status } }];
+    if (persona === 'shopper' && lower.includes('cancel')) {
+      found.status = 'CANCELLED';
+      reply = `Cancelled Order #${found.id}.`;
+      actions = [{ type: 'CANCEL_ORDER', order_id: found.id }, { type: 'REFRESH_DATA' }];
+      tools_used = [{ name: 'cancel_shopper_order', args: { order_id: found.id } }];
+    } else {
+      if (lower.includes('accept')) found.status = 'ACCEPTED';
+      else if (lower.includes('prepare')) found.status = 'PREPARING';
+      else if (lower.includes('dispatch')) found.status = 'OUT_FOR_DELIVERY';
+      else if (lower.includes('deliver')) found.status = 'DELIVERED';
+      else found.status = 'REJECTED';
+      reply = `Order #${found.id} marked ${found.status}.`;
+      actions = [{ type: 'ORDER_CARD', order: found }, { type: 'REFRESH_DATA' }];
+      tools_used = [{ name: 'update_order_status', args: { order_id: found.id, new_status: found.status } }];
+    }
   }
-  // 6. Update product stock or price
-  else if ((lower.includes('update') || lower.includes('set') || lower.includes('change')) && (lower.includes('stock') || lower.includes('price'))) {
-    const prod = matchSingleProduct(prompt) || DEMO_PRODUCTS[0];
+  // 6. Update product stock or price (or Shopper Cart Quantity Update)
+  else if ((lower.includes('update') || lower.includes('set') || lower.includes('change')) && (lower.includes('stock') || lower.includes('price') || lower.includes('quantity') || lower.includes('qty') || lower.includes('cart') || lower.includes('bag'))) {
+    const prod = matchSingleProduct(prompt) || getLiveCatalog()[0];
     const numMatch = lower.match(/(\d+(?:\.\d+)?)/g);
     const val = numMatch ? Number(numMatch[numMatch.length - 1]) : 40;
+    if (persona === 'shopper' && (lower.includes('quantity') || lower.includes('qty') || lower.includes('cart') || lower.includes('bag'))) {
+      const targetQty = Math.max(0, Math.round(val));
+      const cardItem = serializeCardItem(prod, Math.max(1, targetQty));
+      reply = targetQty === 0 ? `Removed ${prod.name} from your cart.` : `Updated ${prod.name} quantity to ${targetQty} in your cart.`;
+      actions = targetQty === 0
+        ? [{ type: 'REMOVE_FROM_CART', product_id: prod.id, name: prod.name }]
+        : [{ type: 'UPDATE_CART_QTY', product_id: prod.id, name: prod.name, quantity: targetQty, item: cardItem }];
+      tools_used = [{ name: 'update_cart_quantity', args: { product_id: prod.id, quantity: targetQty } }];
+      return { reply, voice_reply: reply, mode, actions, tools_used, follow_ups, latency_ms: 12 };
+    }
     if (lower.includes('price')) {
       prod.price = val;
       prod.regular_price = val;
@@ -445,27 +535,52 @@ export function handleLovableAgentFallback(config) {
     actions = [{ type: 'PRODUCT_UPDATED', product: { id: prod.id, name: prod.name, price: prod.price, stock: prod.stock_quantity, stock_quantity: prod.stock_quantity, margin_pct: prod.margin_pct } }, { type: 'REFRESH_DATA' }];
     tools_used = [{ name: 'update_product_inventory', args: { product_name: prod.name } }];
   }
-  // 7. Restock / PayPal Payout
-  else if (lower.includes('restock') || lower.includes('payout') || lower.includes('supplier')) {
-    const prod = matchSingleProduct(prompt) || DEMO_PRODUCTS[0];
-    const cleanedNum = lower.replace(/\$\d+(?:\.\d+)?|\d+\s*(?:lb|oz|ct|gal)\b/gi, '');
-    const numMatch = cleanedNum.match(/\b(\d+)\b/);
-    const qty = numMatch ? Number(numMatch[1]) : 15;
-    prod.stock_quantity += qty;
-    prod.stock = prod.stock_quantity;
-    const paid = Number((qty * prod.cost_price).toFixed(2));
-    const receipt = {
-      status: 'SUCCESS',
-      payout_batch_id: `PAYOUT_SBX_${Date.now().toString().slice(-6)}`,
-      amount_paid: paid,
-      supplier: 'wholesale@kirana.com',
-      product: prod.name,
-      quantity: qty,
-      new_stock: prod.stock_quantity,
-    };
-    reply = `Paid $${paid.toFixed(2)} to restock ${qty} ${prod.name}.`;
-    actions = [{ type: 'PAYOUT_RECEIPT', receipt }, { type: 'REFRESH_DATA' }];
-    tools_used = [{ name: 'execute_supplier_restock_payout', args: { product_name: prod.name, quantity: qty } }];
+  // 7. Restock / PayPal Payout (Single or Bulk All Low-Stock)
+  else if (lower.includes('restock') || lower.includes('payout') || lower.includes('supplier') || lower.includes('replenish all')) {
+    if (lower.includes('all') || lower.includes('low stock')) {
+      const lowProds = DEMO_PRODUCTS.filter((p) => p.stock_quantity <= 10);
+      const targets = lowProds.length ? lowProds : DEMO_PRODUCTS.slice(0, 3);
+      let totalPaid = 0;
+      const names = [];
+      for (const p of targets) {
+        p.stock_quantity += 20;
+        p.stock = p.stock_quantity;
+        totalPaid += 20 * p.cost_price;
+        names.push(p.name);
+      }
+      const receipt = {
+        status: 'SUCCESS',
+        payout_batch_id: `PAYOUT_BATCH_${Date.now().toString().slice(-6)}`,
+        amount_paid: Number(totalPaid.toFixed(2)),
+        supplier: 'wholesale@kirana.com',
+        product: `${names.length} items (${names.slice(0, 3).join(', ')})`,
+        quantity: names.length * 20,
+        new_stock: 'Replenished (+20 each)',
+      };
+      reply = `Restocked ${names.length} low-stock items for $${totalPaid.toFixed(2)} total.`;
+      actions = [{ type: 'PAYOUT_RECEIPT', receipt }, { type: 'REFRESH_DATA' }];
+      tools_used = [{ name: 'execute_supplier_restock_payout', args: { batch: names } }];
+    } else {
+      const prod = matchSingleProduct(prompt) || DEMO_PRODUCTS[0];
+      const cleanedNum = lower.replace(/\$\d+(?:\.\d+)?|\d+\s*(?:lb|oz|ct|gal)\b/gi, '');
+      const numMatch = cleanedNum.match(/\b(\d+)\b/);
+      const qty = numMatch ? Number(numMatch[1]) : 15;
+      prod.stock_quantity += qty;
+      prod.stock = prod.stock_quantity;
+      const paid = Number((qty * prod.cost_price).toFixed(2));
+      const receipt = {
+        status: 'SUCCESS',
+        payout_batch_id: `PAYOUT_SBX_${Date.now().toString().slice(-6)}`,
+        amount_paid: paid,
+        supplier: 'wholesale@kirana.com',
+        product: prod.name,
+        quantity: qty,
+        new_stock: prod.stock_quantity,
+      };
+      reply = `Paid $${paid.toFixed(2)} to restock ${qty} ${prod.name}.`;
+      actions = [{ type: 'PAYOUT_RECEIPT', receipt }, { type: 'REFRESH_DATA' }];
+      tools_used = [{ name: 'execute_supplier_restock_payout', args: { product_name: prod.name, quantity: qty } }];
+    }
   }
   // 8. Low stock check
   else if (lower.includes('low stock') || lower.includes('inventory health') || lower.includes('out of stock')) {
@@ -484,6 +599,127 @@ export function handleLovableAgentFallback(config) {
     reply = low.length ? `${low.length} items low on stock: ${summary}.` : 'All store inventory is healthy.';
     actions = [{ type: 'LOW_STOCK_LIST', items: low }];
     tools_used = [{ name: 'get_inventory_health', args: {} }];
+  }
+  // 8b. Suite 1A: Zero-Click Order Placement ("place my order", "checkout now", "buy my cart", "pay with cod", "pay with wallet")
+  else if (
+    persona === 'shopper' &&
+    ['place order', 'place my order', 'checkout now', 'complete order', 'complete checkout', 'buy my cart', 'order my cart', 'pay with cod', 'pay with cash', 'pay with wallet', 'instant checkout'].some((k) => lower.includes(k))
+  ) {
+    const payMethod = lower.includes('wallet') ? 'WALLET' : 'COD';
+    const delivMode = lower.includes('pickup') ? 'PICKUP' : 'DELIVERY';
+    const payLabel = payMethod === 'WALLET' ? 'Wallet' : 'Cash on Delivery';
+    reply = `Placed your order with ${payLabel}.`;
+    actions = [{ type: 'AUTO_CHECKOUT', payment_method: payMethod, delivery_mode: delivMode }];
+    tools_used = [{ name: 'auto_place_order', args: { payment_method: payMethod, delivery_mode: delivMode } }];
+  }
+  // 8c. Suite 1B: Zero-Click Apply Promo Code ("apply promo SAVE10", "apply best coupon", "use coupon FRESH15")
+  else if (
+    persona === 'shopper' &&
+    ['apply ', 'use ', 'best '].some((w) => lower.includes(w)) &&
+    ['promo', 'coupon', 'code', 'save10', 'fresh15', 'flash'].some((w) => lower.includes(w))
+  ) {
+    const codeMatch = prompt.toUpperCase().match(/\b(SAVE\d+|FRESH\d+|FLASH\d+|[A-Z0-9]{5,12})\b/);
+    const ignored = new Set(['APPLY', 'PROMO', 'COUPON', 'CODES', 'BEST', 'DISCOUNT', 'PLEASE']);
+    const codeStr = codeMatch && !ignored.has(codeMatch[1]) ? codeMatch[1] : 'SAVE10';
+    reply = `Applied promo code ${codeStr} to your cart.`;
+    actions = [{ type: 'APPLY_PROMO', code: codeStr, discount_pct: 10 }];
+    tools_used = [{ name: 'apply_promo_code', args: { code: codeStr } }];
+  }
+  // 8d. Suite 1C: Zero-Click Reorder Last Order ("reorder my last order", "repeat last order", "buy again")
+  else if (
+    persona === 'shopper' &&
+    ['reorder', 'repeat last order', 'repeat my order', 'repeat previous order', 'buy again', 'same order again'].some((k) => lower.includes(k))
+  ) {
+    const catalog = getLiveCatalog();
+    const cards = catalog.slice(0, 3).map((p) => serializeCardItem(p, 1));
+    const totalVal = cards.reduce((s, c) => s + c.price * c.quantity, 0);
+    reply = `Reordered ${cards.length} items from your last order ($${totalVal.toFixed(2)} total).`;
+    actions = cards.map((c) => ({ type: 'ADD_TO_CART', item: c }));
+    tools_used = [{ name: 'reorder_last_order', args: { count: cards.length } }];
+  }
+  // 8e. Suite 2A: Smart Budget Cart Builder ("build a cart under $20", "grocery bag under $15", "weekly essentials")
+  else if (
+    persona === 'shopper' &&
+    (['build a cart', 'build cart', 'cart under', 'bag under', 'fill my cart', 'budget cart', 'weekly essential', 'essential bag', 'grocery bag'].some((k) => lower.includes(k)) ||
+      ((lower.includes('cart') || lower.includes('bag')) && /(?:under|for|within)\s*\$?\d+/.test(lower)))
+  ) {
+    const bMatch = lower.match(/\$?(\d+(?:\.\d+)?)/);
+    let budget = bMatch ? Number(bMatch[1]) : 20.0;
+    if (budget < 3) budget = 15.0;
+    const catalog = [...getLiveCatalog()].sort((a, b) => a.price - b.price);
+    const chosen = [];
+    let runningTotal = 0;
+    for (const p of catalog) {
+      if (runningTotal + p.price <= budget && chosen.length < 6) {
+        chosen.push(serializeCardItem(p, 1));
+        runningTotal += p.price;
+      }
+    }
+    if (chosen.length === 0 && catalog.length > 0) {
+      chosen.push(serializeCardItem(catalog[0], 1));
+      runningTotal = chosen[0].price;
+    }
+    reply = `Added ${chosen.length} essentials to your cart for $${runningTotal.toFixed(2)} (within $${budget} budget).`;
+    actions = chosen.map((c) => ({ type: 'ADD_TO_CART', item: c }));
+    tools_used = [{ name: 'build_budget_cart', args: { budget, items_added: chosen.length } }];
+  }
+  // 8f. Suite 2B: Cheaper Alternative Swap ("swap with cheaper alternative", "replace expensive item", "cheaper option")
+  else if (
+    persona === 'shopper' &&
+    ['swap', 'cheaper alternative', 'cheaper option', 'replace with cheaper', 'lower cost alternative'].some((k) => lower.includes(k))
+  ) {
+    const catalog = getLiveCatalog();
+    const targetProd = matchSingleProduct(prompt) || [...catalog].sort((a, b) => b.price - a.price)[0];
+    const cheaperCandidates = catalog.filter((p) => p.id !== targetProd.id && p.price < targetProd.price);
+    const cheaperProd = cheaperCandidates.length
+      ? cheaperCandidates.sort((a, b) => a.price - b.price)[0]
+      : [...catalog].sort((a, b) => a.price - b.price)[0];
+    const oldCard = serializeCardItem(targetProd, 1);
+    const newCard = serializeCardItem(cheaperProd, 1);
+    const savings = Math.max(0.50, Number((oldCard.price - newCard.price).toFixed(2)));
+    reply = `Swapped ${oldCard.name} for ${newCard.name} at $${newCard.price.toFixed(2)} (saved $${savings.toFixed(2)}).`;
+    actions = [
+      { type: 'REMOVE_FROM_CART', product_id: oldCard.id, name: oldCard.name },
+      { type: 'ADD_TO_CART', item: newCard },
+      { type: 'SWAP_SUMMARY', removed: oldCard, added: newCard, savings },
+    ];
+    tools_used = [{ name: 'swap_cheaper_alternative', args: { removed: oldCard.name, added: newCard.name } }];
+  }
+  // 8g. Suite 4A/4B/4C: Switch Address, Wishlist/Favorites, Filter Orders
+  else if (
+    persona === 'shopper' &&
+    ['switch address', 'change address', 'deliver to home', 'deliver to work', 'deliver to office', 'use home address', 'use work address'].some((k) => lower.includes(k))
+  ) {
+    const label = lower.includes('work') ? 'Work' : (lower.includes('office') ? 'Office' : 'Home');
+    reply = `Switched your active delivery address to ${label}.`;
+    actions = [{ type: 'SWITCH_ADDRESS', label }];
+    tools_used = [{ name: 'switch_delivery_address', args: { label } }];
+  } else if (
+    persona === 'shopper' &&
+    ['favorites to cart', 'wishlist to cart', 'buy my favorites', 'add all favorites'].some((k) => lower.includes(k))
+  ) {
+    reply = 'Added your saved favorites to your cart.';
+    actions = [{ type: 'MOVE_FAVORITES_TO_CART' }];
+    tools_used = [{ name: 'move_favorites_to_cart', args: {} }];
+  } else if (
+    persona === 'shopper' &&
+    ['to favorites', 'to wishlist', 'save to favorite', 'favorite ', 'wishlist '].some((k) => lower.includes(k))
+  ) {
+    const prod = matchSingleProduct(prompt) || getLiveCatalog()[0];
+    const card = serializeCardItem(prod, 1);
+    reply = `Saved ${prod.name} to your favorites.`;
+    actions = [{ type: 'TOGGLE_FAVORITE', product_id: prod.id, name: prod.name, item: card }];
+    tools_used = [{ name: 'toggle_favorite_product', args: { product_id: prod.id } }];
+  } else if (
+    persona === 'shopper' &&
+    lower.includes('order') &&
+    ['delivered', 'cancelled', 'pending', 'processing', 'this month', 'filter'].some((k) => lower.includes(k))
+  ) {
+    const qTerm = lower.includes('delivered') ? 'DELIVERED' : (lower.includes('cancelled') ? 'CANCELLED' : (lower.includes('pending') ? 'PENDING' : ''));
+    const path = qTerm ? `/profile/orders?q=${qTerm}` : '/profile/orders';
+    reply = `Showing your ${qTerm.toLowerCase() || 'filtered'} orders.`;
+    actions = [{ type: 'NAVIGATE', path }];
+    tools_used = [{ name: 'filter_shopper_orders', args: { filter: qTerm } }];
   }
   // 9. Margin / Discount negotiation
   else if (lower.includes('margin') || lower.includes('discount') || lower.includes('% off') || lower.includes('bargain')) {
