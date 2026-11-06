@@ -168,12 +168,18 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+  const OWNER_STARTERS = [
+    { label: "Settle all pending orders", prompt: "Settle all pending orders" },
+    { label: "Restock low stock", prompt: "Restock all low stock items" },
+    { label: "Discount all dairy 10%", prompt: "Discount all dairy by 10%" },
+    { label: "Today sales summary", prompt: "Show today's sales summary" },
+  ];
   const cards = (message, key) => (
     <ActionCards
       key={key}
       actions={message?.actions}
       persona="owner"
-      currency={/\$\d/.test(message?.content || "") ? "USD" : "INR"}
+      currency="USD"
       onSend={sendAction}
       onNavigate={openRoute}
       busy={loading}
@@ -190,9 +196,14 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
       className="shopper-panel shopper-theme flex flex-col overflow-hidden border-border bg-background text-foreground outline-none"
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-4">
-        <h2 id="copilot-title" className="min-w-0 text-base font-bold">
-          Store desk
-        </h2>
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 id="copilot-title" className="min-w-0 text-base font-bold">
+            Store desk
+          </h2>
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+            Zero-Click AI
+          </span>
+        </div>
         <div className="flex shrink-0 items-center gap-0.5">
           <ModeSwitch
             mode={mode}
@@ -230,8 +241,28 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
         </div>
       )}
       {mode === "voice" ? (
-        <VoiceView voice={voice} busy={loading}>
+        <VoiceView
+          voice={voice}
+          busy={loading}
+          replyText={messages.length > 1 ? latest?.content : undefined}
+        >
           {cards(latest, messages.length)}
+          {messages.length === 1 && (
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              {OWNER_STARTERS.map(({ label, prompt }) => (
+                <Button
+                  key={label}
+                  variant="outline"
+                  size="sm"
+                  disabled={loading}
+                  className="h-auto py-2.5 px-3 text-xs font-semibold justify-start text-left whitespace-normal"
+                  onClick={() => sendAction(prompt)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          )}
         </VoiceView>
       ) : (
         <>
@@ -265,14 +296,15 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
               </div>
             ))}
             {messages.length === 1 && (
-              <div className="flex flex-wrap gap-2">
-                {["Latest order", "Pending orders", "Low stock"].map((label) => (
+              <div className="grid grid-cols-2 gap-2">
+                {OWNER_STARTERS.map(({ label, prompt }) => (
                   <Button
                     key={label}
                     variant="outline"
                     size="sm"
                     disabled={loading}
-                    onClick={() => sendAction(`Show ${label.toLowerCase()}`)}
+                    className="h-auto py-2.5 px-3 text-xs font-semibold justify-start text-left whitespace-normal"
+                    onClick={() => sendAction(prompt)}
                   >
                     {label}
                   </Button>

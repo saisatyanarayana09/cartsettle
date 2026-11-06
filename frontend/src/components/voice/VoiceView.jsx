@@ -47,7 +47,13 @@ const STATUS_TEXT = {
   speaking: "Speaking",
 };
 
-export function VoiceView({ voice, children, busy, hint = "Tap the orb and start talking" }) {
+export function VoiceView({
+  voice,
+  children,
+  busy,
+  hint = "Tap the orb and start talking",
+  replyText,
+}) {
   const status = busy && voice.status !== "speaking" ? "working" : voice.status;
   const label =
     voice.status === "listening"
@@ -57,7 +63,7 @@ export function VoiceView({ voice, children, busy, hint = "Tap the orb and start
         : "Start microphone";
   return (
     <div className="voice-stage min-h-0 flex-1 overflow-y-auto px-5">
-      <div className="flex min-h-[46dvh] flex-col items-center justify-center gap-8 py-8">
+      <div className="flex min-h-[42dvh] flex-col items-center justify-center gap-6 py-6">
         <button
           type="button"
           aria-label={label}
@@ -85,9 +91,10 @@ export function VoiceView({ voice, children, busy, hint = "Tap the orb and start
           <p
             role="status"
             aria-live="polite"
-            className="mx-auto min-h-14 max-w-sm text-xl font-semibold leading-snug text-foreground"
+            className="mx-auto min-h-12 max-w-sm text-lg font-semibold leading-snug text-foreground"
           >
             {voice.transcript ||
+              replyText ||
               (status === "listening"
                 ? "Go ahead"
                 : status === "idle" || status === "paused"

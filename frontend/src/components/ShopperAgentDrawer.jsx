@@ -28,9 +28,11 @@ import { ModeSwitch, PanelMenu, VoiceView } from "./voice/VoiceView";
 import { ActionCards } from "./voice/ActionCards";
 
 const STARTERS = [
+  { label: "Build a cart under $20", prompt: "Build a cart under $20", icon: ShoppingBag },
   { label: "Find groceries", prompt: "Help me find groceries from the store", icon: Search },
-  { label: "Plan a meal", prompt: "Suggest a dinner recipe basket", icon: UtensilsCrossed },
   { label: "Explore deals", prompt: "Show me grocery deals", icon: ShoppingBag },
+  { label: "Reorder last order", prompt: "Reorder my last order", icon: UtensilsCrossed },
+  { label: "Place my order", prompt: "Place my order", icon: ArrowUpRight },
 ];
 
 function IconControl({ label, children, ...props }) {
@@ -76,11 +78,13 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("voice");
+  const [confirmClear, setConfirmClear] = useState(false);
   useEffect(() => {
     const handler = (e) => {
       if (e.detail) {
-        setMode(e.detail);
-        if (e.detail === "text") {
+        const nextMode = e.detail === "text" ? "chat" : e.detail;
+        setMode(nextMode);
+        if (nextMode === "chat") {
           setTimeout(() => {
             const textarea = panelRef.current?.querySelector("textarea");
             textarea?.focus();
@@ -234,17 +238,22 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     setLoading(true);
 
     try {
+      const liveCartItems = Array.isArray(cart?.items) ? cart.items : [];
       const res = await api.post("/store/agent/chat/", {
         prompt: prompt,
         session_id: SESSION_ID,
         persona: "shopper",
         ...(requestMode === "voice" ? { mode: "voice" } : {}),
-        cart_items: (cart?.items || []).map((ci) => ({
-          id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
-          name: ci.product_name || ci.name || "Item",
-          price: Number(ci.unit_price ?? ci.price ?? 0),
-          quantity: Number(ci.quantity || 1),
-        })),
+        ...(liveCartItems.length > 0
+          ? {
+              cart_items: liveCartItems.map((ci) => ({
+                id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
+                name: ci.product_name || ci.name || "Item",
+                price: Number(ci.unit_price ?? ci.price ?? 0),
+                quantity: Number(ci.quantity || 1),
+              })),
+            }
+          : {}),
         history: newMessages.map((m) => ({ role: m.role, content: m.content })),
       });
 
@@ -492,10 +501,18 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   if (!isOpen) return null;
   const close = () => {
     voice.stop();
-    clearShopperHistory();
+    setConfirmClear(false);
     onClose();
   };
+  const handleResetChat = () => {
+    voice.stop();
+    clearShopperHistory();
+    setConfirmClear(false);
+    toast.success("Cleared conversation");
+  };
   const isWelcome = messages.length === 1;
+  const cartItemCount = (cart?.items || []).reduce((sum, i) => sum + Number(i.quantity || 1), 0);
+  const cartTotalVal = Number(cart?.total || cart?.items_total || 0);
 
   return (
     <TooltipProvider delayDuration={250}>
@@ -517,7 +534,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         onTouchEnd={handleTouchEnd}
         onPointerDownCapture={voice.interrupt}
         className={`shopper-theme bg-background text-foreground border-border fixed inset-x-0 bottom-0 z-50 flex flex-col ${
-          isFullScreen ? "h-[100dvh] rounded-none" : "h-[75vh] max-h-[85vh] rounded-t-3xl"
+          isFullScreen ? "h-[100dvh] rounded-none" : "h-[78vh] max-h-[88vh] rounded-t-3xl"
         } border-t border-border shadow-[0_-12px_40px_rgba(0,0,0,0.3)] outline-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] md:inset-auto md:right-0 md:top-0 md:bottom-0 md:h-full md:w-[440px] md:rounded-none md:border-l md:border-t-0 md:animate-in md:slide-in-from-right overflow-hidden`}
       >
         {/* Mobile Top Drag Handle Indicator */}
@@ -527,55 +544,118 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           title="Drag up for full screen"
         />
 
-        {/* Top Header: Prominently displaying CartSettle brand */}
-        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 px-5 py-3.5 bg-background/80 backdrop-blur-md">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-black tracking-tighter">
+        {/* Top Header: Prominently displaying CartSettle brand + ModeSwitch + Clear Menu + Close */}
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 px-4 py-3 bg-background/80 backdrop-blur-md">
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 id="shopper-title" className="text-lg font-black tracking-tighter">
               <span className="text-slate-800 dark:text-white">Cart</span>
               <span className="text-emerald-600 dark:text-emerald-400">Settle</span>
-            </span>
+            </h2>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
               AI Assistant
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsFullScreen((prev) => !prev)}
-            className="sm:hidden text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 transition"
-          >
-            {isFullScreen ? "Collapse" : "Full Screen"}
-          </button>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => setIsFullScreen((prev) => !prev)}
+              className="sm:hidden text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 px-2 py-1 mr-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 transition"
+            >
+              {isFullScreen ? "Collapse" : "Expand"}
+            </button>
+            <ModeSwitch
+              mode={mode}
+              onChange={(next) => {
+                voice.stop();
+                setMode(next);
+              }}
+            />
+            <PanelMenu
+              disabled={loading || messages.length === 1}
+              onClear={() => setConfirmClear(true)}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Close concierge"
+              title="Close"
+              onClick={close}
+            >
+              <X />
+            </Button>
+          </div>
         </header>
+
+        {confirmClear && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted px-4 py-2.5 text-sm">
+            <span>Clear this conversation?</span>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setConfirmClear(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" size="sm" onClick={handleResetChat}>
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
+
         {mode === "voice" ? (
           <VoiceView
             voice={voice}
             busy={loading}
             hint={isWelcome ? "Tap the orb and tell me what you need" : undefined}
+            replyText={!isWelcome ? latestReply?.content : undefined}
           >
             <ActionCards
               key={messages.length}
               actions={latestReply?.actions}
               persona="shopper"
-              currency={/\$\d/.test(latestReply?.content || "") ? "USD" : "INR"}
+              currency="USD"
               onAdd={handleAddToCart}
               addedItems={addedItems}
-              onSend={handleSend}
+              onSend={(p) => {
+                voice.stop();
+                return handleSend(p, "voice").catch(() => {});
+              }}
               onNavigate={(path) => {
                 close();
                 navigate(path);
               }}
               busy={loading}
             />
+            {isWelcome && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {STARTERS.slice(0, 4).map(({ label, prompt, icon: Icon }) => (
+                  <Button
+                    key={label}
+                    variant="outline"
+                    disabled={loading}
+                    onClick={() => {
+                      voice.stop();
+                      handleSend(prompt, "voice").catch(() => {});
+                    }}
+                    className="h-auto py-2.5 px-3 justify-between bg-background text-xs font-semibold shadow-none text-left whitespace-normal"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <Icon className="size-3.5 shrink-0 text-primary" />
+                      <span className="truncate">{label}</span>
+                    </span>
+                    <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground" />
+                  </Button>
+                ))}
+              </div>
+            )}
           </VoiceView>
         ) : (
           <Conversation className="min-h-0" initial="instant" resize="instant">
             <ConversationContent
-              className={`gap-7 px-5 py-6 sm:px-6 ${isWelcome ? "shopper-welcome" : ""}`}
+              className={`gap-6 px-5 py-5 sm:px-6 ${isWelcome ? "shopper-welcome" : ""}`}
             >
               {isWelcome && (
                 <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
                   <span className="h-px w-6 bg-primary" />
-                  Your shopping companion
+                  Your zero-click shopping concierge
                 </div>
               )}
               {messages.map((msg, index) => {
@@ -585,10 +665,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                   (a) => a.type === "RECOMMEND_BASKET" || a.type === "SEARCH_RESULTS",
                 );
                 const otherCards = actions.filter(
-                  (a) =>
-                    !["RECOMMEND_BASKET", "SEARCH_RESULTS", "ADD_TO_CART"].includes(
-                      a.type || a.action,
-                    ),
+                  (a) => !["RECOMMEND_BASKET", "SEARCH_RESULTS"].includes(a.type || a.action),
                 );
                 return (
                   <Message
@@ -598,7 +675,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                   >
                     {!isUser && !isWelcome && (
                       <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                        Shopper
+                        CartSettle AI
                       </div>
                     )}
                     <MessageContent
@@ -606,11 +683,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                     >
                       <MessageResponse>{msg.content || ""}</MessageResponse>
                     </MessageContent>
-                    {!isUser && /\$\d/.test(msg.content || "") && (
-                      <p className="text-xs text-muted-foreground">
-                        This reply contains dollar prices, not local ₹ prices.
-                      </p>
-                    )}
                     {isWelcome && (
                       <div className="mt-4 flex flex-col gap-2">
                         {STARTERS.map(({ label, prompt, icon: Icon }) => (
@@ -619,7 +691,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                             variant="outline"
                             disabled={loading}
                             onClick={() => handleSend(prompt)}
-                            className="h-12 w-full justify-between bg-background px-4 text-sm shadow-none"
+                            className="h-11 w-full justify-between bg-background px-4 text-sm shadow-none"
                           >
                             <span className="flex items-center gap-3">
                               <Icon className="text-primary" />
@@ -643,7 +715,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                             <GroceryRow
                               key={item.id || rowIndex}
                               item={item}
-                              currency={/\$\d/.test(msg.content || "") ? "USD" : "INR"}
+                              currency="USD"
                               added={addedItems[item.id]}
                               onAdd={handleAddToCart}
                             />
@@ -666,7 +738,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                         <ActionCards
                           actions={otherCards}
                           persona="shopper"
-                          currency={/\$\d/.test(msg.content || "") ? "USD" : "INR"}
+                          currency="USD"
                           onAdd={handleAddToCart}
                           addedItems={addedItems}
                           onSend={handleSend}
@@ -708,6 +780,41 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             </ConversationContent>
             <ConversationScrollButton aria-label="Scroll to latest message" />
           </Conversation>
+        )}
+
+        {/* Live Mini-Cart & Instant Checkout Bar inside Drawer */}
+        {cartItemCount > 0 && (
+          <div className="shrink-0 border-t border-emerald-200/70 dark:border-emerald-900/60 bg-emerald-50/80 dark:bg-emerald-950/30 px-4 py-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <ShoppingBag size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                {cartItemCount} {cartItemCount === 1 ? "item" : "items"} • ${cartTotalVal.toFixed(2)}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2.5 text-xs font-semibold"
+                onClick={() => {
+                  close();
+                  navigate("/cart");
+                }}
+              >
+                View Cart
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => {
+                  close();
+                  navigate("/checkout");
+                }}
+              >
+                Checkout
+              </Button>
+            </div>
+          </div>
         )}
         {mode === "chat" && (
           <footer className="shopper-footer shrink-0 border-t border-border bg-background px-4 pt-3">
