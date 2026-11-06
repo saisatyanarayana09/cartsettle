@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, ArrowUp } from "lucide-react";
 import { useNavigate } from "../../router";
+import { useTheme } from "../../context/ThemeContext";
 import api, { invalidateCache } from "../../services/api";
 import { Button } from "@/components/ui/button";
 import { ModeSwitch, PanelMenu, VoiceView } from "../../components/voice/VoiceView";
@@ -13,6 +14,7 @@ const INITIAL_MESSAGE = { role: "assistant", content: "What needs your attention
 
 export default function KiranaCopilotDrawer({ isOpen, onClose }) {
   const navigate = useNavigate();
+  const { toggleTheme } = useTheme() || {};
   const [messages, setMessages] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
@@ -75,6 +77,9 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
         },
       ]);
       for (const action of data.actions || []) {
+        if (action.type === "SWITCH_THEME") {
+          toggleTheme?.(action.theme || "dark");
+        }
         if (action.type === "NAVIGATE" && action.path) {
           voice.stop();
           onClose();
@@ -123,6 +128,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
     return handleSend(prompt).catch(() => {});
   };
   const latest = [...messages].reverse().find((message) => message.role === "assistant");
+  const latestUser = [...messages].reverse().find((message) => message.role === "user");
   const clear = () => {
     voice.stop();
     setMessages([INITIAL_MESSAGE]);
@@ -168,12 +174,6 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-  const OWNER_STARTERS = [
-    { label: "Settle all pending orders", prompt: "Settle all pending orders" },
-    { label: "Restock low stock", prompt: "Restock all low stock items" },
-    { label: "Discount all dairy 10%", prompt: "Discount all dairy by 10%" },
-    { label: "Today sales summary", prompt: "Show today's sales summary" },
-  ];
   const cards = (message, key) => (
     <ActionCards
       key={key}
@@ -182,6 +182,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
       currency="USD"
       onSend={sendAction}
       onNavigate={openRoute}
+      onToggleTheme={toggleTheme}
       busy={loading}
     />
   );
@@ -245,24 +246,9 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
           voice={voice}
           busy={loading}
           replyText={messages.length > 1 ? latest?.content : undefined}
+          lastUserText={latestUser?.content}
         >
           {cards(latest, messages.length)}
-          {messages.length === 1 && (
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              {OWNER_STARTERS.map(({ label, prompt }) => (
-                <Button
-                  key={label}
-                  variant="outline"
-                  size="sm"
-                  disabled={loading}
-                  className="h-auto py-2.5 px-3 text-xs font-semibold justify-start text-left whitespace-normal"
-                  onClick={() => sendAction(prompt)}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
-          )}
         </VoiceView>
       ) : (
         <>
@@ -279,38 +265,8 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
                   {message.content}
                 </p>
                 {message.role !== "user" && cards(message, index)}
-                {index === messages.length - 1 && message.role === "assistant" && !loading && (
-                  <div className="flex flex-col items-start gap-1">
-                    {(message.follow_ups || []).slice(0, 2).map((prompt) => (
-                      <Button
-                        key={prompt}
-                        variant="link"
-                        className="h-auto whitespace-normal px-0 text-left text-xs text-muted-foreground"
-                        onClick={() => sendAction(prompt)}
-                      >
-                        {prompt}
-                      </Button>
-                    ))}
-                  </div>
-                )}
               </div>
             ))}
-            {messages.length === 1 && (
-              <div className="grid grid-cols-2 gap-2">
-                {OWNER_STARTERS.map(({ label, prompt }) => (
-                  <Button
-                    key={label}
-                    variant="outline"
-                    size="sm"
-                    disabled={loading}
-                    className="h-auto py-2.5 px-3 text-xs font-semibold justify-start text-left whitespace-normal"
-                    onClick={() => sendAction(prompt)}
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </div>
-            )}
             {loading && (
               <p role="status" className="text-sm text-muted-foreground">
                 One moment

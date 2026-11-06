@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, ShoppingBag, Plus, UtensilsCrossed, ArrowUp, ArrowUpRight, Search, Keyboard, Mic } from "lucide-react";
+import { X, ShoppingBag, Plus, ArrowUp, Keyboard, Mic } from "lucide-react";
 import * as apiModule from "../services/api";
 import toast from "react-hot-toast";
 
 const api = apiModule.default || apiModule;
 import { useCart } from "../cart-context";
+import { useTheme } from "../context/ThemeContext";
 import { useNavigate } from "../router";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,19 +22,10 @@ import {
   PromptInputSubmit,
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
-import { GroceryRow } from "./shopper/GroceryRow";
 import { SHOPPER_HISTORY_KEY, loadShopperHistory } from "./shopper/history";
 import { useVoiceSession } from "./voice/useVoiceSession";
 import { ModeSwitch, PanelMenu, VoiceView } from "./voice/VoiceView";
 import { ActionCards } from "./voice/ActionCards";
-
-const STARTERS = [
-  { label: "Build a cart under $20", prompt: "Build a cart under $20", icon: ShoppingBag },
-  { label: "Find groceries", prompt: "Help me find groceries from the store", icon: Search },
-  { label: "Explore deals", prompt: "Show me grocery deals", icon: ShoppingBag },
-  { label: "Reorder last order", prompt: "Reorder my last order", icon: UtensilsCrossed },
-  { label: "Place my order", prompt: "Place my order", icon: ArrowUpRight },
-];
 
 function IconControl({ label, children, ...props }) {
   return (
@@ -69,6 +61,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     flushCartSync,
     cart,
   } = useCart() || {};
+  const { toggleTheme } = useTheme() || {};
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState(() => {
@@ -267,32 +260,53 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       if (rawActions.length > 0) {
         for (const act of rawActions) {
           const type = act.type || act.action;
-          if (type === "ADD_TO_CART") {
+          if (type === "SWITCH_THEME") {
+            const targetTheme = act.theme || "dark";
+            toggleTheme?.(targetTheme);
+            toast.success(`${targetTheme === "light" ? "Light" : "Dark"} mode activated`);
+            finalActions.push(act);
+          } else if (type === "ADD_TO_CART") {
             const items = act.items || (act.item ? [act.item] : [act]);
             items.filter((it) => it && it.id).forEach((it) => handleAddToCart(it));
             finalActions.push(act);
           } else if (type === "REMOVE_FROM_CART") {
-            const targetId = Number(act.product_id || act.id);
-            const existing = (cart?.items || []).find(
-              (ci) =>
-                Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id) === targetId ||
-                (act.name &&
-                  String(ci.product_name || ci.name || "")
-                    .toLowerCase()
-                    .includes(String(act.name).toLowerCase())),
-            );
-            if (existing) {
-              update?.(existing, 0);
-            } else if (targetId) {
-              update?.({ id: targetId, product: targetId }, 0);
+            const targetList = Array.isArray(act.items) && act.items.length > 0 ? act.items : [act.item || act];
+            const removedPreview = [];
+            for (const rem of targetList) {
+              const targetId = Number(rem.product_id || rem.id);
+              const existing = (cart?.items || []).find(
+                (ci) =>
+                  Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id) === targetId ||
+                  (rem.name &&
+                    String(ci.product_name || ci.name || "")
+                      .toLowerCase()
+                      .includes(String(rem.name).toLowerCase())),
+              );
+              if (existing) {
+                update?.(existing, 0);
+                removedPreview.push({
+                  id: targetId || existing.id,
+                  name: existing.product_name || existing.name || rem.name || "Item",
+                  image: existing.product?.image || existing.image || rem.image,
+                  price: Number(existing.unit_price ?? existing.price ?? rem.price ?? 0),
+                });
+              } else {
+                if (targetId) update?.({ id: targetId, product: targetId }, 0);
+                removedPreview.push({
+                  id: targetId,
+                  name: rem.name || act.name || "Item",
+                  image: rem.image || rem.thumbnail,
+                  price: Number(rem.price || 0),
+                });
+              }
+              setAddedItems((prev) => {
+                const next = { ...prev };
+                delete next[targetId];
+                return next;
+              });
             }
-            setAddedItems((prev) => {
-              const next = { ...prev };
-              delete next[targetId];
-              return next;
-            });
             toast.success(`Removed ${act.name || "item"} from cart`);
-            finalActions.push(act);
+            finalActions.push({ ...act, items: removedPreview });
           } else if (type === "UPDATE_CART_QTY") {
             const targetId = Number(act.product_id || act.item?.id);
             const qty = Math.max(0, Number(act.quantity ?? 1));
@@ -360,9 +374,18 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             }
             finalActions.push(act);
           } else if (type === "CLEAR_CART") {
+            const snapshot = (cart?.items || []).map((ci) => ({
+              id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
+              name: ci.product_name || ci.name || "Cart Item",
+              image: ci.product?.image || ci.image,
+              price: Number(ci.unit_price ?? ci.price ?? 0),
+            }));
             clearCart?.();
             toast.success("Cleared your shopping cart!");
-            finalActions.push(act);
+            finalActions.push({
+              ...act,
+              removed_items: snapshot.length > 0 ? snapshot : act.removed_items || [],
+            });
           } else if (type === "NAVIGATE" && act.path) {
             voice.stop();
             onClose();
@@ -460,6 +483,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     onPrompt: (text) => handleSend(text, "voice"),
   });
   const latestReply = [...messages].reverse().find((message) => message.role === "assistant");
+  const latestUser = [...messages].reverse().find((message) => message.role === "user");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -606,6 +630,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             busy={loading}
             hint={isWelcome ? "Tap the orb and tell me what you need" : undefined}
             replyText={!isWelcome ? latestReply?.content : undefined}
+            lastUserText={latestUser?.content}
           >
             <ActionCards
               key={messages.length}
@@ -614,6 +639,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               currency="USD"
               onAdd={handleAddToCart}
               addedItems={addedItems}
+              onToggleTheme={toggleTheme}
               onSend={(p) => {
                 voice.stop();
                 return handleSend(p, "voice").catch(() => {});
@@ -624,49 +650,16 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               }}
               busy={loading}
             />
-            {isWelcome && (
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {STARTERS.slice(0, 4).map(({ label, prompt, icon: Icon }) => (
-                  <Button
-                    key={label}
-                    variant="outline"
-                    disabled={loading}
-                    onClick={() => {
-                      voice.stop();
-                      handleSend(prompt, "voice").catch(() => {});
-                    }}
-                    className="h-auto py-2.5 px-3 justify-between bg-background text-xs font-semibold shadow-none text-left whitespace-normal"
-                  >
-                    <span className="flex items-center gap-2 min-w-0">
-                      <Icon className="size-3.5 shrink-0 text-primary" />
-                      <span className="truncate">{label}</span>
-                    </span>
-                    <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground" />
-                  </Button>
-                ))}
-              </div>
-            )}
           </VoiceView>
         ) : (
           <Conversation className="min-h-0" initial="instant" resize="instant">
             <ConversationContent
-              className={`gap-6 px-5 py-5 sm:px-6 ${isWelcome ? "shopper-welcome" : ""}`}
+              className={`gap-5 px-5 py-5 sm:px-6 ${isWelcome ? "shopper-welcome" : ""}`}
             >
-              {isWelcome && (
-                <div className="mb-1 flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
-                  <span className="h-px w-6 bg-primary" />
-                  Your zero-click shopping concierge
-                </div>
-              )}
               {messages.map((msg, index) => {
                 const isUser = msg.role === "user";
                 const actions = msg.actions || [];
-                const groceryActions = actions.filter(
-                  (a) => a.type === "RECOMMEND_BASKET" || a.type === "SEARCH_RESULTS",
-                );
-                const otherCards = actions.filter(
-                  (a) => !["RECOMMEND_BASKET", "SEARCH_RESULTS"].includes(a.type || a.action),
-                );
+                const basketAction = actions.find((a) => a.type === "RECOMMEND_BASKET");
                 return (
                   <Message
                     from={isUser ? "user" : "assistant"}
@@ -683,64 +676,15 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                     >
                       <MessageResponse>{msg.content || ""}</MessageResponse>
                     </MessageContent>
-                    {isWelcome && (
-                      <div className="mt-4 flex flex-col gap-2">
-                        {STARTERS.map(({ label, prompt, icon: Icon }) => (
-                          <Button
-                            key={label}
-                            variant="outline"
-                            disabled={loading}
-                            onClick={() => handleSend(prompt)}
-                            className="h-11 w-full justify-between bg-background px-4 text-sm shadow-none"
-                          >
-                            <span className="flex items-center gap-3">
-                              <Icon className="text-primary" />
-                              {label}
-                            </span>
-                            <ArrowUpRight className="text-muted-foreground" />
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                    {groceryActions.map((action, actionIndex) => (
-                      <div key={actionIndex} className="mt-2 w-full">
-                        {action.type === "RECOMMEND_BASKET" && (
-                          <h3 className="mb-2 flex items-center gap-2 text-sm font-bold">
-                            <UtensilsCrossed className="size-4 text-primary" />
-                            {action.recipe || "Meal ingredients"}
-                          </h3>
-                        )}
-                        <div className="divide-y divide-border">
-                          {(action.items || []).map((item, rowIndex) => (
-                            <GroceryRow
-                              key={item.id || rowIndex}
-                              item={item}
-                              currency="USD"
-                              added={addedItems[item.id]}
-                              onAdd={handleAddToCart}
-                            />
-                          ))}
-                        </div>
-                        {action.type === "RECOMMEND_BASKET" && (
-                          <Button
-                            variant="outline"
-                            className="mt-3 w-full"
-                            onClick={() => handleAddAllBasket(action.items)}
-                          >
-                            <Plus />
-                            Add all ingredients
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    {otherCards.length > 0 && (
+                    {actions.length > 0 && (
                       <div className="mt-2 w-full space-y-2">
                         <ActionCards
-                          actions={otherCards}
+                          actions={actions}
                           persona="shopper"
                           currency="USD"
                           onAdd={handleAddToCart}
                           addedItems={addedItems}
+                          onToggleTheme={toggleTheme}
                           onSend={handleSend}
                           onNavigate={(path) => {
                             close();
@@ -748,27 +692,19 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                           }}
                           busy={loading}
                         />
+                        {basketAction?.items?.length > 1 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleAddAllBasket(basketAction.items)}
+                          >
+                            <Plus />
+                            Add all ingredients
+                          </Button>
+                        )}
                       </div>
                     )}
-                    {!isWelcome &&
-                      !isUser &&
-                      index === messages.length - 1 &&
-                      !loading &&
-                      msg.follow_ups?.length > 0 && (
-                        <div className="flex flex-col items-start gap-1">
-                          {msg.follow_ups.slice(0, 2).map((followUp, fIndex) => (
-                            <Button
-                              key={fIndex}
-                              variant="link"
-                              className="h-auto max-w-full justify-start whitespace-normal px-0 py-1 text-left text-xs text-muted-foreground"
-                              onClick={() => handleSend(followUp)}
-                            >
-                              <ArrowUpRight className="shrink-0" />
-                              {followUp}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
                   </Message>
                 );
               })}

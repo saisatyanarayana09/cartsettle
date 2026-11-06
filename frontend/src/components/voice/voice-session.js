@@ -1,8 +1,8 @@
-function pickBestVoice(browser, preferredLang = "en-IN") {
+function pickBestVoice(browser, preferredLang = "en-US") {
   const voices = browser.speechSynthesis?.getVoices?.() || [];
   if (!voices.length) return null;
 
-  const prefLower = String(preferredLang || "en-IN").toLowerCase();
+  const prefLower = String(preferredLang || "en-US").toLowerCase();
   const prefPrefix = prefLower.split("-")[0] || "en";
 
   const scoreVoice = (v) => {
@@ -18,10 +18,9 @@ function pickBestVoice(browser, preferredLang = "en-IN") {
     if (name.includes("natural") || name.includes("neural") || name.includes("online")) score += 50;
     if (name.includes("google")) score += 40;
     if (
-      name.includes("neerja") ||
-      name.includes("prabhat") ||
       name.includes("aria") ||
       name.includes("jenny") ||
+      name.includes("guy") ||
       name.includes("sonia") ||
       name.includes("samantha") ||
       name.includes("siri") ||
@@ -51,7 +50,7 @@ export function createVoiceSession({
   let timer;
   let transcript = "";
   let status = "idle";
-  const effectiveLang = lang || browser.navigator?.language || "en-IN";
+  const effectiveLang = lang || browser.navigator?.language || "en-US";
 
   // Pre-warm browser voice list
   try {

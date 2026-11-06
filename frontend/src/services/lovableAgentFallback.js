@@ -214,16 +214,16 @@ function normalizeVoiceTranscript(text) {
     [/\bthirteen\b/gi, '13'],
     [/\btwelve\b/gi, '12'],
     [/\beleven\b/gi, '11'],
-    [/\b(?:ten|das)\b/gi, '10'],
+    [/\bten\b/gi, '10'],
     [/\bnine\b/gi, '9'],
     [/\beight\b/gi, '8'],
     [/\bseven\b/gi, '7'],
     [/\bsix\b/gi, '6'],
-    [/\b(?:five|paanch|panch)\b/gi, '5'],
-    [/\b(?:four|chaar|char)\b/gi, '4'],
-    [/\b(?:three|teen)\b/gi, '3'],
-    [/\b(?:two|do)\b/gi, '2'],
-    [/\b(?:one|ek)\b/gi, '1'],
+    [/\bfive\b/gi, '5'],
+    [/\bfour\b/gi, '4'],
+    [/\bthree\b/gi, '3'],
+    [/\btwo\b/gi, '2'],
+    [/\bone\b/gi, '1'],
     [/\bthirty\b/gi, '30'],
     [/\bforty\b/gi, '40'],
     [/\bfifty\b/gi, '50'],
@@ -233,39 +233,24 @@ function normalizeVoiceTranscript(text) {
     out = out.replace(re, digit);
   }
 
-  // Indian English / Hinglish / Regional Kirana & Global Accent Phonetic Normalization
-  const accentAndVocabMap = [
-    [/\b(?:doodh|dudh|paalu|palu)\b/gi, 'milk'],
-    [/\b(?:aata|godhuma\s+pindi|chapati\s+flour|roti\s+flour)\b/gi, 'atta'],
-    [/\b(?:dahi|curd|perugu|yoghurt|yogart)\b/gi, 'yogurt'],
-    [/\b(?:chawal|biyyam)\b/gi, 'rice'],
-    [/\b(?:pav|double\s+roti|chapati|phulka)\b/gi, 'bread'],
-    [/\b(?:anda|ande|gudlu)\b/gi, 'eggs'],
-    [/\b(?:makhan|venna)\b/gi, 'butter'],
-    [/\b(?:paneer)\b/gi, 'cheese'],
-    [/\b(?:tamatar)\b/gi, 'tomato'],
+  const englishPhoneticMap = [
     [/\b(?:straberry|strawbery|straberries)\b/gi, 'strawberries'],
     [/\b(?:avacado|avacados)\b/gi, 'avocados'],
-    [/\b(?:kitne\s+ka\s+hai|kitna\s+hai|rate\s+kya\s+hai)\b/gi, 'how much is'],
-    [/\b(?:daal\s+do|daalo|add\s+karo|bhej\s+do)\b/gi, 'add'],
-    [/\b(?:hata\s+do|hatao|nikalo)\b/gi, 'remove'],
-    [/\b(?:sasta|kam\s+daam|cheepar|chipper)\b/gi, 'cheaper'],
-    [/\b(?:andar|andhar|unda)(?=\s*\$?\d)/gi, 'under'],
+    [/\b(?:yoghurt|yogart)\b/gi, 'yogurt'],
+    [/\b(?:cheepar|chipper)\b/gi, 'cheaper'],
     [/\b(?:auder|ordo|odder)\b/gi, 'order'],
     [/\b(?:setal|satel|settel)\b/gi, 'settle'],
     [/\b(?:kansal|cansel)\b/gi, 'cancel'],
     [/\b(?:fayvorit|fevret|favourite)\b/gi, 'favorite'],
     [/\b(?:fayvorits|fevrets|favourites)\b/gi, 'favorites'],
     [/\b(?:restok|re[\s-]+stock)\b/gi, 'restock'],
-    [/\b(?:dairi|deri)\b/gi, 'dairy'],
-    [/\b(?:bakri|bekari)\b/gi, 'bakery'],
   ];
-  for (const [re, replacement] of accentAndVocabMap) {
+  for (const [re, replacement] of englishPhoneticMap) {
     out = out.replace(re, replacement);
   }
 
-  out = out.replace(/(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent|pratishat)\b/gi, '$1%');
-  out = out.replace(/\b(\d+(?:\.\d+)?)\s*(?:dollars?|bucks?|rupees?|inr|usd)\b/gi, '$$$1');
+  out = out.replace(/(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent)\b/gi, '$1%');
+  out = out.replace(/\b(\d+(?:\.\d+)?)\s*(?:dollars?|bucks?|usd)\b/gi, '$$$1');
   return out;
 }
 
@@ -342,8 +327,20 @@ export function handleLovableAgentFallback(config) {
     ? ['Check pending orders', 'Check low stock', 'Which product has the highest margin?']
     : ['What is the cheapest item?', 'Add 1 Whole Milk', '15% off Strawberries'];
 
-  // 0. Strict Settings Guardrail
+  // 0A. Live Theme Switch ("switch to dark mode", "switch to light mode")
   if (
+    ['dark mode', 'light mode', 'dark theme', 'light theme', 'switch theme', 'toggle theme', 'night mode', 'day mode'].some((k) =>
+      lower.includes(k)
+    )
+  ) {
+    const targetTheme = lower.includes('light') || lower.includes('day') ? 'light' : 'dark';
+    const label = targetTheme === 'light' ? 'Light Mode' : 'Dark Mode';
+    reply = `${label} activated.`;
+    actions = [{ type: 'SWITCH_THEME', theme: targetTheme }];
+    tools_used = [{ name: 'switch_theme', args: { theme: targetTheme } }];
+  }
+  // 0. Strict Settings Guardrail
+  else if (
     lower.includes('setting') ||
     lower.includes('operating hour') ||
     lower.includes('delivery radius') ||
@@ -850,18 +847,37 @@ export function handleLovableAgentFallback(config) {
       tools_used = [{ name: 'inspect_margin', args: {} }];
     }
   }
-  // 10. Clear cart
-  else if ((lower.includes('clear') || lower.includes('empty')) && (lower.includes('cart') || lower.includes('bag'))) {
-    reply = 'Cleared your cart.';
-    actions = [{ type: 'CLEAR_CART' }];
+  // 10. Clear cart ("clear my cart", "remove the cart items", "remove all cart items")
+  else if (
+    ['clear cart', 'clear my cart', 'empty cart', 'empty my cart', 'remove the cart items', 'remove cart items', 'remove all cart items', 'remove all items from cart'].some((k) =>
+      lower.includes(k)
+    )
+  ) {
+    reply = 'Removed all items from your cart.';
+    actions = [{ type: 'CLEAR_CART', removed_items: Array.isArray(body.cart_items) ? body.cart_items : [] }];
     tools_used = [{ name: 'clear_shopper_cart', args: {} }];
   }
-  // 10b. Remove from cart
-  else if ((lower.includes('remove ') || lower.includes('delete ')) && (lower.includes('cart') || lower.includes('bag'))) {
-    const prod = matchSingleProduct(prompt) || DEMO_PRODUCTS[0];
-    reply = `Removed ${prod.name} from your cart.`;
-    actions = [{ type: 'REMOVE_FROM_CART', product_id: prod.id, name: prod.name }];
-    tools_used = [{ name: 'remove_from_shopper_cart', args: { product_id: prod.id } }];
+  // 10b. Remove specific item(s) from cart
+  else if ((lower.includes('remove ') || lower.includes('delete ')) && (lower.includes('cart') || lower.includes('bag') || matchSingleProduct(prompt))) {
+    let itemsWithQty = extractItemsWithQuantities(prompt);
+    if (itemsWithQty.length === 0) {
+      const single = matchSingleProduct(prompt) || DEMO_PRODUCTS[0];
+      itemsWithQty = [{ prod: single, qty: 1 }];
+    }
+    const serializedRemoved = itemsWithQty.map(({ prod, qty }) => serializeCardItem(prod, qty));
+    const namesStr = itemsWithQty.map(({ prod }) => prod.name).join(', ');
+    const firstCard = serializedRemoved[0];
+    reply = `Removed ${namesStr} from your cart.`;
+    actions = [
+      {
+        type: 'REMOVE_FROM_CART',
+        product_id: firstCard.id,
+        name: namesStr,
+        item: firstCard,
+        items: serializedRemoved,
+      },
+    ];
+    tools_used = [{ name: 'remove_from_shopper_cart', args: { product_id: firstCard.id } }];
   }
   // 11. Multi-Item or Single-Item Add to Cart
   else if (

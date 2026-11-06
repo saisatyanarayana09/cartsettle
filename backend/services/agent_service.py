@@ -1269,7 +1269,7 @@ class AgentService:
             return ["Build a cart under $20", "Reorder my last order", f"Add 1 {short_prod} to my cart"]
 
     def _normalize_voice_transcript(self, text: str) -> str:
-        """Normalizes spoken number words, Indian/global accent variations, and regional kirana vocabulary into clean intent text."""
+        """Normalizes spoken English number words and common speech-to-text terms into clean intent text."""
         if not text:
             return ""
         out = text.strip()
@@ -1285,16 +1285,16 @@ class AgentService:
             (r"\bthirteen\b", "13"),
             (r"\btwelve\b", "12"),
             (r"\beleven\b", "11"),
-            (r"\b(?:ten|das)\b", "10"),
+            (r"\bten\b", "10"),
             (r"\bnine\b", "9"),
             (r"\beight\b", "8"),
             (r"\bseven\b", "7"),
             (r"\bsix\b", "6"),
-            (r"\b(?:five|paanch|panch)\b", "5"),
-            (r"\b(?:four|chaar|char)\b", "4"),
-            (r"\b(?:three|teen)\b", "3"),
-            (r"\b(?:two|do)\b", "2"),
-            (r"\b(?:one|ek)\b", "1"),
+            (r"\bfive\b", "5"),
+            (r"\bfour\b", "4"),
+            (r"\bthree\b", "3"),
+            (r"\btwo\b", "2"),
+            (r"\bone\b", "1"),
             (r"\bthirty\b", "30"),
             (r"\bforty\b", "40"),
             (r"\bfifty\b", "50"),
@@ -1303,37 +1303,23 @@ class AgentService:
         for pattern, digit in word_to_num:
             out = re.sub(pattern, digit, out, flags=re.IGNORECASE)
 
-        accent_and_vocab_map = [
-            (r"\b(?:doodh|dudh|paalu|palu)\b", "milk"),
-            (r"\b(?:aata|godhuma\s+pindi|chapati\s+flour|roti\s+flour)\b", "atta"),
-            (r"\b(?:dahi|curd|perugu|yoghurt|yogart)\b", "yogurt"),
-            (r"\b(?:chawal|biyyam)\b", "basmati rice"),
-            (r"\b(?:pav|double\s+roti|chapati|phulka)\b", "bread"),
-            (r"\b(?:anda|ande|gudlu)\b", "eggs"),
-            (r"\b(?:makhan|venna)\b", "butter"),
-            (r"\b(?:paneer)\b", "cheese"),
-            (r"\b(?:tamatar)\b", "tomato"),
+        english_phonetic_map = [
             (r"\b(?:straberry|strawbery|straberries)\b", "strawberries"),
             (r"\b(?:avacado|avacados)\b", "avocados"),
-            (r"\b(?:kitne\s+ka\s+hai|kitna\s+hai|rate\s+kya\s+hai)\b", "how much is"),
-            (r"\b(?:daal\s+do|daalo|add\s+karo|bhej\s+do)\b", "add"),
-            (r"\b(?:hata\s+do|hatao|nikalo)\b", "remove"),
-            (r"\b(?:sasta|kam\s+daam|cheepar|chipper)\b", "cheaper"),
-            (r"\b(?:andar|andhar|unda)(?=\s*\$?\d)", "under"),
+            (r"\b(?:yoghurt|yogart)\b", "yogurt"),
+            (r"\b(?:cheepar|chipper)\b", "cheaper"),
             (r"\b(?:auder|ordo|odder)\b", "order"),
             (r"\b(?:setal|satel|settel)\b", "settle"),
             (r"\b(?:kansal|cansel)\b", "cancel"),
             (r"\b(?:fayvorit|fevret|favourite)\b", "favorite"),
             (r"\b(?:fayvorits|fevrets|favourites)\b", "favorites"),
             (r"\b(?:restok|re[\s-]+stock)\b", "restock"),
-            (r"\b(?:dairi|deri)\b", "dairy"),
-            (r"\b(?:bakri|bekari)\b", "bakery"),
         ]
-        for pattern, replacement in accent_and_vocab_map:
+        for pattern, replacement in english_phonetic_map:
             out = re.sub(pattern, replacement, out, flags=re.IGNORECASE)
 
-        out = re.sub(r"(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent|pratishat)\b", r"\1%", out, flags=re.IGNORECASE)
-        out = re.sub(r"\b(\d+(?:\.\d+)?)\s*(?:dollars?|bucks?|rupees?|inr|usd)\b", r"$\1", out, flags=re.IGNORECASE)
+        out = re.sub(r"(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent)\b", r"\1%", out, flags=re.IGNORECASE)
+        out = re.sub(r"\b(\d+(?:\.\d+)?)\s*(?:dollars?|bucks?|usd)\b", r"$\1", out, flags=re.IGNORECASE)
         return out
 
     def _to_concise_human_reply(self, text: str, mode: str = "chat") -> tuple:
@@ -1800,6 +1786,20 @@ class AgentService:
     def _check_fast_path(self, prompt: str, persona: str, session_id: str, cart_items: list = None) -> dict:
         """Sub-50ms instant execution for all shop operations while strictly blocking Settings."""
         lower = prompt.lower().strip()
+
+        # --- 0A. LIVE THEME SWITCH ("switch to dark mode", "switch to light mode", "dark mode", "light mode") ---
+        if any(k in lower for k in [
+            "dark mode", "light mode", "dark theme", "light theme",
+            "switch theme", "toggle theme", "night mode", "day mode"
+        ]):
+            target_theme = "light" if ("light" in lower or "day" in lower) else "dark"
+            label = "Light Mode" if target_theme == "light" else "Dark Mode"
+            return {
+                "reply": f"{label} activated.",
+                "tools_used": [{"name": "switch_theme", "args": {"theme": target_theme}}],
+                "actions": [{"type": "SWITCH_THEME", "theme": target_theme}],
+                "tool_result": {"status": "switched", "theme": target_theme}
+            }
 
         # --- 0. STRICT SETTINGS GUARDRAIL (Block all Settings access/modifications) ---
         if any(k in lower for k in [
@@ -2581,24 +2581,44 @@ class AgentService:
                     "tool_result": {"path": path, "filter": q_term}
                 }
 
-            # 0. Clear Cart ("clear my cart", "empty cart")
-            if any(k in lower for k in ["clear cart", "clear my cart", "empty cart", "empty my cart"]):
+            # 0. Clear Cart ("clear my cart", "empty cart", "remove the cart items", "remove all cart items")
+            if any(k in lower for k in [
+                "clear cart", "clear my cart", "empty cart", "empty my cart",
+                "remove the cart items", "remove cart items", "remove all cart items",
+                "remove all items from cart", "remove items from cart", "delete cart items"
+            ]):
                 return {
-                    "reply": "Cleared your cart.",
+                    "reply": "Removed all items from your cart.",
                     "tools_used": [{"name": "clear_shopper_cart", "args": {}}],
-                    "actions": [{"type": "CLEAR_CART"}],
+                    "actions": [{"type": "CLEAR_CART", "removed_items": cart_items or []}],
                     "tool_result": {"status": "cleared"}
                 }
 
-            # 0b. Remove item from cart ("remove milk from cart", "delete bread from cart")
-            if any(w in lower for w in ["remove ", "delete "]) and ("cart" in lower or "bag" in lower):
-                matched_p = self._match_product_from_text(lower)
-                if matched_p:
+            # 0b. Remove specific item(s) from cart ("remove milk and bread from my cart", "delete bread from cart")
+            if any(w in lower for w in ["remove ", "delete "]) and ("cart" in lower or "bag" in lower or self._match_product_from_text(lower)):
+                items_to_remove = self._extract_items_with_quantities(prompt)
+                if not items_to_remove:
+                    single_m = self._match_product_from_text(lower)
+                    if single_m:
+                        items_to_remove = [(single_m, 1)]
+                if items_to_remove:
+                    serialized_removed = [AgentTools.serialize_card_product(p, quantity=qty) for p, qty in items_to_remove]
+                    names_str = ", ".join(p.name for p, _ in items_to_remove)
+                    first_card = serialized_removed[0]
+                    actions = [
+                        {
+                            "type": "REMOVE_FROM_CART",
+                            "product_id": first_card["id"],
+                            "name": names_str,
+                            "item": first_card,
+                            "items": serialized_removed,
+                        }
+                    ]
                     return {
-                        "reply": f"Removed {matched_p.name} from your cart.",
-                        "tools_used": [{"name": "remove_from_shopper_cart", "args": {"product_id": matched_p.id}}],
-                        "actions": [{"type": "REMOVE_FROM_CART", "product_id": matched_p.id, "name": matched_p.name}],
-                        "tool_result": {"status": "removed", "product_id": matched_p.id}
+                        "reply": f"Removed {names_str} from your cart.",
+                        "tools_used": [{"name": "remove_from_shopper_cart", "args": {"product_id": first_card["id"], "items": [c["id"] for c in serialized_removed]}}],
+                        "actions": actions,
+                        "tool_result": {"status": "removed", "product_id": first_card["id"], "items": serialized_removed}
                     }
 
             # 0c. Bargaining / Discount Negotiation for Shopper ("can I get 15% off strawberries?", "discount on milk")

@@ -1,11 +1,95 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowUpRight, Check, Minus, Plus } from "lucide-react";
+import { ArrowUpRight, Check, Minus, Moon, Package, Plus, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GroceryRow } from "../shopper/GroceryRow";
+import { optimizeImage } from "../../utils/image";
 
-const money = (value, currency) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency }).format(Number(value) || 0);
+const money = (value, currency = "USD") =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(value) || 0);
+
+function CompactProductCard({ item, currency = "USD", added, onAdd, disabled }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const photo = item.image || item.thumbnail || item.image_url;
+  const price = Number(item.price ?? item.offer_price ?? item.regular_price ?? 0);
+  const qty = Number(item.quantity || 1);
+
+  return (
+    <div className="group flex flex-col justify-between rounded-xl border border-border/80 bg-secondary/35 p-2.5 shadow-2xs transition-all hover:border-primary/40">
+      <div>
+        <div className="relative mb-2 flex h-20 w-full items-center justify-center overflow-hidden rounded-lg bg-muted text-muted-foreground">
+          {photo && !imageFailed ? (
+            <img
+              src={optimizeImage(photo, 160)}
+              alt={item.name}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <Package className="size-5 opacity-60" />
+          )}
+          {qty > 1 && (
+            <span className="absolute top-1.5 right-1.5 rounded-full bg-slate-900/80 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs">
+              ×{qty}
+            </span>
+          )}
+        </div>
+        <p className="line-clamp-1 text-xs font-bold leading-tight text-foreground">{item.name}</p>
+        <p className="mt-0.5 text-[10px] text-muted-foreground">
+          {item.unit || item.pack_size || "1 unit"}
+        </p>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-1.5 pt-1">
+        <span className="text-xs font-extrabold text-foreground">
+          {currency === "USD" ? "$" : "₹"}
+          {price.toFixed(2)}
+        </span>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-label={`Add ${qty} ${item.name} to cart`}
+          onClick={() => onAdd?.({ ...item, quantity: qty })}
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold transition-all active:scale-95 cursor-pointer ${
+            added
+              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+              : "bg-primary text-primary-foreground hover:opacity-90"
+          }`}
+        >
+          {added ? <Check className="size-3" /> : <Plus className="size-3" />}
+          <span>{added ? "Added" : "Add"}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RemovedMiniCard({ item }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const photo = item.image || item.thumbnail || item.image_url;
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-rose-500/25 bg-rose-500/5 p-2">
+      <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted text-muted-foreground">
+        {photo && !imageFailed ? (
+          <img
+            src={optimizeImage(photo, 100)}
+            alt={item.name || "Item"}
+            loading="lazy"
+            className="h-full w-full object-cover opacity-85"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <Package className="size-4 opacity-60" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-bold text-foreground">{item.name || "Cart Item"}</p>
+        <span className="mt-1 inline-flex items-center rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-2xs">
+          - Removed
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function RestockRow({ item, onSend, busy }) {
   const [quantity, setQuantity] = useState(
@@ -56,45 +140,120 @@ function RestockRow({ item, onSend, busy }) {
   );
 }
 
-function ActionContent({ action, currency, onAdd, addedItems, onSend, onNavigate, busy, persona }) {
+function ActionContent({
+  action,
+  currency,
+  onAdd,
+  addedItems,
+  onSend,
+  onNavigate,
+  onToggleTheme,
+  busy,
+  persona,
+}) {
   const type = action.type || action.action;
   const addProduct =
     onAdd || ((item) => onSend(`Add ${item.quantity || 1} units of ${item.name} to cart`));
+
+  if (type === "SWITCH_THEME") {
+    const isDark = action.theme !== "light";
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-2 text-center">
+        <div
+          className={`flex size-12 items-center justify-center rounded-full ${
+            isDark
+              ? "bg-cyan-500/15 text-cyan-400 shadow-[0_0_24px_rgba(34,211,238,0.35)]"
+              : "bg-amber-500/15 text-amber-500 shadow-[0_0_24px_rgba(245,158,11,0.3)]"
+          }`}
+        >
+          {isDark ? <Moon className="size-6 fill-current" /> : <Sun className="size-6 fill-current" />}
+        </div>
+        <div className="flex w-full items-center justify-between gap-3 px-1">
+          <div className="text-left">
+            <h3 className="text-sm font-extrabold tracking-tight text-foreground">
+              {isDark ? "Dark Mode" : "Light Mode"}
+            </h3>
+            <p className="text-xs font-semibold text-muted-foreground">Activated</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onToggleTheme?.(isDark ? "light" : "dark")}
+            aria-label="Toggle theme"
+            className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer items-center rounded-full px-1.5 transition-colors ${
+              isDark
+                ? "bg-cyan-400 text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.5)]"
+                : "bg-amber-400 text-slate-950 shadow-[0_0_18px_rgba(251,191,36,0.45)]"
+            }`}
+          >
+            <span className="pl-1 text-[10px] font-black uppercase">ON</span>
+            <span className="ml-auto size-5.5 rounded-full bg-white shadow-sm" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "REMOVE_FROM_CART" || type === "CLEAR_CART") {
+    const removedList =
+      Array.isArray(action.items) && action.items.length > 0
+        ? action.items
+        : Array.isArray(action.removed_items) && action.removed_items.length > 0
+          ? action.removed_items
+          : action.item
+            ? [action.item]
+            : [{ id: action.product_id || 0, name: action.name || "All Cart Items" }];
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-rose-500">
+            Live Cart Update
+          </span>
+          <span className="text-[11px] font-semibold text-muted-foreground">
+            {removedList.length} {removedList.length === 1 ? "item" : "items"} removed
+          </span>
+        </div>
+        <div className={`grid gap-2 ${removedList.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+          {removedList.slice(0, 4).map((item, idx) => (
+            <RemovedMiniCard key={item.id || idx} item={item} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (["SEARCH_RESULTS", "RECOMMEND_BASKET", "ADD_TO_CART"].includes(type)) {
     const items = type === "ADD_TO_CART" ? [action.item || action] : action.items || [];
     return (
-      <>
-        {action.recipe && <h3 className="text-sm font-semibold">{action.recipe}</h3>}
-        <div className="divide-y divide-border">
-          {items.map((item, index) => (
-            <GroceryRow
+      <div className="space-y-2">
+        {action.recipe && <h3 className="text-xs font-bold text-foreground">{action.recipe}</h3>}
+        <div className={`grid gap-2 ${items.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+          {items.slice(0, 4).map((item, index) => (
+            <CompactProductCard
               key={item.id || index}
               item={item}
               currency={currency}
-              added={addedItems?.[item.id]}
+              added={type === "ADD_TO_CART" ? true : addedItems?.[item.id]}
               onAdd={addProduct}
               disabled={busy}
             />
           ))}
         </div>
-      </>
+      </div>
     );
   }
   if (type === "MARGIN_DECISION") {
     const decision = action.decision || action;
     return (
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">
-          {decision.product || decision.item?.name || "Price offer"}
-        </h3>
-        <div className="flex flex-wrap justify-between gap-2 text-sm">
-          <span>{money(decision.counter_price ?? decision.final_price, currency)}</span>
-          <span className="text-muted-foreground">
-            {decision.counter_discount_pct ?? decision.discount_approved_pct ?? 0}% off
+      <div className="space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <h3 className="font-bold">{decision.product || decision.item?.name || "Price offer"}</h3>
+          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-bold text-emerald-600 dark:text-emerald-400">
+            {decision.counter_discount_pct ?? decision.discount_approved_pct ?? 0}% off ·{" "}
+            {money(decision.counter_price ?? decision.final_price, currency)}
           </span>
         </div>
         {decision.item && persona === "shopper" && (
-          <GroceryRow
+          <CompactProductCard
             item={{
               ...decision.item,
               price: decision.counter_price ?? decision.final_price ?? decision.item.price,
@@ -289,6 +448,9 @@ function ActionContent({ action, currency, onAdd, addedItems, onSend, onNavigate
 }
 
 const visibleTypes = new Set([
+  "SWITCH_THEME",
+  "REMOVE_FROM_CART",
+  "CLEAR_CART",
   "SEARCH_RESULTS",
   "RECOMMEND_BASKET",
   "ADD_TO_CART",
@@ -323,7 +485,7 @@ export function ActionCards({ actions = [], ...props }) {
                 ? { duration: 0 }
                 : { type: "spring", stiffness: 280, damping: 26, delay: index * 0.07 }
             }
-            className="rounded-md border border-border bg-background p-3"
+            className="rounded-2xl border border-border/80 bg-background/90 p-3 shadow-md backdrop-blur-md"
           >
             <ActionContent action={action} {...props} />
           </motion.div>
