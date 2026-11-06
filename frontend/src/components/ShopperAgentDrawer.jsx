@@ -26,6 +26,8 @@ import { SHOPPER_HISTORY_KEY, loadShopperHistory } from "./shopper/history";
 import { useVoiceSession } from "./voice/useVoiceSession";
 import { ModeSwitch, PanelMenu, VoiceView } from "./voice/VoiceView";
 import { ActionCards } from "./voice/ActionCards";
+import { PaymentReview } from "./voice/PaymentReview";
+import { requiresPaymentReview } from "./voice/payment-review";
 
 function IconControl({ label, children, ...props }) {
   return (
@@ -89,30 +91,10 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     return () => window.removeEventListener("shopper-switch-mode", handler);
   }, []);
 
+  const [paymentReview, setPaymentReview] = useState(null);
+  useEffect(() => { if (!isOpen) setPaymentReview(null); }, [isOpen]);
   const requestRef = useRef(false);
   const [addedItems, setAddedItems] = useState({});
-
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const touchStartY = useRef(0);
-
-  const handleTouchStart = (e) => {
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e) => {
-    const touchEndY = e.changedTouches[0].clientY;
-    const deltaY = touchStartY.current - touchEndY;
-    if (deltaY > 50 && !isFullScreen) {
-      setIsFullScreen(true);
-    }
-    if (deltaY < -50) {
-      if (isFullScreen) {
-        setIsFullScreen(false);
-      } else {
-        close();
-      }
-    }
-  };
 
   const panelRef = useRef(null);
 
@@ -152,76 +134,16 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     api.delete(`/store/agent/chat/?session_id=${SESSION_ID}&persona=shopper`).catch(() => {});
   };
 
-  const executeAutoCheckout = async (act) => {
-    const payMethod = act.payment_method || "COD";
-    const delivMode = act.delivery_mode || "DELIVERY";
-    const cartTotal = Number(cart?.total || cart?.items_total || 18.50);
-    let orderId = `ORD${new Date().getFullYear()}${String(Date.now()).slice(-5)}`;
-    let deliveryPin = "4829";
-
-    try {
-      await flushCartSync?.();
-      let addressId = null;
-      if (delivMode === "DELIVERY") {
-        const addrRes = await api.get("/auth/addresses/").catch(() => ({ data: [] }));
-        const addrList = Array.isArray(addrRes.data?.results)
-          ? addrRes.data.results
-          : Array.isArray(addrRes.data)
-          ? addrRes.data
-          : [];
-        const preferredLabel = localStorage.getItem("cartsettle_preferred_address_label");
-        const matchedAddr =
-          (preferredLabel &&
-            addrList.find(
-              (a) =>
-                String(a.label || a.address_type || "").toLowerCase() ===
-                preferredLabel.toLowerCase(),
-            )) ||
-          addrList.find((a) => a.is_default) ||
-          addrList[0];
-        if (matchedAddr?.id) addressId = matchedAddr.id;
-      }
-
-      const payload = {
-        delivery_mode: delivMode,
-        payment_method: payMethod,
-        use_wallet: payMethod === "WALLET",
-        upi_transaction_id: "",
-        paypal_order_id: "",
-        customer_note: "Placed via Zero-Click AI Concierge",
-        customer_notes: "Placed via Zero-Click AI Concierge",
-        delivery_slot_date: "",
-        delivery_slot_label: "",
-        slot_date: "",
-        time_slot: "",
-        pickup_time: delivMode === "PICKUP" ? "ASAP (15-20 mins)" : "",
-        ...(addressId ? { address_id: addressId } : {}),
-      };
-
-      const orderRes = await api.post("/orders/", payload);
-      if (orderRes?.data?.id) {
-        orderId = String(orderRes.data.id);
-        deliveryPin = String(orderRes.data.delivery_pin || "4829");
-      }
-    } catch {
-      // Fallback order receipt if guest/offline or empty server cart
-    }
-
-    clearCart?.();
-    apiModule.invalidateCache?.();
-    toast.success(`Order #${orderId} placed!`);
-    return {
-      type: "ORDER_PLACED",
-      order_id: orderId,
-      total: cartTotal,
-      payment_method: payMethod,
-      delivery_pin: deliveryPin,
-    };
-  };
-
   const handleSend = async (textToSend, requestMode = mode) => {
     const prompt = (textToSend || input).trim();
     if (!prompt || requestRef.current) return;
+    if (paymentReview) return;
+    if (requiresPaymentReview(prompt)) {
+      voice.stop();
+      setInput("");
+      setPaymentReview({ prompt });
+      return { reply: "Review your payment details before continuing." };
+    }
     requestRef.current = true;
 
     setInput("");
@@ -251,7 +173,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       });
 
       const reply = (res.data?.reply || "Done.").trim();
-      const rawActions = res.data?.actions || [];
+      const rawActions = Array.isArray(res.data?.actions) ? res.data.actions : [];
       const toolsUsed = res.data?.tools_used || [];
       const followUps = res.data?.follow_ups || [];
       const latencyMs = res.data?.latency_ms || 10;
@@ -260,11 +182,11 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       if (rawActions.length > 0) {
         for (const act of rawActions) {
           const type = act.type || act.action;
-          if (type === "SWITCH_THEME") {
+          if (type === "SWITCH_THEME" || type === "TOGGLE_DARK_MODE") {
             const targetTheme = act.theme || "dark";
             toggleTheme?.(targetTheme);
             toast.success(`${targetTheme === "light" ? "Light" : "Dark"} mode activated`);
-            finalActions.push(act);
+            finalActions.push({ ...act, type: "SWITCH_THEME", theme: targetTheme });
           } else if (type === "ADD_TO_CART") {
             const items = act.items || (act.item ? [act.item] : [act]);
             items.filter((it) => it && it.id).forEach((it) => handleAddToCart(it));
@@ -328,16 +250,14 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                 toast.success(`Applied promo ${code}!`);
               });
             finalActions.push(act);
-          } else if (type === "AUTO_CHECKOUT") {
-            const placedCard = await executeAutoCheckout(act);
-            finalActions.push(placedCard);
+          } else if (type === "AUTO_CHECKOUT" || type === "PAYMENT_REVIEW") {
+            voice.stop();
+            setPaymentReview({ prompt });
+            finalActions.push({ type: "PAYMENT_REVIEW", message: "Review checkout before placing your order." });
           } else if (type === "CANCEL_ORDER") {
-            const oid = act.order_id;
-            if (oid) {
-              api.post(`/orders/${oid}/cancel/`).catch(() => {});
-              apiModule.invalidateCache?.();
-              toast.success(`Cancelled Order #${oid}`);
-            }
+            // Cancellation can trigger refunds; review on the order screen.
+            voice.stop();
+            setPaymentReview({ prompt });
             finalActions.push(act);
           } else if (type === "SWITCH_ADDRESS") {
             const label = act.label || "Home";
@@ -386,6 +306,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               ...act,
               removed_items: snapshot.length > 0 ? snapshot : act.removed_items || [],
             });
+          } else if (["SWITCH_LANGUAGE", "CHANGE_LANGUAGE"].includes(type)) {
+            finalActions.push({ ...act, type: "PROPOSED_LANGUAGE" });
           } else if (type === "NAVIGATE" && act.path) {
             voice.stop();
             onClose();
@@ -415,7 +337,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         ...prev,
         {
           role: "assistant",
-          content: "Couldn’t complete that. Try again.",
+          content: err?.message || "Couldn’t complete that. Try again.",
           error: true,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
@@ -479,10 +401,14 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   };
 
   const voice = useVoiceSession({
-    active: isOpen && mode === "voice",
+    active: isOpen && mode === "voice" && !paymentReview,
     onPrompt: (text) => handleSend(text, "voice"),
   });
   const latestReply = [...messages].reverse().find((message) => message.role === "assistant");
+  const recentCartActions = [...messages].reverse().find((message) =>
+    message.actions?.some((action) => ["SEARCH_RESULTS", "RECOMMEND_BASKET", "ADD_TO_CART", "REMOVE_FROM_CART", "CLEAR_CART"].includes(action.type)))?.actions || [];
+  const voiceActions = latestReply?.actions?.some((action) => ["SEARCH_RESULTS", "RECOMMEND_BASKET", "ADD_TO_CART", "REMOVE_FROM_CART", "CLEAR_CART"].includes(action.type))
+    ? latestReply.actions : [...(latestReply?.actions || []), ...recentCartActions];
   const latestUser = [...messages].reverse().find((message) => message.role === "user");
 
   useEffect(() => {
@@ -493,8 +419,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     panelRef.current?.focus();
     const onKey = (event) => {
       if (event.key === "Escape") {
-        voice.stop();
-        onClose();
+        close();
       }
       if (event.key !== "Tab") return;
       const controls = panelRef.current?.querySelectorAll(
@@ -526,6 +451,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const close = () => {
     voice.stop();
     setConfirmClear(false);
+    setPaymentReview(null);
     onClose();
   };
   const handleResetChat = () => {
@@ -535,14 +461,11 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     toast.success("Cleared conversation");
   };
   const isWelcome = messages.length === 1;
-  const cartItemCount = (cart?.items || []).reduce((sum, i) => sum + Number(i.quantity || 1), 0);
-  const cartTotalVal = Number(cart?.total || cart?.items_total || 0);
-
   return (
     <TooltipProvider delayDuration={250}>
       {/* Dimmed Background Overlay */}
       <div
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        className="assistant-backdrop"
         onClick={close}
         aria-hidden="true"
       />
@@ -554,39 +477,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="shopper-title"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
         onPointerDownCapture={voice.interrupt}
-        className={`shopper-theme bg-background text-foreground border-border fixed inset-x-0 bottom-0 z-50 flex flex-col ${
-          isFullScreen ? "h-[100dvh] rounded-none" : "h-[78vh] max-h-[88vh] rounded-t-3xl"
-        } border-t border-border shadow-[0_-12px_40px_rgba(0,0,0,0.3)] outline-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] md:inset-auto md:right-0 md:top-0 md:bottom-0 md:h-full md:w-[440px] md:rounded-none md:border-l md:border-t-0 md:animate-in md:slide-in-from-right overflow-hidden`}
+        className="shopper-panel shopper-theme bg-background text-foreground flex flex-col overflow-hidden outline-none"
       >
-        {/* Mobile Top Drag Handle Indicator */}
-        <div
-          onClick={() => setIsFullScreen((prev) => !prev)}
-          className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mt-2.5 mb-1 sm:hidden shrink-0 cursor-pointer hover:bg-slate-400 transition"
-          title="Drag up for full screen"
-        />
-
-        {/* Top Header: Prominently displaying CartSettle brand + ModeSwitch + Clear Menu + Close */}
-        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/70 px-4 py-3 bg-background/80 backdrop-blur-md">
-          <div className="flex items-center gap-2 min-w-0">
-            <h2 id="shopper-title" className="text-lg font-black tracking-tighter">
-              <span className="text-slate-800 dark:text-white">Cart</span>
-              <span className="text-emerald-600 dark:text-emerald-400">Settle</span>
-            </h2>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
-              AI Assistant
-            </span>
-          </div>
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-5 py-4">
+          <h2 id="shopper-title" className="assistant-wordmark">Cart<span>Settle</span></h2>
           <div className="flex shrink-0 items-center gap-0.5">
-            <button
-              type="button"
-              onClick={() => setIsFullScreen((prev) => !prev)}
-              className="sm:hidden text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 px-2 py-1 mr-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 transition"
-            >
-              {isFullScreen ? "Collapse" : "Expand"}
-            </button>
             <ModeSwitch
               mode={mode}
               onChange={(next) => {
@@ -624,20 +520,24 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           </div>
         )}
 
+        <PaymentReview review={paymentReview} onCancel={() => setPaymentReview(null)}
+          onOpen={() => { close(); navigate("/checkout"); }} busy={loading} />
         {mode === "voice" ? (
           <VoiceView
             voice={voice}
             busy={loading}
-            hint={isWelcome ? "Tap the orb and tell me what you need" : undefined}
+            hint={isWelcome ? "What can I help with?" : undefined}
             replyText={!isWelcome ? latestReply?.content : undefined}
             lastUserText={latestUser?.content}
           >
             <ActionCards
               key={messages.length}
-              actions={latestReply?.actions}
+              actions={voiceActions}
               persona="shopper"
               currency="USD"
               onAdd={handleAddToCart}
+              cartItems={cart?.items}
+              onUpdate={(item, quantity) => update?.(item, quantity)}
               addedItems={addedItems}
               onToggleTheme={toggleTheme}
               onSend={(p) => {
@@ -648,7 +548,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                 close();
                 navigate(path);
               }}
-              busy={loading}
+              busy={loading || Boolean(paymentReview)}
             />
           </VoiceView>
         ) : (
@@ -683,6 +583,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                           persona="shopper"
                           currency="USD"
                           onAdd={handleAddToCart}
+              cartItems={cart?.items}
+              onUpdate={(item, quantity) => update?.(item, quantity)}
                           addedItems={addedItems}
                           onToggleTheme={toggleTheme}
                           onSend={handleSend}
@@ -690,7 +592,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                             close();
                             navigate(path);
                           }}
-                          busy={loading}
+                          busy={loading || Boolean(paymentReview)}
                         />
                         {basketAction?.items?.length > 1 && (
                           <Button
@@ -718,40 +620,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           </Conversation>
         )}
 
-        {/* Live Mini-Cart & Instant Checkout Bar inside Drawer */}
-        {cartItemCount > 0 && (
-          <div className="shrink-0 border-t border-emerald-200/70 dark:border-emerald-900/60 bg-emerald-50/80 dark:bg-emerald-950/30 px-4 py-2.5 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <ShoppingBag size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                {cartItemCount} {cartItemCount === 1 ? "item" : "items"} • ${cartTotalVal.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-2.5 text-xs font-semibold"
-                onClick={() => {
-                  close();
-                  navigate("/cart");
-                }}
-              >
-                View Cart
-              </Button>
-              <Button
-                size="sm"
-                className="h-8 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
-                onClick={() => {
-                  close();
-                  navigate("/checkout");
-                }}
-              >
-                Checkout
-              </Button>
-            </div>
-          </div>
-        )}
         {mode === "chat" && (
           <footer className="shopper-footer shrink-0 border-t border-border bg-background px-4 pt-3">
             {mode === "chat" && (
@@ -782,47 +650,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           </footer>
         )}
 
-        {/* Built-In Bottom Toolbar with Keyboard Toggle & In-Place Close under thumb */}
-        <div className="shrink-0 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0c1220]/95 backdrop-blur-2xl px-3 py-2.5 pb-[calc(0.6rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between z-10">
-          <button
-            type="button"
-            onClick={() => {
-              setMode((prev) => {
-                const nextMode = prev === "voice" ? "chat" : "voice";
-                if (nextMode === "chat") {
-                  setTimeout(() => {
-                    const textarea = panelRef.current?.querySelector("textarea");
-                    textarea?.focus();
-                  }, 120);
-                }
-                return nextMode;
-              });
-            }}
-            className="flex items-center gap-2 h-11 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all active:scale-95 cursor-pointer border border-slate-200/70 dark:border-slate-700/80 shadow-2xs"
-          >
-            {mode === "voice" ? (
-              <>
-                <Keyboard size={18} className="stroke-[2.25] text-emerald-600 dark:text-emerald-400" />
-                <span>Keyboard</span>
-              </>
-            ) : (
-              <>
-                <Mic size={18} className="stroke-[2.25] text-emerald-600 dark:text-emerald-400" />
-                <span>Voice Mode</span>
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={close}
-            className="flex items-center justify-center gap-2 h-11 w-[44%] max-w-[200px] rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-black text-xs shadow-lg active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer border border-slate-700 dark:border-slate-300"
-            aria-label="Close Assistant"
-          >
-            <X size={18} className="stroke-[2.5]" />
-            <span>Close</span>
-          </button>
-        </div>
       </section>
     </TooltipProvider>
   );

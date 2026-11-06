@@ -497,40 +497,11 @@ export function handleLovableAgentFallback(config) {
   }
   // 4. Settle order (Single or Bulk All Pending)
   else if (lower.includes('settle') || lower.includes('capture') || lower.includes('pack all') || lower.includes('accept all pending')) {
-    if ((lower.includes('all') || lower.includes('pending orders')) && persona === 'owner') {
-      const pending = DEMO_ORDERS.filter((o) => ['NEW', 'ACCEPTED', 'PREPARING'].includes(o.status));
-      let totalCap = 0;
-      const settledIds = [];
-      for (const po of pending) {
-        po.status = 'READY';
-        po.captured_amount = Number((po.total_amount * 0.92).toFixed(2));
-        po.released_amount = Number((po.authorized_amount - po.captured_amount).toFixed(2));
-        totalCap += po.captured_amount;
-        settledIds.push(po.id);
-      }
-      reply = settledIds.length
-        ? `Settled ${settledIds.length} pending orders ($${totalCap.toFixed(2)} total PayPal captured).`
-        : 'All orders are already settled.';
-      actions = [
-        { type: 'BULK_SETTLED', count: settledIds.length, total_captured: Number(totalCap.toFixed(2)), orders: settledIds },
-        { type: 'REFRESH_DATA' },
-      ];
-      tools_used = [{ name: 'auto_settle_order_packing', args: { batch_count: settledIds.length } }];
-    } else {
-      const ordMatch = lower.match(/\b(ord\d+\w*)\b/i);
-      const targetId = ordMatch ? ordMatch[1].toUpperCase() : (mem.last_order_id || 'ORD202600002');
-      const found = DEMO_ORDERS.find((o) => o.id === targetId) || DEMO_ORDERS[3];
-      found.status = 'READY';
-      found.captured_amount = Number((found.total_amount * 0.92).toFixed(2));
-      found.released_amount = Number((found.authorized_amount - found.captured_amount).toFixed(2));
-      reply = `Order #${found.id} settled for $${found.captured_amount.toFixed(2)}.`;
-      actions = [
-        { type: 'ORDER_SETTLED', order_id: found.id, captured: found.captured_amount, released: found.released_amount },
-        { type: 'REFRESH_DATA' },
-      ];
-      tools_used = [{ name: 'auto_settle_order_packing', args: { order_id: found.id } }];
-    }
+    reply = 'Review the order and approve payment in Orders.';
+    actions = [{ type: 'PAYMENT_REVIEW', message: reply }];
+    tools_used = [{ name: 'payment_review_required', args: {} }];
   }
+
   // 5. Accept / Prepare / Dispatch / Deliver / Cancel order
   else if (
     ['accept', 'prepare', 'dispatch', 'deliver', 'reject', 'cancel'].some((w) => lower.includes(w)) &&
@@ -586,51 +557,11 @@ export function handleLovableAgentFallback(config) {
   }
   // 7. Restock / PayPal Payout (Single or Bulk All Low-Stock)
   else if (lower.includes('restock') || lower.includes('payout') || lower.includes('supplier') || lower.includes('replenish all')) {
-    if (lower.includes('all') || lower.includes('low stock')) {
-      const lowProds = DEMO_PRODUCTS.filter((p) => p.stock_quantity <= 10);
-      const targets = lowProds.length ? lowProds : DEMO_PRODUCTS.slice(0, 3);
-      let totalPaid = 0;
-      const names = [];
-      for (const p of targets) {
-        p.stock_quantity += 20;
-        p.stock = p.stock_quantity;
-        totalPaid += 20 * p.cost_price;
-        names.push(p.name);
-      }
-      const receipt = {
-        status: 'SUCCESS',
-        payout_batch_id: `PAYOUT_BATCH_${Date.now().toString().slice(-6)}`,
-        amount_paid: Number(totalPaid.toFixed(2)),
-        supplier: 'wholesale@kirana.com',
-        product: `${names.length} items (${names.slice(0, 3).join(', ')})`,
-        quantity: names.length * 20,
-        new_stock: 'Replenished (+20 each)',
-      };
-      reply = `Restocked ${names.length} low-stock items for $${totalPaid.toFixed(2)} total.`;
-      actions = [{ type: 'PAYOUT_RECEIPT', receipt }, { type: 'REFRESH_DATA' }];
-      tools_used = [{ name: 'execute_supplier_restock_payout', args: { batch: names } }];
-    } else {
-      const prod = matchSingleProduct(prompt) || DEMO_PRODUCTS[0];
-      const cleanedNum = lower.replace(/\$\d+(?:\.\d+)?|\d+\s*(?:lb|oz|ct|gal)\b/gi, '');
-      const numMatch = cleanedNum.match(/\b(\d+)\b/);
-      const qty = numMatch ? Number(numMatch[1]) : 15;
-      prod.stock_quantity += qty;
-      prod.stock = prod.stock_quantity;
-      const paid = Number((qty * prod.cost_price).toFixed(2));
-      const receipt = {
-        status: 'SUCCESS',
-        payout_batch_id: `PAYOUT_SBX_${Date.now().toString().slice(-6)}`,
-        amount_paid: paid,
-        supplier: 'wholesale@kirana.com',
-        product: prod.name,
-        quantity: qty,
-        new_stock: prod.stock_quantity,
-      };
-      reply = `Paid $${paid.toFixed(2)} to restock ${qty} ${prod.name}.`;
-      actions = [{ type: 'PAYOUT_RECEIPT', receipt }, { type: 'REFRESH_DATA' }];
-      tools_used = [{ name: 'execute_supplier_restock_payout', args: { product_name: prod.name, quantity: qty } }];
-    }
+    reply = 'Supplier payments require verified payment details and manual approval.';
+    actions = [{ type: 'PAYMENT_REVIEW', message: reply }];
+    tools_used = [{ name: 'payment_review_required', args: {} }];
   }
+
   // 8. Low stock check
   else if (lower.includes('low stock') || lower.includes('inventory health') || lower.includes('out of stock')) {
     const low = DEMO_PRODUCTS.filter((p) => p.stock_quantity <= 10).map((p) => ({
@@ -654,13 +585,11 @@ export function handleLovableAgentFallback(config) {
     persona === 'shopper' &&
     ['place order', 'place my order', 'checkout now', 'complete order', 'complete checkout', 'buy my cart', 'order my cart', 'pay with cod', 'pay with cash', 'pay with wallet', 'instant checkout'].some((k) => lower.includes(k))
   ) {
-    const payMethod = lower.includes('wallet') ? 'WALLET' : 'COD';
-    const delivMode = lower.includes('pickup') ? 'PICKUP' : 'DELIVERY';
-    const payLabel = payMethod === 'WALLET' ? 'Wallet' : 'Cash on Delivery';
-    reply = `Placed your order with ${payLabel}.`;
-    actions = [{ type: 'AUTO_CHECKOUT', payment_method: payMethod, delivery_mode: delivMode }];
-    tools_used = [{ name: 'auto_place_order', args: { payment_method: payMethod, delivery_mode: delivMode } }];
+    reply = 'Review checkout before placing your order.';
+    actions = [{ type: 'PAYMENT_REVIEW', message: reply }];
+    tools_used = [{ name: 'payment_review_required', args: {} }];
   }
+
   // 8c. Suite 1B: Zero-Click Apply Promo Code ("apply promo SAVE10", "apply best coupon", "use coupon FRESH15")
   else if (
     persona === 'shopper' &&
@@ -971,12 +900,9 @@ export function handleLovableAgentFallback(config) {
     actions = [{ type: 'SEARCH_RESULTS', items }];
     tools_used = [{ name: 'search_products_and_stock', args: { query: label } }];
   }
-  // 16. Live products / Catalog summary
+  // Unknown requests need real AI, never a fabricated live catalog summary.
   else {
-    const items = DEMO_PRODUCTS.slice(0, 6).map((p) => serializeCardItem(p, 1));
-    reply = `${DEMO_PRODUCTS.length} live products across 4 categories.`;
-    actions = [{ type: 'CATALOG_SUMMARY', total: DEMO_PRODUCTS.length, in_stock: DEMO_PRODUCTS.length, categories: 4, items }];
-    tools_used = [{ name: 'get_catalog_summary', args: {} }];
+    return { reply: '', voice_reply: '', actions: [], tools_used: [], follow_ups: [], needs_ai: true };
   }
 
   // Track last discussed product in session memory for follow-up pronouns

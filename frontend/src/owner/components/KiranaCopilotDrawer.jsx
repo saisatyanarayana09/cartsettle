@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { ModeSwitch, PanelMenu, VoiceView } from "../../components/voice/VoiceView";
 import { useVoiceSession } from "../../components/voice/useVoiceSession";
 import { ActionCards } from "../../components/voice/ActionCards";
+import { PaymentReview } from "../../components/voice/PaymentReview";
+import { requiresPaymentReview } from "../../components/voice/payment-review";
 
 const STORAGE_KEY = "cartsettle_owner_agent_chat_v2";
 const SESSION_ID = "owner_copilot_session";
@@ -28,9 +30,11 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
   const [mode, setMode] = useState("voice");
   const [loading, setLoading] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [paymentReview, setPaymentReview] = useState(null);
   const busy = useRef(false);
   const endRef = useRef(null);
   const panelRef = useRef(null);
+  useEffect(() => { if (!isOpen) setPaymentReview(null); }, [isOpen]);
 
   useEffect(() => {
     try {
@@ -53,6 +57,13 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
   const handleSend = async (text = input, requestMode = mode) => {
     const prompt = text.trim();
     if (!prompt || busy.current) return;
+    if (paymentReview) return;
+    if (requiresPaymentReview(prompt)) {
+      voice.stop();
+      setInput("");
+      setPaymentReview({ prompt });
+      return { reply: "Review payment details before continuing." };
+    }
     busy.current = true;
     setLoading(true);
     setInput("");
@@ -66,7 +77,9 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
         ...(requestMode === "voice" ? { mode: "voice" } : {}),
         history: history.map(({ role, content }) => ({ role, content })),
       });
-      const data = res.data;
+      const data = { ...res.data, actions: (res.data.actions || []).map((action) =>
+        action.type === "TOGGLE_DARK_MODE" ? { ...action, type: "SWITCH_THEME" } :
+        ["SWITCH_LANGUAGE", "CHANGE_LANGUAGE"].includes(action.type) ? { ...action, type: "PROPOSED_LANGUAGE" } : action) };
       setMessages((previous) => [
         ...previous,
         {
@@ -77,6 +90,10 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
         },
       ]);
       for (const action of data.actions || []) {
+        if (action.type === "PAYMENT_REVIEW") {
+          voice.stop();
+          setPaymentReview({ prompt });
+        }
         if (action.type === "SWITCH_THEME") {
           toggleTheme?.(action.theme || "dark");
         }
@@ -102,7 +119,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
     } catch (error) {
       setMessages((previous) => [
         ...previous,
-        { role: "assistant", content: "Couldn’t complete that. Try again." },
+        { role: "assistant", content: error?.message || "Couldn’t complete that. Try again." },
       ]);
       throw error;
     } finally {
@@ -111,12 +128,13 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
     }
   };
   const voice = useVoiceSession({
-    active: isOpen && mode === "voice",
+    active: isOpen && mode === "voice" && !paymentReview,
     onPrompt: (text) => handleSend(text, "voice"),
   });
   const close = () => {
     voice.stop();
     setConfirmClear(false);
+    setPaymentReview(null);
     onClose();
   };
   const openRoute = (path) => {
@@ -131,6 +149,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
   const latestUser = [...messages].reverse().find((message) => message.role === "user");
   const clear = () => {
     voice.stop();
+    setPaymentReview(null);
     setMessages([INITIAL_MESSAGE]);
     setConfirmClear(false);
     localStorage.removeItem(STORAGE_KEY);
@@ -144,8 +163,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
     panelRef.current?.focus();
     const keydown = (event) => {
       if (event.key === "Escape") {
-        voice.stop();
-        onClose();
+        close();
       }
       if (event.key !== "Tab") return;
       const controls = panelRef.current?.querySelectorAll(
@@ -181,12 +199,15 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
       persona="owner"
       currency="USD"
       onSend={sendAction}
+      onReviewPayment={(review) => { voice.stop(); setPaymentReview(review); }}
       onNavigate={openRoute}
       onToggleTheme={toggleTheme}
-      busy={loading}
+      busy={loading || Boolean(paymentReview)}
     />
   );
   return (
+    <>
+    <div className="assistant-backdrop" onClick={close} aria-hidden="true" />
     <section
       ref={panelRef}
       tabIndex={-1}
@@ -197,14 +218,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
       className="shopper-panel shopper-theme flex flex-col overflow-hidden border-border bg-background text-foreground outline-none"
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-4">
-        <div className="flex items-center gap-2 min-w-0">
-          <h2 id="copilot-title" className="min-w-0 text-base font-bold">
-            Store desk
-          </h2>
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
-            Zero-Click AI
-          </span>
-        </div>
+        <h2 id="copilot-title" className="assistant-wordmark">Cart<span>Settle</span></h2>
         <div className="flex shrink-0 items-center gap-0.5">
           <ModeSwitch
             mode={mode}
@@ -241,10 +255,13 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
           </div>
         </div>
       )}
+      <PaymentReview review={paymentReview} busy={loading} onCancel={() => setPaymentReview(null)}
+        onOpen={() => { close(); navigate("/owner/orders"); }}
+        />
       {mode === "voice" ? (
         <VoiceView
           voice={voice}
-          busy={loading}
+          busy={loading || Boolean(paymentReview)}
           replyText={messages.length > 1 ? latest?.content : undefined}
           lastUserText={latestUser?.content}
         >
@@ -286,14 +303,14 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
               placeholder="Ask about your store"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              disabled={loading}
+              disabled={loading || Boolean(paymentReview)}
               className="min-w-0 flex-1 rounded-md border border-input bg-muted px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             <Button
               type="submit"
               size="icon"
               aria-label="Send message"
-              disabled={!input.trim() || loading}
+              disabled={!input.trim() || loading || Boolean(paymentReview)}
             >
               <ArrowUp />
             </Button>
@@ -301,5 +318,6 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
         </>
       )}
     </section>
+    </>
   );
 }
