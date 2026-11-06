@@ -202,33 +202,70 @@ function extractItemsWithQuantities(text) {
 function normalizeVoiceTranscript(text) {
   if (!text) return '';
   let out = String(text).trim();
-  const map = [
+  const wordToNum = [
     [/\btwenty[\s-]+five\b/gi, '25'],
     [/\btwenty\b/gi, '20'],
+    [/\bnineteen\b/gi, '19'],
+    [/\beighteen\b/gi, '18'],
+    [/\bseventeen\b/gi, '17'],
+    [/\bsixteen\b/gi, '16'],
     [/\bfifteen\b/gi, '15'],
     [/\bfourteen\b/gi, '14'],
     [/\bthirteen\b/gi, '13'],
     [/\btwelve\b/gi, '12'],
     [/\beleven\b/gi, '11'],
-    [/\bten\b/gi, '10'],
+    [/\b(?:ten|das)\b/gi, '10'],
     [/\bnine\b/gi, '9'],
     [/\beight\b/gi, '8'],
     [/\bseven\b/gi, '7'],
     [/\bsix\b/gi, '6'],
-    [/\bfive\b/gi, '5'],
-    [/\bfour\b/gi, '4'],
-    [/\bthree\b/gi, '3'],
-    [/\btwo\b/gi, '2'],
-    [/\bone\b/gi, '1'],
+    [/\b(?:five|paanch|panch)\b/gi, '5'],
+    [/\b(?:four|chaar|char)\b/gi, '4'],
+    [/\b(?:three|teen)\b/gi, '3'],
+    [/\b(?:two|do)\b/gi, '2'],
+    [/\b(?:one|ek)\b/gi, '1'],
     [/\bthirty\b/gi, '30'],
     [/\bforty\b/gi, '40'],
     [/\bfifty\b/gi, '50'],
+    [/\bhundred\b/gi, '100'],
   ];
-  for (const [re, digit] of map) {
+  for (const [re, digit] of wordToNum) {
     out = out.replace(re, digit);
   }
-  out = out.replace(/(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent)\b/gi, '$1%');
-  out = out.replace(/\b(\d+(?:\.\d+)?)\s*dollars?\b/gi, '$$$1');
+
+  // Indian English / Hinglish / Regional Kirana & Global Accent Phonetic Normalization
+  const accentAndVocabMap = [
+    [/\b(?:doodh|dudh|paalu|palu)\b/gi, 'milk'],
+    [/\b(?:aata|godhuma\s+pindi|chapati\s+flour|roti\s+flour)\b/gi, 'atta'],
+    [/\b(?:dahi|curd|perugu|yoghurt|yogart)\b/gi, 'yogurt'],
+    [/\b(?:chawal|biyyam)\b/gi, 'rice'],
+    [/\b(?:pav|double\s+roti|chapati|phulka)\b/gi, 'bread'],
+    [/\b(?:anda|ande|gudlu)\b/gi, 'eggs'],
+    [/\b(?:makhan|venna)\b/gi, 'butter'],
+    [/\b(?:paneer)\b/gi, 'cheese'],
+    [/\b(?:tamatar)\b/gi, 'tomato'],
+    [/\b(?:straberry|strawbery|straberries)\b/gi, 'strawberries'],
+    [/\b(?:avacado|avacados)\b/gi, 'avocados'],
+    [/\b(?:kitne\s+ka\s+hai|kitna\s+hai|rate\s+kya\s+hai)\b/gi, 'how much is'],
+    [/\b(?:daal\s+do|daalo|add\s+karo|bhej\s+do)\b/gi, 'add'],
+    [/\b(?:hata\s+do|hatao|nikalo)\b/gi, 'remove'],
+    [/\b(?:sasta|kam\s+daam|cheepar|chipper)\b/gi, 'cheaper'],
+    [/\b(?:andar|andhar|unda)(?=\s*\$?\d)/gi, 'under'],
+    [/\b(?:auder|ordo|odder)\b/gi, 'order'],
+    [/\b(?:setal|satel|settel)\b/gi, 'settle'],
+    [/\b(?:kansal|cansel)\b/gi, 'cancel'],
+    [/\b(?:fayvorit|fevret|favourite)\b/gi, 'favorite'],
+    [/\b(?:fayvorits|fevrets|favourites)\b/gi, 'favorites'],
+    [/\b(?:restok|re[\s-]+stock)\b/gi, 'restock'],
+    [/\b(?:dairi|deri)\b/gi, 'dairy'],
+    [/\b(?:bakri|bekari)\b/gi, 'bakery'],
+  ];
+  for (const [re, replacement] of accentAndVocabMap) {
+    out = out.replace(re, replacement);
+  }
+
+  out = out.replace(/(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent|pratishat)\b/gi, '$1%');
+  out = out.replace(/\b(\d+(?:\.\d+)?)\s*(?:dollars?|bucks?|rupees?|inr|usd)\b/gi, '$$$1');
   return out;
 }
 
@@ -950,12 +987,17 @@ export function handleLovableAgentFallback(config) {
     follow_ups = [`Add 1 ${mem.last_product} to my cart`, `Can I get 10% off ${mem.last_product}?`, 'What is the cheapest item?'];
   }
 
+  const voiceReply = String(reply || 'Done.')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/(?:Order\s*)?#?ORD\d*0*(\d+)\b/gi, 'Order $1')
+    .trim();
+
   mem.messages.push({ role: 'user', content: rawPrompt });
-  mem.messages.push({ role: 'assistant', content: reply, voice_reply: reply, mode, actions, tools_used, follow_ups, latency_ms: 14 });
+  mem.messages.push({ role: 'assistant', content: reply, voice_reply: voiceReply, mode, actions, tools_used, follow_ups, latency_ms: 14 });
 
   return {
     reply,
-    voice_reply: reply,
+    voice_reply: voiceReply,
     mode,
     actions,
     tools_used,

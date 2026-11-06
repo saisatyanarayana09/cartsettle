@@ -55,15 +55,52 @@ export function VoiceView({
   replyText,
 }) {
   const status = busy && voice.status !== "speaking" ? "working" : voice.status;
+  const hasTranscript = Boolean(voice.transcript && voice.transcript.trim());
   const label =
     voice.status === "listening"
-      ? "Pause microphone"
+      ? hasTranscript
+        ? "Send spoken message"
+        : "Pause microphone"
       : voice.status === "speaking"
         ? "Stop speaking"
         : "Start microphone";
+  const activeLang = voice?.lang || "en-IN";
+
   return (
     <div className="voice-stage min-h-0 flex-1 overflow-y-auto px-5">
-      <div className="flex min-h-[42dvh] flex-col items-center justify-center gap-6 py-6">
+      <div className="flex min-h-[42dvh] flex-col items-center justify-center gap-5 py-5">
+        {typeof voice?.setLang === "function" && (
+          <div
+            role="group"
+            aria-label="Voice recognition accent"
+            className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-secondary/50 p-0.5 text-[11px] font-semibold"
+          >
+            <button
+              type="button"
+              onClick={() => voice.setLang("en-IN")}
+              aria-pressed={activeLang === "en-IN"}
+              className={`rounded-full px-2.5 py-1 transition-all ${
+                activeLang === "en-IN"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              🇮🇳 India EN
+            </button>
+            <button
+              type="button"
+              onClick={() => voice.setLang("en-US")}
+              aria-pressed={activeLang === "en-US"}
+              className={`rounded-full px-2.5 py-1 transition-all ${
+                activeLang === "en-US"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              🌍 Global EN
+            </button>
+          </div>
+        )}
         <button
           type="button"
           aria-label={label}
@@ -96,11 +133,16 @@ export function VoiceView({
             {voice.transcript ||
               replyText ||
               (status === "listening"
-                ? "Go ahead"
+                ? "Go ahead, I'm listening..."
                 : status === "idle" || status === "paused"
                   ? hint
                   : "")}
           </p>
+          {status === "listening" && hasTranscript && (
+            <p className="text-[11px] font-medium text-muted-foreground animate-pulse">
+              Tap orb to send immediately, or pause briefly to auto-send
+            </p>
+          )}
         </div>
       </div>
       <div className="space-y-3 pb-8">{children}</div>

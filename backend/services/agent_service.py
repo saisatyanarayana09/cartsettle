@@ -1269,7 +1269,7 @@ class AgentService:
             return ["Build a cart under $20", "Reorder my last order", f"Add 1 {short_prod} to my cart"]
 
     def _normalize_voice_transcript(self, text: str) -> str:
-        """Normalizes spoken number words and currency/percent terms from SpeechRecognition into clean digits."""
+        """Normalizes spoken number words, Indian/global accent variations, and regional kirana vocabulary into clean intent text."""
         if not text:
             return ""
         out = text.strip()
@@ -1285,16 +1285,16 @@ class AgentService:
             (r"\bthirteen\b", "13"),
             (r"\btwelve\b", "12"),
             (r"\beleven\b", "11"),
-            (r"\bten\b", "10"),
+            (r"\b(?:ten|das)\b", "10"),
             (r"\bnine\b", "9"),
             (r"\beight\b", "8"),
             (r"\bseven\b", "7"),
             (r"\bsix\b", "6"),
-            (r"\bfive\b", "5"),
-            (r"\bfour\b", "4"),
-            (r"\bthree\b", "3"),
-            (r"\btwo\b", "2"),
-            (r"\bone\b", "1"),
+            (r"\b(?:five|paanch|panch)\b", "5"),
+            (r"\b(?:four|chaar|char)\b", "4"),
+            (r"\b(?:three|teen)\b", "3"),
+            (r"\b(?:two|do)\b", "2"),
+            (r"\b(?:one|ek)\b", "1"),
             (r"\bthirty\b", "30"),
             (r"\bforty\b", "40"),
             (r"\bfifty\b", "50"),
@@ -1302,8 +1302,38 @@ class AgentService:
         ]
         for pattern, digit in word_to_num:
             out = re.sub(pattern, digit, out, flags=re.IGNORECASE)
-        out = re.sub(r"(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent)\b", r"\1%", out, flags=re.IGNORECASE)
-        out = re.sub(r"\b(\d+(?:\.\d+)?)\s*dollars?\b", r"$\1", out, flags=re.IGNORECASE)
+
+        accent_and_vocab_map = [
+            (r"\b(?:doodh|dudh|paalu|palu)\b", "milk"),
+            (r"\b(?:aata|godhuma\s+pindi|chapati\s+flour|roti\s+flour)\b", "atta"),
+            (r"\b(?:dahi|curd|perugu|yoghurt|yogart)\b", "yogurt"),
+            (r"\b(?:chawal|biyyam)\b", "basmati rice"),
+            (r"\b(?:pav|double\s+roti|chapati|phulka)\b", "bread"),
+            (r"\b(?:anda|ande|gudlu)\b", "eggs"),
+            (r"\b(?:makhan|venna)\b", "butter"),
+            (r"\b(?:paneer)\b", "cheese"),
+            (r"\b(?:tamatar)\b", "tomato"),
+            (r"\b(?:straberry|strawbery|straberries)\b", "strawberries"),
+            (r"\b(?:avacado|avacados)\b", "avocados"),
+            (r"\b(?:kitne\s+ka\s+hai|kitna\s+hai|rate\s+kya\s+hai)\b", "how much is"),
+            (r"\b(?:daal\s+do|daalo|add\s+karo|bhej\s+do)\b", "add"),
+            (r"\b(?:hata\s+do|hatao|nikalo)\b", "remove"),
+            (r"\b(?:sasta|kam\s+daam|cheepar|chipper)\b", "cheaper"),
+            (r"\b(?:andar|andhar|unda)(?=\s*\$?\d)", "under"),
+            (r"\b(?:auder|ordo|odder)\b", "order"),
+            (r"\b(?:setal|satel|settel)\b", "settle"),
+            (r"\b(?:kansal|cansel)\b", "cancel"),
+            (r"\b(?:fayvorit|fevret|favourite)\b", "favorite"),
+            (r"\b(?:fayvorits|fevrets|favourites)\b", "favorites"),
+            (r"\b(?:restok|re[\s-]+stock)\b", "restock"),
+            (r"\b(?:dairi|deri)\b", "dairy"),
+            (r"\b(?:bakri|bekari)\b", "bakery"),
+        ]
+        for pattern, replacement in accent_and_vocab_map:
+            out = re.sub(pattern, replacement, out, flags=re.IGNORECASE)
+
+        out = re.sub(r"(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent|pratishat)\b", r"\1%", out, flags=re.IGNORECASE)
+        out = re.sub(r"\b(\d+(?:\.\d+)?)\s*(?:dollars?|bucks?|rupees?|inr|usd)\b", r"$\1", out, flags=re.IGNORECASE)
         return out
 
     def _to_concise_human_reply(self, text: str, mode: str = "chat") -> tuple:
@@ -1320,13 +1350,14 @@ class AgentService:
         else:
             clean = "Done."
 
-        # Build an ultra-clean spoken sentence without parentheticals or bullet symbols
+        # Build an ultra-clean spoken sentence without parentheticals, bullet symbols, or raw long order codes
         spoken = re.sub(r"\s*\([^)]*\)", "", clean)
         spoken = spoken.replace("•", ",").replace("—", ",")
+        spoken = re.sub(r"(?:Order\s*)?#?ORD\d*0*(\d+)\b", r"Order \1", spoken, flags=re.IGNORECASE)
         first_sentence = re.split(r"(?<=[.!?])\s+", spoken)[0].strip()
         voice_reply = first_sentence or clean
         if mode == "voice":
-            return voice_reply, voice_reply
+            return clean, voice_reply
         return clean, voice_reply
 
     def chat(self, prompt: str, session_id: str = "default_session", history: list = None, persona: str = "owner", mode: str = "chat", cart_items: list = None) -> dict:
