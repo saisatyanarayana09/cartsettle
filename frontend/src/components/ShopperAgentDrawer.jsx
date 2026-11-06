@@ -238,10 +238,13 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             if (existing) {
               update?.(existing, qty);
               toast.success(`Updated ${act.name || "item"} to ${qty}`);
+              finalActions.push({ ...act, previous_quantity: Number(existing.quantity || 0) });
             } else if (act.item) {
               handleAddToCart({ ...act.item, quantity: qty });
+              finalActions.push(act);
+            } else {
+              finalActions.push(act);
             }
-            finalActions.push(act);
           } else if (type === "APPLY_PROMO") {
             const code = act.code || "SAVE10";
             applyPromo?.(code)
@@ -400,6 +403,49 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     toast.success(`Added ${items.length} ingredients`);
   };
 
+  const handleUndoAdd = (items) => {
+    (items || []).forEach((it) => {
+      const live = (cart?.items || []).find(
+        (ci) => Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id) === Number(it.id),
+      );
+      if (live) update?.(live, 0);
+      setAddedItems((prev) => {
+        const next = { ...prev };
+        delete next[it.id];
+        return next;
+      });
+    });
+    toast.success("Removed from cart");
+  };
+
+  const handleUndoRemove = (items) => {
+    (items || []).forEach((it) => {
+      if (it?.id) handleAddToCart({ ...it, quantity: it.quantity || 1 });
+    });
+  };
+
+  const handleUndoQty = (action) => {
+    const targetId = Number(action.product_id || action.item?.id);
+    const existing = (cart?.items || []).find(
+      (ci) => Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id) === targetId,
+    );
+    if (existing) update?.(existing, Math.max(0, Number(action.previous_quantity || 0)));
+  };
+
+  const handleReorder = (items) => {
+    (items || []).forEach((it) =>
+      handleAddToCart({
+        id: it.product_id || it.id,
+        name: it.name || it.product_name || "Item",
+        price: Number(it.price ?? it.unit_price ?? 0),
+        unit: it.unit,
+        image: it.image,
+        quantity: it.quantity || 1,
+      }),
+    );
+    toast.success("Added your last order to the cart");
+  };
+
   const voice = useVoiceSession({
     active: isOpen && mode === "voice" && !paymentReview,
     onPrompt: (text) => handleSend(text, "voice"),
@@ -461,6 +507,10 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     toast.success("Cleared conversation");
   };
   const isWelcome = messages.length === 1;
+  const liveItems = Array.isArray(cart?.items) ? cart.items : [];
+  const cartCount = liveItems.reduce((sum, ci) => sum + Number(ci.quantity || 1), 0);
+  const cartTotal = Number(cart?.total ?? 0);
+  const showCartBar = cartCount > 0 && !paymentReview && mode === "chat";
   return (
     <TooltipProvider delayDuration={250}>
       {/* Dimmed Background Overlay */}
@@ -529,6 +579,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             hint={isWelcome ? "What can I help with?" : undefined}
             replyText={!isWelcome ? latestReply?.content : undefined}
             lastUserText={latestUser?.content}
+            cartCount={cartCount}
+            cartTotal={cartTotal}
+            onViewCart={() => {
+              close();
+              navigate("/cart");
+            }}
           >
             <ActionCards
               key={messages.length}
@@ -540,6 +596,10 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               onUpdate={(item, quantity) => update?.(item, quantity)}
               addedItems={addedItems}
               onToggleTheme={toggleTheme}
+              onUndoAdd={handleUndoAdd}
+              onUndoRemove={handleUndoRemove}
+              onUndoQty={handleUndoQty}
+              onReorder={handleReorder}
               onSend={(p) => {
                 voice.stop();
                 return handleSend(p, "voice").catch(() => {});
@@ -587,6 +647,10 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               onUpdate={(item, quantity) => update?.(item, quantity)}
                           addedItems={addedItems}
                           onToggleTheme={toggleTheme}
+                          onUndoAdd={handleUndoAdd}
+                          onUndoRemove={handleUndoRemove}
+                          onUndoQty={handleUndoQty}
+                          onReorder={handleReorder}
                           onSend={handleSend}
                           onNavigate={(path) => {
                             close();
@@ -618,6 +682,24 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             </ConversationContent>
             <ConversationScrollButton aria-label="Scroll to latest message" />
           </Conversation>
+        )}
+
+        {showCartBar && (
+          <button
+            type="button"
+            className="assistant-cartbar"
+            onClick={() => {
+              close();
+              navigate("/cart");
+            }}
+            aria-label={`View cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}, total ${cartTotal.toFixed(2)}`}
+          >
+            <span className="assistant-cartbar-count">
+              <ShoppingBag className="size-4" />
+              {cartCount} {cartCount === 1 ? "item" : "items"}
+            </span>
+            <span className="assistant-cartbar-total">${cartTotal.toFixed(2)}</span>
+          </button>
         )}
 
         {mode === "chat" && (

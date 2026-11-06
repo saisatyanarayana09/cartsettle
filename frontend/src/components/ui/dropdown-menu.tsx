@@ -56,12 +56,20 @@ export function DropdownMenuTrigger({
     children.props?.onClick?.(event);
     setOpen((prev) => !prev);
   };
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    children.props?.onKeyDown?.(event);
+    if (event.key === "Enter" || event.key === " " || event.key === "ArrowDown") {
+      event.preventDefault();
+      setOpen((prev) => !prev);
+    }
+  };
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children, {
       ...props,
       "aria-expanded": open,
       "data-state": open ? "open" : "closed",
       onClick: handleClick,
+      onKeyDown: handleKeyDown,
     });
   }
   return (
@@ -70,6 +78,7 @@ export function DropdownMenuTrigger({
       aria-expanded={open}
       data-state={open ? "open" : "closed"}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       {...props}
     >
       {children}

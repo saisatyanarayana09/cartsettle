@@ -114,6 +114,10 @@ function ActionContent({
   onReviewPayment,
   cartItems,
   onUpdate,
+  onUndoAdd,
+  onUndoRemove,
+  onUndoQty,
+  onReorder,
   busy,
   persona,
 }) {
@@ -131,8 +135,17 @@ function ActionContent({
   }
   if (type === "PROPOSED_LANGUAGE") return <div><div className="flex justify-between gap-2"><h3 className="text-sm font-semibold">{action.language || "Assistant language"}</h3><span className="text-xs text-muted-foreground">Proposed</span></div><p className="mt-2 text-xs text-muted-foreground">Language switching is not connected yet.</p></div>;
   if (type === "PAYMENT_REVIEW") return <p className="text-sm">{action.message}</p>;
-  if (["SWITCH_ADDRESS", "TOGGLE_FAVORITE", "MOVE_FAVORITES_TO_CART", "UPDATE_CART_QTY", "NAVIGATE"].includes(type)) {
-    const titles = { SWITCH_ADDRESS: `${action.label || "Delivery"} address selected`, TOGGLE_FAVORITE: `${action.name || "Item"} saved`, MOVE_FAVORITES_TO_CART: "Favorites added to cart", UPDATE_CART_QTY: `${action.name || "Item"} · ${action.quantity} in cart`, NAVIGATE: "Opened" };
+  if (type === "UPDATE_CART_QTY") {
+    const canUndo = onUndoQty && action.previous_quantity != null;
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <p role="status" className="flex gap-2 items-center text-sm"><Check className="size-4 text-primary" />{action.name || "Item"} · {action.quantity} in cart</p>
+        {canUndo && <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndoQty(action)}>Undo</Button>}
+      </div>
+    );
+  }
+  if (["SWITCH_ADDRESS", "TOGGLE_FAVORITE", "MOVE_FAVORITES_TO_CART", "NAVIGATE"].includes(type)) {
+    const titles = { SWITCH_ADDRESS: `${action.label || "Delivery"} address selected`, TOGGLE_FAVORITE: `${action.name || "Item"} saved`, MOVE_FAVORITES_TO_CART: "Favorites added to cart", NAVIGATE: "Opened" };
     return <p role="status" className="flex gap-2 items-center text-sm"><Check className="size-4 text-primary" />{titles[type]}</p>;
   }
 
@@ -160,6 +173,9 @@ function ActionContent({
             <RemovedMiniCard key={item.id || idx} item={item} />
           ))}
         </div>
+        {onUndoRemove && removedList.length > 0 && (
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndoRemove(removedList)}>Undo</Button>
+        )}
       </div>
     );
   }
@@ -183,6 +199,9 @@ function ActionContent({
             />
           ))}
         </div>
+        {type === "ADD_TO_CART" && onUndoAdd && items.length > 0 && (
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndoAdd(items)}>Undo</Button>
+        )}
       </div>
     );
   }
@@ -214,6 +233,7 @@ function ActionContent({
   }
   if (type === "ORDER_CARD") {
     const order = action.order || action;
+    const reorderItems = Array.isArray(order.items) ? order.items : [];
     return (
       <div className="space-y-3">
         <div className="flex justify-between gap-2 text-sm">
@@ -226,14 +246,20 @@ function ActionContent({
             currency,
           )}
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onNavigate(`/owner/orders/${order.id}`)}
+            onClick={() => onNavigate(persona === "shopper" ? "/profile/orders" : `/owner/orders/${order.id}`)}
           >
             Open <ArrowUpRight />
           </Button>
+          {persona === "shopper" && reorderItems.length > 0 && onReorder && (
+            <Button size="sm" disabled={busy} onClick={() => onReorder(reorderItems)}>
+              <Plus />
+              Reorder
+            </Button>
+          )}
           {order.can_settle && (
             <Button size="sm" disabled={busy} onClick={() => onReviewPayment?.({ prompt: `Settle order ${order.id}`, amount: order.total_amount ?? order.total ?? order.authorized_amount, recipient: order.recipient || order.payee, currency })}>
               <Check />

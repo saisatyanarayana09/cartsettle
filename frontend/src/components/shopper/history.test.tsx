@@ -7,6 +7,7 @@ const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn() }))
 vi.mock("../../services/api", () => ({ default: api }));
 vi.mock("../../cart-context", () => ({ useCart: () => ({ cart: { items: [] }, add: cart.add }) }));
 vi.mock("../../router", () => ({ useNavigate: () => vi.fn() }));
+vi.mock("../../context/ThemeContext", () => ({ useTheme: () => ({ toggleTheme: vi.fn() }) }));
 vi.mock("react-hot-toast", () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 const cart = vi.hoisted(() => ({ add: vi.fn() }));
 vi.mock("../voice/useVoiceSession", () => ({
@@ -29,7 +30,7 @@ vi.mock("@/components/ai-elements/message", () => ({
   MessageResponse: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("@/components/ai-elements/prompt-input", () => ({
-  PromptInput: ({ children }: { children: React.ReactNode }) => <form>{children}</form>,
+  PromptInput: ({ children, onSubmit }: { children: React.ReactNode; onSubmit: (data: {text: string}) => void }) => <form onSubmit={(event) => { event.preventDefault(); onSubmit({text: "Find groceries"}); }}>{children}<button type="submit">Find groceries</button></form>,
   PromptInputTextarea: () => <textarea aria-label="Message Shopper AI" />,
   PromptInputFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   PromptInputButton: () => null,

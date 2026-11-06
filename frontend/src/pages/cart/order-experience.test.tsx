@@ -4,7 +4,7 @@ import CartPage from './CartPage.jsx';
 import CheckoutPage from './CheckoutPage.jsx';
 
 const mocks = vi.hoisted(() => ({ navigate: vi.fn(), update: vi.fn(), flush: vi.fn(), refresh: vi.fn(), clear: vi.fn(), promo: vi.fn(), get: vi.fn(), post: vi.fn(), delete: vi.fn() }));
-vi.mock('../../router', () => ({ useNavigate: () => mocks.navigate, Link: ({ children, to, ...props }: any) => <a href={to} {...props}>{children}</a> }));
+vi.mock('../../router', () => ({ useNavigate: () => mocks.navigate, useLocation: () => ({ pathname: '/cart', search: '', hash: '', state: null }), Link: ({ children, to, ...props }: any) => <a href={to} {...props}>{children}</a> }));
 vi.mock('../../customer-layout', () => ({ CustomerLayout: ({ children }: any) => <>{children}</> }));
 vi.mock('../../components/PayPalAuthorizeButton', () => ({ default: () => null }));
 vi.mock('../../services/api', () => ({ default: { get: mocks.get, post: mocks.post, delete: mocks.delete } }));
