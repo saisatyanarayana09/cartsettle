@@ -1366,6 +1366,11 @@ class ReferralLookupView(APIView):
                         code = pending.referral_code
 
             if not code:
+                if by_ip:
+                    return Response({
+                        'referrer_name': None,
+                        'referral_code': None,
+                    }, status=200)
                 return Response({'error': 'No referral code provided'}, status=400)
                 
             profile = CustomerProfile.objects.select_related('user').filter(referral_code__iexact=code).first()

@@ -201,51 +201,61 @@ class CartClearView(APIView):
 class CartMergeView(APIView):
     permission_classes = [IsAuthenticated, IsCustomerUser]
 
-    @transaction.atomic
     def post(self, request, *args, **kwargs):
+        import time
+        from django.db import OperationalError
+
         items = request.data.get('items', [])
         if not isinstance(items, list):
             return Response({'detail': 'Items must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        cart = customer_cart(request.user)
-        cart = Cart.objects.select_for_update().get(id=cart.id)
-
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            product_id = item.get('product')
+        for attempt in range(3):
             try:
-                qty = int(item.get('quantity', 1))
-            except (ValueError, TypeError):
-                continue
+                with transaction.atomic():
+                    cart = customer_cart(request.user)
+                    for item in items:
+                        if not isinstance(item, dict):
+                            continue
+                        product_id = item.get('product')
+                        try:
+                            qty = int(item.get('quantity', 1))
+                        except (ValueError, TypeError):
+                            continue
 
-            if not product_id or qty <= 0:
-                continue
+                        if not product_id or qty <= 0:
+                            continue
 
-            product = Product.objects.select_for_update().filter(id=product_id, is_active=True).first()
-            if not product or not product.is_in_stock:
-                continue
+                        product = Product.objects.filter(id=product_id, is_active=True).first()
+                        if not product or not product.is_in_stock:
+                            continue
 
-            if product.stock_quantity is not None and product.stock_quantity <= 0:
-                continue
+                        if product.stock_quantity is not None and product.stock_quantity <= 0:
+                            continue
 
-            existing = CartItem.objects.select_for_update().filter(cart=cart, product=product).first()
+                        existing = CartItem.objects.filter(cart=cart, product=product).first()
 
-            if existing:
-                existing.quantity = min(existing.quantity + qty, product.stock_quantity or (existing.quantity + qty))
-                if product.max_order_quantity and product.max_order_quantity > 0:
-                    existing.quantity = min(existing.quantity, product.max_order_quantity)
-                existing.save(update_fields=['quantity'])
-            else:
-                initial_qty = min(qty, product.stock_quantity or qty)
-                if product.max_order_quantity and product.max_order_quantity > 0:
-                    initial_qty = min(initial_qty, product.max_order_quantity)
-                if initial_qty > 0:
-                    CartItem.objects.create(cart=cart, product=product, quantity=initial_qty)
+                        if existing:
+                            existing.quantity = min(existing.quantity + qty, product.stock_quantity or (existing.quantity + qty))
+                            if product.max_order_quantity and product.max_order_quantity > 0:
+                                existing.quantity = min(existing.quantity, product.max_order_quantity)
+                            existing.save(update_fields=['quantity'])
+                        else:
+                            initial_qty = min(qty, product.stock_quantity or qty)
+                            if product.max_order_quantity and product.max_order_quantity > 0:
+                                initial_qty = min(initial_qty, product.max_order_quantity)
+                            if initial_qty > 0:
+                                CartItem.objects.create(cart=cart, product=product, quantity=initial_qty)
 
+                cart = Cart.objects.prefetch_related('items__product').select_related('promo_code').get(id=cart.id)
+                data = CartSerializer(cart, context={'request': request}).data
+                broadcast_cart_updated(request.user.id, data)
+                return Response(data, status=status.HTTP_200_OK)
+            except OperationalError:
+                time.sleep(0.06 * (attempt + 1))
+
+        cart = customer_cart(request.user)
         cart = Cart.objects.prefetch_related('items__product').select_related('promo_code').get(id=cart.id)
         data = CartSerializer(cart, context={'request': request}).data
-        broadcast_cart_updated(request.user.id, data)
         return Response(data, status=status.HTTP_200_OK)
 
 

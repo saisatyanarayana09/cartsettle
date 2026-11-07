@@ -28,7 +28,7 @@ if IS_PRODUCTION:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-default_allowed_hosts = 'localhost,127.0.0.1'
+default_allowed_hosts = 'localhost,127.0.0.1,testserver'
 if IS_PRODUCTION:
     default_allowed_hosts = os.environ.get(
         'RENDER_EXTERNAL_HOSTNAME',
@@ -174,6 +174,22 @@ else:
 DATABASES['default']['CONN_MAX_AGE'] = DB_CONN_MAX_AGE
 if 'postgres' in DATABASES['default'].get('ENGINE', ''):
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+elif 'sqlite' in DATABASES['default'].get('ENGINE', ''):
+    DATABASES['default'].setdefault('OPTIONS', {})
+    DATABASES['default']['OPTIONS']['timeout'] = 30  # 30s busy timeout for concurrent threads
+
+# Enable SQLite WAL (Write-Ahead Logging) to eliminate 'database is locked' errors
+from django.db.backends.signals import connection_created
+def _enable_sqlite_wal(sender, connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        try:
+            cursor = connection.cursor()
+            cursor.execute('PRAGMA journal_mode=WAL;')
+            cursor.execute('PRAGMA synchronous=NORMAL;')
+            cursor.execute('PRAGMA busy_timeout=30000;')
+        except Exception:
+            pass
+connection_created.connect(_enable_sqlite_wal)
 
 
 # ─── Authentication Backends (Email or Username Login) ───

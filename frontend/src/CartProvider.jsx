@@ -22,6 +22,12 @@ const getStoredCart = () => {
   }
 };
 
+const clearStoredCart = () => {
+  try {
+    localStorage.removeItem(LOCAL_CART_KEY);
+  } catch {}
+};
+
 const getItemProductId = (item) => {
   if (!item) return null;
   if (typeof item.product === 'object' && item.product !== null) {
@@ -92,6 +98,7 @@ export function CartProvider({ children }) {
   const cartMutationQueue = useRef(Promise.resolve())
   const cartMutationVersion = useRef(0)
   const pendingSyncTimers = useRef({})
+  const isMergingRef = useRef(false)
 
   useEffect(() => {
     storeSettingsRef.current = storeSettings
@@ -237,12 +244,14 @@ export function CartProvider({ children }) {
     }
     const stored = getStoredCart();
     const localItems = stored?.items || [];
-    if (localItems.length > 0) {
+    if (localItems.length > 0 && !isMergingRef.current) {
+      isMergingRef.current = true;
       try {
         const itemsPayload = localItems
           .map(item => ({ product: getItemProductId(item), quantity: item.quantity }))
           .filter(i => i.product && i.quantity > 0);
         if (itemsPayload.length > 0) {
+          clearStoredCart();
           const res = await api.post('/cart/merge/', { items: itemsPayload });
           if (res?.data) {
             replaceCart(res.data);
@@ -250,6 +259,8 @@ export function CartProvider({ children }) {
         }
       } catch (e) {
         console.warn('Cart merge on refresh warning:', e);
+      } finally {
+        isMergingRef.current = false;
       }
     }
     // Run them independently so one slow request doesn't block the others

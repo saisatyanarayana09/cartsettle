@@ -1490,7 +1490,7 @@ class AgentService:
         }
 
         try:
-            res = requests.post(url, json=payload, timeout=3.5)
+            res = requests.post(url, json=payload, timeout=15.0)
             if res.status_code != 200:
                 logger.warning("Gemini API status %s, using fast fallback", res.status_code)
                 fb = self._fallback_chat(resolved_prompt, session_id, persona)
