@@ -422,17 +422,20 @@
   color: #ffffff;
   box-shadow: 0 6px 18px -6px rgba(6, 95, 70, 0.55);
 }
-@media (prefers-reduced-motion: reduce) {
-  .voice-orb *, .voice-orb, .voice-orb-container * { animation: none !important; }
-}
 
 /* ==========================================================================
    True Multi-Layer 3D Crystal Sphere with Internal Liquid Plasma & Ribbons
-   (Stationary 3D glass sphere shell + internal flowing plasma & occasional turn)
+   (Stationary 3D glass sphere shell + 60fps 3D volumetric canvas ribbons)
    ========================================================================== */
 .voice-orb-container {
   padding: 10px;
   touch-action: manipulation;
+}
+.voice-orb-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  display: block;
 }
 
 /* Layer 1: Soft Borderless Ambient Emerald & Aqua Plasma Backlight */
@@ -992,15 +995,6 @@
     border-left: 1px solid var(--border);
     border-radius: 0;
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .shopper-theme *,
-  .shopper-theme *::before,
-  .shopper-theme *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
   }
 }
 

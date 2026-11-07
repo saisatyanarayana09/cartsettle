@@ -40,6 +40,8 @@ describe("VoiceOrb", () => {
     expect(containerEl).toHaveStyle({ "--orb-level": "0.750" });
     const sphere = container.querySelector(".voice-orb-sphere");
     expect(sphere).toHaveAttribute("data-state", "listening");
+    expect(container.querySelector(".voice-orb-canvas")).toBeInTheDocument();
+    expect(container.querySelector(".voice-orb-sphere img")).toBeNull();
     expect(container.querySelector(".voice-orb-plasma-ribbon-a")).toBeInTheDocument();
     expect(container.querySelector(".voice-orb-plasma-ribbon-b")).toBeInTheDocument();
     expect(container.querySelector(".voice-orb-acoustic-core")).toBeInTheDocument();
