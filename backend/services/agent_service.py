@@ -11,6 +11,7 @@ Powered by Google Gemini + PayPal Agentic Commerce:
 """
 
 import os
+import random
 import json
 import logging
 import re
@@ -1410,6 +1411,10 @@ class AgentService:
             (r"\b(?:bekari|bekary)\b", "bakery"),
             (r"\b(?:milkk|melk)\b", "milk"),
             (r"\b(?:bred|braed)\b", "bread"),
+            (r"\b(?:cold\s+drinks?|soft\s+drinks?)\b", "colddrink"),
+            (r"\b(?:aashirvaad|ashirwaad|aashirwad)\b", "ashirvad"),
+            (r"\b(?:thums\s+up|thumbs\s+up)\b", "thumpsup"),
+            (r"\b(?:ice[\s-]+cream|icecream)\b", "ice cream"),
         ]
         for pattern, replacement in product_slips:
             out = re.sub(pattern, replacement, out, flags=re.IGNORECASE)
@@ -1833,18 +1838,30 @@ class AgentService:
             p_tokens = [w for w in re.findall(r"[a-z]+", p_lower) if len(w) >= 3 and w not in stop_words]
 
             aliases = []
-            if "parmigiano" in p_lower or "reggiano" in p_lower:
-                aliases.extend(["cheese", "parmesan"])
-            if "atta" in p_lower:
-                aliases.extend(["flour", "roti", "chapati"])
+            if "thumpsup" in p_lower:
+                aliases.extend(["drink", "drinks", "colddrink", "colddrinks", "soda", "coke", "cola", "beverage", "beverages", "softdrink", "softdrinks"])
+            if "parmigiano" in p_lower or "reggiano" in p_lower or "parmesan" in p_lower or "cheese" in p_lower:
+                aliases.extend(["cheese", "parmesan", "cheddar", "dairy"])
+            if "atta" in p_lower or "ashirvad" in p_lower:
+                aliases.extend(["flour", "roti", "chapati", "wheat", "aashirvaad", "ashirwaad"])
             if "strawberries" in p_lower:
-                aliases.extend(["strawberry", "berries", "berry"])
+                aliases.extend(["strawberry", "berries", "berry", "fruit"])
             if "avocados" in p_lower:
-                aliases.extend(["avocado", "guacamole"])
+                aliases.extend(["avocado", "guacamole", "fruit"])
             if "marinara" in p_lower:
-                aliases.extend(["tomato"])
+                aliases.extend(["tomato", "pasta sauce", "sauce"])
             if "sourdough" in p_lower or "bread" in p_lower:
-                aliases.extend(["loaf", "toast"])
+                aliases.extend(["loaf", "toast", "bakery", "bread"])
+            if "milk" in p_lower:
+                aliases.extend(["dairy", "doodh", "dudh", "whole milk"])
+            if "egg" in p_lower:
+                aliases.extend(["eggs", "anda", "ande", "protein", "breakfast"])
+            if "yogurt" in p_lower:
+                aliases.extend(["curd", "dahi", "yoghurt", "dairy", "greek yogurt"])
+            if "pasta" in p_lower:
+                aliases.extend(["noodles", "spaghetti", "macaroni", "wheat pasta"])
+            if "oil" in p_lower:
+                aliases.extend(["ghee", "cooking oil", "tel"])
 
             score = 0
             core_matched = False
@@ -2043,28 +2060,65 @@ class AgentService:
                 "tool_result": {"methods": ["COD", "WALLET", "PAYPAL"]}
             }
 
-        # --- 00C. BULK ADD ALL IN-STOCK ITEMS (Voice Typo 'part' -> 'cart' Tolerant) ---
-        is_cart_kw = any(w in lower for w in ["cart", "bag", "basket", "part"])
-        is_all_kw = any(w in lower for w in ["all items", "all the items", "all products", "everything in stock", "all in stock", "all in-stock"])
-        if any(w in lower for w in ["add ", "put ", "buy "]) and is_cart_kw and is_all_kw:
+        # --- 00C. BULK ADD ALL OR RANDOM IN-STOCK ITEMS (Voice & Multi-Item Tolerant) ---
+        is_add_cmd = any(w in lower for w in ["add ", "put ", "buy ", "fill ", "get "])
+        is_random_kw = any(w in lower for w in ["random", "different", "diverse", "any"])
+        is_items_kw = any(w in lower for w in ["item", "items", "product", "products", "grocer", "groceries"])
+        is_all_kw = any(w in lower for w in [
+            "all items", "all the items", "all products", "everything in stock", "all in stock", "all in-stock"
+        ])
+        is_num_items = bool(re.search(r"\b(?:add|put|buy|fill)\s+\d+\s+(?:random\s+)?(?:items|products|groceries)\b", lower))
+
+        if is_add_cmd and (
+            is_all_kw
+            or (is_random_kw and is_items_kw)
+            or is_num_items
+            or ("random" in lower and any(w in lower for w in ["cart", "bag", "basket"]))
+        ):
             active_prods = [p for p in _get_cached_active_products() if p.stock_quantity > 0 and p.is_in_stock]
-            chosen = active_prods[:6]
-            if chosen:
-                actions = []
-                tools_used = []
-                total_val = 0.0
-                for p in chosen:
-                    card = AgentTools.serialize_card_product(p, quantity=1)
-                    actions.append({"type": "ADD_TO_CART", "item": card})
-                    tools_used.append({"name": "add_to_shopper_cart", "args": {"product_id": p.id, "quantity": 1}})
-                    total_val += card["price"]
-                reply = f"Added {len(chosen)} in-stock items to your cart for ${total_val:.2f}."
+            if not active_prods:
                 return {
-                    "reply": reply,
-                    "tools_used": tools_used,
-                    "actions": actions,
-                    "tool_result": {"status": "bulk_added", "count": len(chosen), "total": total_val}
+                    "reply": "No in-stock products are available to add.",
+                    "tools_used": [],
+                    "actions": [],
+                    "tool_result": {"status": "no_stock"}
                 }
+
+            cnt_match = re.search(r"\b(\d+)\b", lower)
+            if cnt_match and not any(w in lower for w in ["all", "everything"]):
+                req_qty = max(1, min(int(cnt_match.group(1)), len(active_prods)))
+                if "random" in lower or req_qty < len(active_prods):
+                    chosen = random.sample(active_prods, req_qty)
+                else:
+                    chosen = active_prods[:req_qty]
+            elif any(w in lower for w in ["all", "everything"]):
+                chosen = list(active_prods)
+            else:
+                target_cnt = min(5, len(active_prods))
+                chosen = random.sample(active_prods, target_cnt)
+
+            actions = []
+            tools_used = []
+            total_val = 0.0
+            for p in chosen:
+                card = AgentTools.serialize_card_product(p, quantity=1)
+                actions.append({"type": "ADD_TO_CART", "item": card})
+                tools_used.append({"name": "add_to_shopper_cart", "args": {"product_id": p.id, "quantity": 1}})
+                total_val += card["price"]
+
+            if "random" in lower:
+                reply = f"Added {len(chosen)} random in-stock items to your cart for ${total_val:.2f} total."
+            elif any(w in lower for w in ["all", "everything"]):
+                reply = f"Added all {len(chosen)} in-stock items to your cart for ${total_val:.2f} total."
+            else:
+                reply = f"Added {len(chosen)} in-stock items to your cart for ${total_val:.2f} total."
+
+            return {
+                "reply": reply,
+                "tools_used": tools_used,
+                "actions": actions,
+                "tool_result": {"status": "bulk_added", "count": len(chosen), "total": total_val}
+            }
 
         # --- 00D. EXPIRY & FRESHNESS GUARANTEE ---
         if any(k in lower for k in ["expiry date", "shelf life", "is it fresh", "freshness", "expiry of"]):
@@ -3025,9 +3079,20 @@ class AgentService:
                         "tool_result": {"removed": old_card, "added": new_card, "savings": savings}
                     }
 
-            # Suite 2C: Direct Cart Quantity Update ("set milk to 3", "change bread quantity to 2", "update eggs to 4 in cart")
-            if any(w in lower for w in ["set ", "change ", "update "]) and any(w in lower for w in ["quantity", "qty", "cart", "bag", "to "]):
+            # Suite 2C: Direct Cart Quantity Update ("make milk 5", "set milk to 3", "change bread quantity to 2", "update eggs to 4 in cart")
+            is_set_qty_cmd = (
+                any(w in lower for w in ["set ", "change ", "update ", "make "])
+                or any(w in lower for w in ["quantity", "qty"])
+            ) and bool(re.search(r"\b\d+\b", lower))
+
+            if is_set_qty_cmd:
                 matched_p = self._match_product_from_text(lower)
+                if not matched_p and cart_items:
+                    for ci in cart_items:
+                        c_name = str(ci.get("name") or ci.get("product_name") or "").lower()
+                        if any(tk in lower for tk in c_name.split() if len(tk) >= 3):
+                            matched_p = next((p for p in _get_cached_active_products() if p.id == ci.get("id")), None)
+                            break
                 qty_m = re.findall(r"\b(\d+)\b", lower)
                 if matched_p and qty_m:
                     new_qty = max(0, min(int(qty_m[-1]), 99))
@@ -3087,7 +3152,7 @@ class AgentService:
                 }
 
             # 0. Clear Cart ("clear", "clear my cart", "clear the cart", "empty cart", "remove all cart items", "remove all")
-            if (
+            if not self._match_product_from_text(lower) and (
                 lower in ("clear", "clear it", "empty")
                 or any(k in lower for k in [
                     "clear cart", "clear my cart", "clear the cart", "empty cart", "empty my cart", "empty the cart",
@@ -3098,7 +3163,7 @@ class AgentService:
                 or (
                     any(w in lower for w in ("remove", "delete", "clear"))
                     and any(w in lower for w in ("all", "everything"))
-                    and any(w in lower for w in ("cart", "bag", "item"))
+                    and any(w in lower for w in ("cart", "bag", "items"))
                 )
             ):
                 return {
@@ -3330,11 +3395,14 @@ class AgentService:
                     return {"reply": reply, "tools_used": tools_used, "actions": actions, "tool_result": last_res}
 
             # 2. Universal Dish & Recipe Basket Recommendations ("making biryani", "suggest biryani requirements", "dinner recipe", "breakfast")
-            if any(k in lower for k in [
+            is_browse_or_search = any(lower.startswith(prefix) for prefix in ["show me ", "find ", "search ", "do you have ", "what ", "browse "])
+            has_recipe_explicit = any(k in lower for k in ["recipe", "ingredients", "meal plan", "basket", "cook", "making", "prepare", "dish requirements"])
+            
+            if (not is_browse_or_search or has_recipe_explicit) and any(k in lower for k in [
                 "biryani", "biriyani", "pulao", "fried rice", "paneer", "curry", "masala",
                 "chai", "tea", "coffee", "dal", "roti", "dinner", "breakfast", "smoothie",
                 "recipe", "salad", "meal", "plan a meal", "basket", "ingredients",
-                "requirements", "making ", "cooking ", "prepare ", "sandwich", "snack",
+                "requirements", "making ", "cooking ", "prepare ", "sandwich",
                 "dosa", "idli", "sambar", "upma", "poha", "paratha", "omelette", "maggi",
                 "noodles", "soup", "halwa", "kheer", "cake", "burger", "pizza", "taco",
                 "lunch", "supper", "cook ", "dish"
@@ -3425,22 +3493,43 @@ class AgentService:
                     "tool_result": {"status": "success", "count": len(cards), "products": cards}
                 }
 
-        # 4c. Category & Budget Browse ("dairy", "bakery", "produce", "pantry", "under $6", "find groceries")
-        if any(k in lower for k in ["find ", "search ", "deal", "grocer", "under $", "dairy", "bakery", "produce", "pantry", "fruit", "vegetable", "italian"]):
+        # 4c. Category & Budget Browse ("dairy", "bakery", "produce", "pantry", "under $6", "find groceries", "snacks", "drinks")
+        if any(k in lower for k in [
+            "find ", "search ", "deal", "grocer", "under $", "dairy", "bakery", "produce",
+            "pantry", "fruit", "vegetable", "italian", "snack", "show me", "browse",
+            "beverage", "drink", "colddrink", "grain", "oil"
+        ]):
             qs = Product.objects.select_related("category").filter(is_active=True, stock_quantity__gt=0)
             cat_label = "store"
-            if "dairy" in lower:
+            if "dairy" in lower or "milk" in lower or "egg" in lower or "cheese" in lower or "yogurt" in lower:
                 qs = qs.filter(category__name__icontains="dairy")
                 cat_label = "Dairy & Eggs"
-            elif "bakery" in lower:
+            elif "bakery" in lower or "bread" in lower or "toast" in lower:
                 qs = qs.filter(category__name__icontains="bakery")
                 cat_label = "Bakery"
-            elif "produce" in lower or "fruit" in lower or "vegetable" in lower:
+            elif "produce" in lower or "fruit" in lower or "vegetable" in lower or "strawberries" in lower or "avocado" in lower:
                 qs = qs.filter(category__name__icontains="produce")
                 cat_label = "Produce"
-            elif "pantry" in lower or "italian" in lower:
+            elif "pantry" in lower or "italian" in lower or "pasta" in lower or "marinara" in lower:
                 qs = qs.filter(category__name__icontains="pantry")
                 cat_label = "Pantry"
+            elif "beverage" in lower or "drink" in lower or "colddrink" in lower or "soda" in lower or "cola" in lower:
+                qs = qs.filter(category__name__icontains="beverage")
+                cat_label = "Beverages"
+            elif "grain" in lower or "rice" in lower or "atta" in lower or "flour" in lower:
+                qs = qs.filter(category__name__icontains="grain")
+                cat_label = "Rice & Grains"
+            elif "oil" in lower or "ghee" in lower:
+                qs = qs.filter(category__name__icontains="oil")
+                cat_label = "Oil & Ghee"
+            elif "snack" in lower:
+                snack_qs = qs.filter(category__name__icontains="snack")
+                if snack_qs.exists():
+                    qs = snack_qs
+                    cat_label = "Snacks"
+                else:
+                    qs = qs.filter(category__name__iregex=r"bakery|produce|beverage")
+                    cat_label = "Snacks & Refreshments"
 
             max_p_match = re.search(r"under\s*\$?(\d+(?:\.\d+)?)", lower)
             if max_p_match:

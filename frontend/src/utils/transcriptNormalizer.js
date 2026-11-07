@@ -134,6 +134,10 @@ export function normalizeVoiceTranscript(rawText) {
     [/\b(?:bekari|bekary)\b/gi, 'bakery'],
     [/\b(?:milkk|melk)\b/gi, 'milk'],
     [/\b(?:bred|braed)\b/gi, 'bread'],
+    [/\b(?:cold\s+drinks?|soft\s+drinks?)\b/gi, 'colddrink'],
+    [/\b(?:aashirvaad|ashirwaad|aashirwad)\b/gi, 'ashirvad'],
+    [/\b(?:thums\s+up|thumbs\s+up)\b/gi, 'thumpsup'],
+    [/\b(?:ice[\s-]+cream|icecream)\b/gi, 'ice cream'],
   ];
   for (const [re, replacement] of PRODUCT_SLIPS) {
     out = out.replace(re, replacement);

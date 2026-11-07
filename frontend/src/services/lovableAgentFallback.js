@@ -7,16 +7,17 @@
 const SESSION_STORE = {};
 
 const DEMO_PRODUCTS = [
-  { id: 101, name: 'Organic Farm Whole Milk', unit: '1 Gal', price: 4.50, regular_price: 4.50, offer_price: 4.50, cost_price: 3.60, stock: 8, stock_quantity: 8, category: 'Dairy & Eggs', category_name: 'Dairy & Eggs', margin_pct: 20.0, max_safe_discount_pct: 9.0, best_deal_price: 4.10, image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=240&q=80', aliases: ['milk', 'dairy'] },
-  { id: 102, name: 'Artisanal Sourdough Bread', unit: '1 Loaf', price: 5.50, regular_price: 5.50, offer_price: 5.50, cost_price: 4.00, stock: 14, stock_quantity: 14, category: 'Bakery', category_name: 'Bakery', margin_pct: 27.3, max_safe_discount_pct: 17.3, best_deal_price: 4.55, image: 'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=240&q=80', aliases: ['bread', 'sourdough', 'loaf', 'toast'] },
-  { id: 103, name: 'Fresh California Strawberries', unit: '1 lb', price: 4.99, regular_price: 4.99, offer_price: 4.99, cost_price: 4.10, stock: 40, stock_quantity: 40, category: 'Produce', category_name: 'Produce', margin_pct: 17.8, max_safe_discount_pct: 6.6, best_deal_price: 4.66, image: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=240&q=80', aliases: ['strawberry', 'strawberries', 'berries', 'berry'] },
-  { id: 104, name: 'Pasture-Raised Organic Eggs', unit: '12 ct', price: 5.99, regular_price: 5.99, offer_price: 5.99, cost_price: 4.70, stock: 6, stock_quantity: 6, category: 'Dairy & Eggs', category_name: 'Dairy & Eggs', margin_pct: 21.5, max_safe_discount_pct: 10.8, best_deal_price: 5.35, image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=240&q=80', aliases: ['egg', 'eggs', 'dozen'] },
-  { id: 105, name: 'Organic Hass Avocados', unit: 'Bag of 4', price: 6.50, regular_price: 6.50, offer_price: 6.50, cost_price: 5.10, stock: 5, stock_quantity: 5, category: 'Produce', category_name: 'Produce', margin_pct: 21.5, max_safe_discount_pct: 10.8, best_deal_price: 5.80, image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=240&q=80', aliases: ['avocado', 'avocados', 'guacamole'] },
-  { id: 106, name: 'Bronze-Cut Penne Pasta', unit: '16 oz', price: 3.50, regular_price: 3.50, offer_price: 3.50, cost_price: 2.50, stock: 25, stock_quantity: 25, category: 'Pantry', category_name: 'Pantry', margin_pct: 28.6, max_safe_discount_pct: 18.9, best_deal_price: 2.84, image: 'https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=240&q=80', aliases: ['pasta', 'penne', 'spaghetti'] },
+  { id: 101, name: 'Organic Farm Whole Milk', unit: '1 Gal', price: 4.50, regular_price: 4.50, offer_price: 4.50, cost_price: 3.60, stock: 8, stock_quantity: 8, category: 'Dairy & Eggs', category_name: 'Dairy & Eggs', margin_pct: 20.0, max_safe_discount_pct: 9.0, best_deal_price: 4.10, image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=240&q=80', aliases: ['milk', 'dairy', 'doodh', 'whole milk'] },
+  { id: 102, name: 'Artisanal Sourdough Bread', unit: '1 Loaf', price: 5.50, regular_price: 5.50, offer_price: 5.50, cost_price: 4.00, stock: 14, stock_quantity: 14, category: 'Bakery', category_name: 'Bakery', margin_pct: 27.3, max_safe_discount_pct: 17.3, best_deal_price: 4.55, image: 'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=240&q=80', aliases: ['bread', 'sourdough', 'loaf', 'toast', 'bakery'] },
+  { id: 103, name: 'Fresh California Strawberries', unit: '1 lb', price: 4.99, regular_price: 4.99, offer_price: 4.99, cost_price: 4.10, stock: 40, stock_quantity: 40, category: 'Produce', category_name: 'Produce', margin_pct: 17.8, max_safe_discount_pct: 6.6, best_deal_price: 4.66, image: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=240&q=80', aliases: ['strawberry', 'strawberries', 'berries', 'berry', 'fruit'] },
+  { id: 104, name: 'Pasture-Raised Organic Eggs', unit: '12 ct', price: 5.99, regular_price: 5.99, offer_price: 5.99, cost_price: 4.70, stock: 6, stock_quantity: 6, category: 'Dairy & Eggs', category_name: 'Dairy & Eggs', margin_pct: 21.5, max_safe_discount_pct: 10.8, best_deal_price: 5.35, image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=240&q=80', aliases: ['egg', 'eggs', 'dozen', 'anda', 'ande', 'protein'] },
+  { id: 105, name: 'Organic Hass Avocados', unit: 'Bag of 4', price: 6.50, regular_price: 6.50, offer_price: 6.50, cost_price: 5.10, stock: 5, stock_quantity: 5, category: 'Produce', category_name: 'Produce', margin_pct: 21.5, max_safe_discount_pct: 10.8, best_deal_price: 5.80, image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=240&q=80', aliases: ['avocado', 'avocados', 'guacamole', 'fruit'] },
+  { id: 106, name: 'Bronze-Cut Penne Pasta', unit: '16 oz', price: 3.50, regular_price: 3.50, offer_price: 3.50, cost_price: 2.50, stock: 25, stock_quantity: 25, category: 'Pantry', category_name: 'Pantry', margin_pct: 28.6, max_safe_discount_pct: 18.9, best_deal_price: 2.84, image: 'https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=240&q=80', aliases: ['pasta', 'penne', 'spaghetti', 'noodles', 'macaroni'] },
   { id: 107, name: 'San Marzano Marinara Sauce', unit: '24 oz', price: 6.50, regular_price: 6.50, offer_price: 6.50, cost_price: 4.80, stock: 18, stock_quantity: 18, category: 'Pantry', category_name: 'Pantry', margin_pct: 26.2, max_safe_discount_pct: 16.0, best_deal_price: 5.45, image: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=240&q=80', aliases: ['marinara', 'sauce', 'tomato'] },
-  { id: 108, name: 'Aged Parmigiano Reggiano', unit: '8 oz', price: 5.50, regular_price: 5.50, offer_price: 5.50, cost_price: 4.20, stock: 12, stock_quantity: 12, category: 'Dairy & Eggs', category_name: 'Dairy & Eggs', margin_pct: 23.6, max_safe_discount_pct: 13.1, best_deal_price: 4.78, image: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=240&q=80', aliases: ['cheese', 'parmesan', 'parmigiano', 'reggiano'] },
-  { id: 109, name: 'Greek Honey Yogurt', unit: '32 oz', price: 4.99, regular_price: 4.99, offer_price: 4.99, cost_price: 3.80, stock: 9, stock_quantity: 9, category: 'Dairy & Eggs', category_name: 'Dairy & Eggs', margin_pct: 23.8, max_safe_discount_pct: 13.4, best_deal_price: 4.32, image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=240&q=80', aliases: ['yogurt', 'curd'] },
-  { id: 110, name: 'Whole Wheat Chakki Atta', unit: '10 lb', price: 12.99, regular_price: 12.99, offer_price: 12.99, cost_price: 10.20, stock: 15, stock_quantity: 15, category: 'Pantry', category_name: 'Pantry', margin_pct: 21.5, max_safe_discount_pct: 10.8, best_deal_price: 11.59, image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=240&q=80', aliases: ['atta', 'flour', 'wheat', 'roti'] },
+  { id: 108, name: 'Aged Parmigiano Reggiano', unit: '8 oz', price: 5.50, regular_price: 5.50, offer_price: 5.50, cost_price: 4.20, stock: 12, stock_quantity: 12, category: 'Dairy & Eggs', category_name: 'Dairy & Eggs', margin_pct: 23.6, max_safe_discount_pct: 13.1, best_deal_price: 4.78, image: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=240&q=80', aliases: ['cheese', 'parmesan', 'parmigiano', 'reggiano', 'cheddar', 'dairy'] },
+  { id: 109, name: 'Greek Honey Yogurt', unit: '32 oz', price: 4.99, regular_price: 4.99, offer_price: 4.99, cost_price: 3.80, stock: 9, stock_quantity: 9, category: 'Dairy & Eggs', category_name: 'Dairy & Eggs', margin_pct: 23.8, max_safe_discount_pct: 13.4, best_deal_price: 4.32, image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=240&q=80', aliases: ['yogurt', 'curd', 'dahi', 'yoghurt', 'dairy', 'greek yogurt'] },
+  { id: 110, name: 'Whole Wheat Chakki Atta', unit: '10 lb', price: 12.99, regular_price: 12.99, offer_price: 12.99, cost_price: 10.20, stock: 15, stock_quantity: 15, category: 'Pantry', category_name: 'Pantry', margin_pct: 21.5, max_safe_discount_pct: 10.8, best_deal_price: 11.59, image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=240&q=80', aliases: ['atta', 'flour', 'wheat', 'roti', 'ashirvad', 'aashirvaad', 'ashirwaad'] },
+  { id: 111, name: 'ThumpsUp', unit: '2.25 ltr', price: 90.00, regular_price: 90.00, offer_price: 90.00, cost_price: 70.00, stock: 55, stock_quantity: 55, category: 'Beverages', category_name: 'Beverages', margin_pct: 22.2, max_safe_discount_pct: 10.0, best_deal_price: 81.00, image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=240&q=80', thumbnail: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=240&q=80', aliases: ['thumpsup', 'thums up', 'thumbs up', 'coke', 'cola', 'soda', 'colddrink', 'cold drink', 'beverage', 'drink'] },
 ];
 
 const DEMO_ORDERS = [
@@ -312,6 +313,10 @@ function normalizeVoiceTranscript(rawText) {
     [/\b(?:bekari|bekary)\b/gi, 'bakery'],
     [/\b(?:milkk|melk)\b/gi, 'milk'],
     [/\b(?:bred|braed)\b/gi, 'bread'],
+    [/\b(?:cold\s+drinks?|soft\s+drinks?)\b/gi, 'colddrink'],
+    [/\b(?:aashirvaad|ashirwaad|aashirwad)\b/gi, 'ashirvad'],
+    [/\b(?:thums\s+up|thumbs\s+up)\b/gi, 'thumpsup'],
+    [/\b(?:ice[\s-]+cream|icecream)\b/gi, 'ice cream'],
   ];
   for (const [re, replacement] of productSlips) {
     out = out.replace(re, replacement);
@@ -639,11 +644,18 @@ export function handleLovableAgentFallback(config) {
     }
   }
   // 6. Update product stock or price (or Shopper Cart Quantity Update)
-  else if ((lower.includes('update') || lower.includes('set') || lower.includes('change')) && (lower.includes('stock') || lower.includes('price') || lower.includes('quantity') || lower.includes('qty') || lower.includes('cart') || lower.includes('bag'))) {
+  else if (
+    (
+      ['update', 'set', 'change', 'make'].some((w) => lower.includes(w)) ||
+      ['quantity', 'qty'].some((w) => lower.includes(w))
+    ) && (
+      lower.includes('stock') || lower.includes('price') || lower.includes('quantity') || lower.includes('qty') || lower.includes('cart') || lower.includes('bag') || /\b\d+\b/.test(lower)
+    )
+  ) {
     const prod = matchSingleProduct(prompt) || getLiveCatalog()[0];
     const numMatch = lower.match(/(\d+(?:\.\d+)?)/g);
     const val = numMatch ? Number(numMatch[numMatch.length - 1]) : 40;
-    if (persona === 'shopper' && (lower.includes('quantity') || lower.includes('qty') || lower.includes('cart') || lower.includes('bag'))) {
+    if (persona === 'shopper' || lower.includes('quantity') || lower.includes('qty') || lower.includes('cart') || lower.includes('bag') || lower.startsWith('make ')) {
       const targetQty = Math.max(0, Math.round(val));
       const cardItem = serializeCardItem(prod, Math.max(1, targetQty));
       reply = targetQty === 0 ? `Removed ${prod.name} from your cart.` : `Updated ${prod.name} quantity to ${targetQty} in your cart.`;
@@ -887,20 +899,75 @@ export function handleLovableAgentFallback(config) {
       tools_used = [{ name: 'inspect_margin', args: {} }];
     }
   }
+  // 9b. Bulk Add All or Random In-Stock Items ("add 10 random items", "add 10 random products", "add all in stock to cart", "add all items into the part")
+  else if (
+    ['add ', 'put ', 'buy ', 'fill ', 'get '].some((w) => lower.includes(w)) &&
+    (
+      ['all items', 'all the items', 'all products', 'everything in stock', 'all in stock', 'all in-stock'].some((k) => lower.includes(k)) ||
+      (['random', 'different', 'diverse', 'any'].some((w) => lower.includes(w)) && ['item', 'items', 'product', 'products', 'grocer', 'groceries'].some((w) => lower.includes(w))) ||
+      /\b(?:add|put|buy|fill)\s+\d+\s+(?:random\s+)?(?:items|products|groceries)\b/.test(lower) ||
+      (lower.includes('random') && ['cart', 'bag', 'basket', 'part'].some((w) => lower.includes(w)))
+    )
+  ) {
+    const catalog = getLiveCatalog().filter((p) => (p.stock_quantity ?? p.stock ?? 1) > 0);
+    if (catalog.length === 0) {
+      reply = 'No in-stock products are available to add.';
+      actions = [];
+      tools_used = [];
+    } else {
+      const cntMatch = lower.match(/\b(\d+)\b/);
+      let chosen = [];
+      if (cntMatch && !['all', 'everything'].some((w) => lower.includes(w))) {
+        const reqQty = Math.max(1, Math.min(Number(cntMatch[1]), catalog.length));
+        if (lower.includes('random') || reqQty < catalog.length) {
+          const shuffled = [...catalog].sort(() => 0.5 - Math.random());
+          chosen = shuffled.slice(0, reqQty);
+        } else {
+          chosen = catalog.slice(0, reqQty);
+        }
+      } else if (['all', 'everything'].some((w) => lower.includes(w))) {
+        chosen = [...catalog];
+      } else {
+        const targetCnt = Math.min(5, catalog.length);
+        const shuffled = [...catalog].sort(() => 0.5 - Math.random());
+        chosen = shuffled.slice(0, targetCnt);
+      }
+
+      actions = [];
+      tools_used = [];
+      let totalVal = 0;
+      for (const p of chosen) {
+        const card = serializeCardItem(p, 1);
+        actions.push({ type: 'ADD_TO_CART', item: card });
+        tools_used.push({ name: 'add_to_shopper_cart', args: { product_name: p.name, quantity: 1 } });
+        totalVal += Number(card.price || 0);
+      }
+
+      if (lower.includes('random')) {
+        reply = `Added ${chosen.length} random in-stock items to your cart for $${totalVal.toFixed(2)} total.`;
+      } else if (['all', 'everything'].some((w) => lower.includes(w))) {
+        reply = `Added all ${chosen.length} in-stock items to your cart for $${totalVal.toFixed(2)} total.`;
+      } else {
+        reply = `Added ${chosen.length} in-stock items to your cart for $${totalVal.toFixed(2)} total.`;
+      }
+    }
+  }
   // 10. Clear cart ("clear", "clear my cart", "clear the cart", "remove all cart items", "remove all", "empty cart")
   else if (
-    lower === 'clear' ||
-    lower === 'clear it' ||
-    lower === 'empty' ||
-    [
-      'clear cart', 'clear my cart', 'clear the cart', 'empty cart', 'empty my cart', 'empty the cart', 'empty bag',
-      'remove the cart items', 'remove cart items', 'remove all cart items', 'remove all items',
-      'remove all from cart', 'remove all from my cart', 'remove items from cart', 'remove everything',
-      'delete all', 'delete cart items', 'delete all items', 'clean cart', 'reset cart',
-    ].some((k) => lower.includes(k)) ||
-    ((lower.includes('remove') || lower.includes('delete') || lower.includes('clear')) &&
-      (lower.includes('all') || lower.includes('everything')) &&
-      (lower.includes('cart') || lower.includes('bag') || lower.includes('item')))
+    !matchSingleProduct(prompt) && (
+      lower === 'clear' ||
+      lower === 'clear it' ||
+      lower === 'empty' ||
+      [
+        'clear cart', 'clear my cart', 'clear the cart', 'empty cart', 'empty my cart', 'empty the cart', 'empty bag',
+        'remove the cart items', 'remove cart items', 'remove all cart items', 'remove all items',
+        'remove all from cart', 'remove all from my cart', 'remove items from cart', 'remove everything',
+        'delete all', 'delete cart items', 'delete all items', 'clean cart', 'reset cart',
+      ].some((k) => lower.includes(k)) ||
+      ((lower.includes('remove') || lower.includes('delete') || lower.includes('clear')) &&
+        (lower.includes('all') || lower.includes('everything')) &&
+        (lower.includes('cart') || lower.includes('bag') || lower.includes('items')))
+    )
   ) {
     reply = 'Removed all items from your cart.';
     actions = [{ type: 'CLEAR_CART', removed_items: Array.isArray(body.cart_items) ? body.cart_items : [] }];
@@ -1071,13 +1138,17 @@ export function handleLovableAgentFallback(config) {
   }
   // 12. Universal Dish, Recipe & Occasion Ingredient Engine (25+ Indian & Global Dishes)
   else if (
+    (
+      !['show me ', 'find ', 'search ', 'do you have ', 'what ', 'browse '].some((p) => lower.startsWith(p)) ||
+      ['recipe', 'ingredients', 'meal plan', 'basket', 'cook', 'making', 'prepare', 'dish requirements'].some((k) => lower.includes(k))
+    ) &&
     [
       'biryani', 'biriyani', 'pulao', 'fried rice', 'paneer', 'butter chicken', 'curry', 'masala',
       'dal', 'tadka', 'chole', 'dosa', 'idli', 'roti', 'paratha',
       'chai', 'tea', 'coffee', 'dinner', 'breakfast', 'lunch',
       'smoothie', 'recipe', 'basket', 'meal', 'salad', 'ingredients',
       'requirements', 'making ', 'cooking ', 'prepare ', 'sandwich', 'burger', 'pizza', 'taco',
-      'baking', 'cake', 'oatmeal', 'snack', 'party', 'protein', 'keto',
+      'baking', 'cake', 'oatmeal', 'party', 'protein', 'keto',
     ].some((k) => lower.includes(k))
   ) {
     const catalog = getLiveCatalog();
@@ -1108,7 +1179,7 @@ export function handleLovableAgentFallback(config) {
     } else if (lower.includes('smoothie') || lower.includes('berry')) {
       recipe = 'Berry Protein Smoothie';
       keywords = ['strawberry', 'yogurt', 'milk', 'avocado'];
-    } else if (lower.includes('baking') || lower.includes('cake') || lower.includes('party') || lower.includes('snack')) {
+    } else if (lower.includes('baking') || lower.includes('cake') || lower.includes('party')) {
       recipe = lower.includes('party') ? 'Party Snack Kit' : 'Fresh Baking Kit';
       keywords = ['egg', 'milk', 'strawberry', 'cheese', 'bread', 'yogurt'];
     } else {
@@ -1179,8 +1250,8 @@ export function handleLovableAgentFallback(config) {
     actions = [{ type: 'SEARCH_RESULTS', items: cards }];
     tools_used = [{ name: 'search_products_and_stock', args: { query: matched[0].name } }];
   }
-  // 15. Category & Budget Browse ("dairy", "bakery", "produce", "pantry")
-  else if (['dairy', 'bakery', 'produce', 'pantry', 'find', 'search', 'deal', 'grocer', 'under $'].some((k) => lower.includes(k))) {
+  // 15. Category & Budget Browse ("dairy", "bakery", "produce", "pantry", "snacks", "drinks")
+  else if (['dairy', 'bakery', 'produce', 'pantry', 'find', 'search', 'deal', 'grocer', 'under $', 'snack', 'drink', 'beverage', 'colddrink', 'show me', 'browse'].some((k) => lower.includes(k))) {
     let filtered = [...DEMO_PRODUCTS];
     let label = 'store';
     if (lower.includes('dairy')) {
@@ -1189,12 +1260,24 @@ export function handleLovableAgentFallback(config) {
     } else if (lower.includes('bakery')) {
       filtered = filtered.filter((p) => p.category.toLowerCase().includes('bakery'));
       label = 'Bakery';
-    } else if (lower.includes('produce')) {
+    } else if (lower.includes('produce') || lower.includes('fruit') || lower.includes('vegetable')) {
       filtered = filtered.filter((p) => p.category.toLowerCase().includes('produce'));
       label = 'Produce';
-    } else if (lower.includes('pantry')) {
+    } else if (lower.includes('pantry') || lower.includes('pasta')) {
       filtered = filtered.filter((p) => p.category.toLowerCase().includes('pantry'));
       label = 'Pantry';
+    } else if (lower.includes('beverage') || lower.includes('drink') || lower.includes('colddrink') || lower.includes('soda')) {
+      filtered = filtered.filter((p) => p.category.toLowerCase().includes('beverage'));
+      label = 'Beverages';
+    } else if (lower.includes('snack')) {
+      const snackMatch = filtered.filter((p) => p.category.toLowerCase().includes('snack'));
+      if (snackMatch.length > 0) {
+        filtered = snackMatch;
+        label = 'Snacks';
+      } else {
+        filtered = filtered.filter((p) => /bakery|produce|beverage/i.test(p.category));
+        label = 'Snacks & Refreshments';
+      }
     }
     const items = filtered.slice(0, 6).map((p) => serializeCardItem(p, 1));
     const topNames = items.slice(0, 3).map((c) => `${c.name} ($${c.price.toFixed(2)})`).join(', ');
