@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, ShoppingBag, Plus, ArrowUp, Keyboard, Mic } from "lucide-react";
+import { X, ShoppingBag, Plus, ArrowUp, Keyboard, Mic, Camera } from "lucide-react";
 import * as apiModule from "../services/api";
 import toast from "react-hot-toast";
 
@@ -136,6 +136,89 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     api.delete(`/store/agent/chat/?session_id=${SESSION_ID}&persona=shopper`).catch(() => {});
   };
 
+  const fileInputRef = useRef(null);
+
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = "";
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Data = reader.result;
+      const base64Content = String(base64Data).includes(",")
+        ? String(base64Data).split(",")[1]
+        : String(base64Data);
+
+      setCurrentTask({
+        id: `scan-${Date.now()}`,
+        state: "processing",
+        label: "Scanning grocery photo with AI Vision...",
+      });
+
+      const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          content: "📷 Scanned Grocery Photo",
+          timestamp: nowTime,
+        },
+      ]);
+      setLoading(true);
+
+      try {
+        const liveCartItems = Array.isArray(cart?.items) ? cart.items : [];
+        const res = await api.post("/store/agent/chat/", {
+          prompt: "Analyze this grocery item or shopping list photo and recommend available store items.",
+          image: base64Content,
+          session_id: SESSION_ID,
+          persona: "shopper",
+          ...(liveCartItems.length > 0
+            ? {
+                cart_items: liveCartItems.map((ci) => ({
+                  id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
+                  name: ci.product_name || ci.name || "Item",
+                  price: Number(ci.unit_price ?? ci.price ?? 0),
+                  quantity: Number(ci.quantity || 1),
+                })),
+              }
+            : {}),
+        });
+
+        const reply = (res.data?.reply || "Here is your parsed grocery checklist.").trim();
+        const actions = Array.isArray(res.data?.actions) ? res.data.actions : [];
+
+        setCurrentTask({
+          id: `scan-${Date.now()}`,
+          state: "success",
+          label: "Grocery checklist generated!",
+        });
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: reply,
+            actions: actions,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+      } catch (err) {
+        console.error("Photo scan error:", err);
+        setCurrentTask({
+          id: `scan-${Date.now()}`,
+          state: "error",
+          label: "Could not scan grocery photo",
+        });
+        toast.error("Could not scan photo. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSend = async (textToSend, requestMode = mode) => {
     const prompt = (textToSend || input).trim();
     if (!prompt || requestRef.current) return;
@@ -184,7 +267,26 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       if (rawActions.length > 0) {
         for (const act of rawActions) {
           const type = act.type || act.action;
-          if (type === "SWITCH_THEME" || type === "TOGGLE_DARK_MODE") {
+          if (type === "CLOSE_ASSISTANT" || type === "CLOSE_AI") {
+            voice.stop();
+            close();
+            return;
+          } else if (type === "SWITCH_MODE") {
+            const nextMode = act.mode || "chat";
+            setMode(nextMode);
+            voice.stop();
+            if (nextMode === "chat") {
+              setTimeout(() => {
+                const textarea = panelRef.current?.querySelector("textarea");
+                textarea?.focus();
+              }, 100);
+            }
+            toast.success("Switched to chat mode");
+            finalActions.push(act);
+          } else if (type === "NOTIFICATIONS_CLEARED") {
+            toast.success("All notifications cleared");
+            finalActions.push(act);
+          } else if (type === "SWITCH_THEME" || type === "TOGGLE_DARK_MODE") {
             const targetTheme = act.theme || "dark";
             setCurrentTask({ id: `theme-${Date.now()}`, state: "processing", label: `Switching to ${targetTheme} mode...` });
             toggleTheme?.(targetTheme);
@@ -493,9 +595,22 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     onPrompt: (text) => handleSend(text, "voice"),
   });
   const latestReply = [...messages].reverse().find((message) => message.role === "assistant");
+  const ACTION_TYPES_VOICE = [
+    "SEARCH_RESULTS",
+    "RECOMMEND_BASKET",
+    "ADD_TO_CART",
+    "REMOVE_FROM_CART",
+    "CLEAR_CART",
+    "SWITCH_THEME",
+    "TOGGLE_DARK_MODE",
+    "ORDER_STATUS_CARD",
+    "GROCERY_CHECKLIST",
+    "NOTIFICATIONS_CARD",
+    "REFERRAL_STATUS_CARD",
+  ];
   const recentCartActions = [...messages].reverse().find((message) =>
-    message.actions?.some((action) => ["SEARCH_RESULTS", "RECOMMEND_BASKET", "ADD_TO_CART", "REMOVE_FROM_CART", "CLEAR_CART"].includes(action.type)))?.actions || [];
-  const voiceActions = latestReply?.actions?.some((action) => ["SEARCH_RESULTS", "RECOMMEND_BASKET", "ADD_TO_CART", "REMOVE_FROM_CART", "CLEAR_CART"].includes(action.type))
+    message.actions?.some((action) => ACTION_TYPES_VOICE.includes(action.type)))?.actions || [];
+  const voiceActions = latestReply?.actions?.some((action) => ACTION_TYPES_VOICE.includes(action.type))
     ? latestReply.actions : [...(latestReply?.actions || []), ...recentCartActions];
   const latestUser = [...messages].reverse().find((message) => message.role === "user");
 
@@ -594,11 +709,27 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             {mode === "voice" ? <Keyboard className="size-4" /> : <Mic className="size-4" />}
           </Button>
 
-          <h2 id="shopper-title" className="text-sm font-semibold tracking-tight text-foreground">
-            Assistant
-          </h2>
+          <div id="shopper-title" className="flex items-center gap-1.5 select-none">
+            <span className="text-sm font-bold tracking-tight text-foreground">
+              Cart<span className="text-emerald-500 font-extrabold">Settle</span>
+            </span>
+            <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              AI
+            </span>
+          </div>
 
           <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Scan grocery list photo"
+              title="Scan grocery list photo"
+              className="size-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+            >
+              <Camera className="size-4" />
+            </Button>
             <PanelMenu
               disabled={loading || messages.length === 1}
               onClear={() => setConfirmClear(true)}
@@ -615,6 +746,14 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             </Button>
           </div>
         </header>
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={handlePhotoUpload}
+        />
 
         <LiveTaskActivity task={currentTask} onDismiss={() => setCurrentTask(null)} />
 
@@ -779,7 +918,19 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                   disabled={loading}
                   className="min-h-14 max-h-32 px-3 text-base"
                 />
-                <PromptInputFooter className="px-2 pb-2 pt-0">
+                <PromptInputFooter className="flex items-center justify-between px-2 pb-2 pt-0">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Upload grocery list photo"
+                    title="Scan grocery list photo"
+                    className="size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={loading}
+                  >
+                    <Camera className="size-4" />
+                  </Button>
                   <PromptInputSubmit
                     aria-label="Send message"
                     status={loading ? "submitted" : "ready"}

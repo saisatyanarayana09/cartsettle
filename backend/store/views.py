@@ -530,17 +530,28 @@ class AgentChatView(views.APIView):
 
     def post(self, request):
         prompt = (request.data.get('prompt') or request.data.get('message') or '').strip()
+        image = request.data.get('image') or request.data.get('image_base64')
         session_id = request.data.get('session_id', 'kirana_copilot')
         history = request.data.get('history', [])
         mode = str(request.data.get('mode') or request.query_params.get('mode') or 'chat').strip().lower()
 
-        if not prompt:
-            return response.Response({'detail': 'Prompt is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not prompt and not image:
+            return response.Response({'detail': 'Prompt or image is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not prompt and image:
+            prompt = 'Analyze this grocery item or shopping list photo and recommend available store items.'
 
         persona = self._resolve_persona(request)
         cart_items = request.data.get('cart_items', [])
         from services.agent_service import agent_service
-        result = agent_service.chat(prompt=prompt, session_id=session_id, history=history, persona=persona, mode=mode, cart_items=cart_items)
+        result = agent_service.chat(
+            prompt=prompt,
+            session_id=session_id,
+            history=history,
+            persona=persona,
+            mode=mode,
+            cart_items=cart_items,
+            image=image
+        )
         return response.Response(result, status=status.HTTP_200_OK)
 
 

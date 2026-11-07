@@ -59,3 +59,6 @@ MotionDiv.displayName = "MotionDiv";
 export const motion = {
   div: MotionDiv,
 };
+
+export const AnimatePresence = ({ children }: any) => <>{children}</>;
+
