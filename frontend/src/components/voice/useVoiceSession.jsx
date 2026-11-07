@@ -11,7 +11,7 @@ export function useVoiceSession({ active, onPrompt }) {
       browser: window,
       onChange: setState,
       onPrompt: (text) => promptRef.current(text),
-      silenceMs: 1100,
+      silenceMs: 750,
       lang: window.navigator?.language || "en-IN",
     });
     session.current = controller;

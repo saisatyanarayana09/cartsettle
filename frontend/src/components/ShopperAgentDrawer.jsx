@@ -689,7 +689,10 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="shopper-title"
-        onPointerDownCapture={voice.interrupt}
+        onPointerDownCapture={(event) => {
+          if (event.target?.closest?.(".voice-orb-container")) return;
+          voice.interrupt();
+        }}
         className="shopper-panel shopper-theme bg-background text-foreground flex flex-col overflow-hidden outline-none"
       >
         <header className="assistant-nav-header flex shrink-0 items-center justify-between px-5 py-3.5 bg-white dark:bg-[#0b0f17] z-10 select-none">

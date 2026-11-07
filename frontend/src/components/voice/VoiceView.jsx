@@ -83,7 +83,12 @@ export function VoiceView({
 }) {
   const status = busy && voice.status !== "speaking" ? "working" : voice.status;
   const hasTranscript = Boolean(voice.transcript && voice.transcript.trim());
-  const micLevel = useMicLevel(status === "listening");
+  const baseMicLevel = useMicLevel(status === "listening" || status === "speaking");
+  const transcriptBoost =
+    status === "listening" && hasTranscript
+      ? Math.min(0.32, ((voice.transcript.trim().length % 10) + 2) * 0.03)
+      : 0;
+  const micLevel = Math.min(1, baseMicLevel + transcriptBoost);
   const label =
     voice.status === "listening"
       ? hasTranscript

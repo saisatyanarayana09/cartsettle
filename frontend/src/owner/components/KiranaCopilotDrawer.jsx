@@ -214,7 +214,10 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="copilot-title"
-      onPointerDownCapture={voice.interrupt}
+      onPointerDownCapture={(event) => {
+        if (event.target?.closest?.(".voice-orb-container")) return;
+        voice.interrupt();
+      }}
       className="shopper-panel shopper-theme flex flex-col overflow-hidden border-border bg-background text-foreground outline-none"
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-4">

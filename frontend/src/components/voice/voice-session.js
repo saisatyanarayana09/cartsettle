@@ -15,8 +15,10 @@ function pickBestVoice(browser, preferredLang = "en-US") {
     else if (vLang.startsWith("en")) score += 15;
     else return -100;
 
-    if (name.includes("natural") || name.includes("neural") || name.includes("online")) score += 50;
-    if (name.includes("google")) score += 40;
+    // Prefer fast local voices so browser speechSynthesis never stalls on network TTS
+    if (v.localService) score += 40;
+    if (name.includes("natural") || name.includes("neural")) score += 25;
+    if (name.includes("google")) score += 20;
     if (
       name.includes("aria") ||
       name.includes("jenny") ||
@@ -98,21 +100,35 @@ export function createVoiceSession({
     recognition.lang = effectiveLang;
     emit("listening", "");
 
+    let lastHeardNorm = "";
+    let scheduledFinal = false;
+
     recognition.onresult = (event) => {
       if (!active || turn !== generation) return;
       const resultsArr = Array.from(event.results || []);
-      const text = resultsArr
+      const nonEmptyResults = resultsArr.filter(
+        (result) => (result?.[0]?.transcript || "").trim().length > 0,
+      );
+      const text = nonEmptyResults
         .map((result) => result[0]?.transcript || "")
         .join(" ")
         .trim();
       emit("listening", text);
-      clearTimeout(timer);
-      if (text) {
+      if (!text) return;
+
+      const norm = text.toLowerCase();
+      const latestNonEmpty = nonEmptyResults[nonEmptyResults.length - 1];
+      const isFinal = Boolean(latestNonEmpty?.isFinal);
+      const textChanged = norm !== lastHeardNorm;
+      const newlyFinal = isFinal && !scheduledFinal;
+
+      if (textChanged || newlyFinal || !timer) {
+        lastHeardNorm = norm;
+        scheduledFinal = isFinal;
+        clearTimeout(timer);
         let waitTime = silenceMs;
-        if (silenceMs > 500) {
-          const lastRes = resultsArr[resultsArr.length - 1];
-          const isFinal = Boolean(lastRes?.isFinal);
-          waitTime = isFinal ? 650 : silenceMs;
+        if (silenceMs > 500 && isFinal) {
+          waitTime = 380;
         }
         timer = setTimeout(() => submit(text), waitTime);
       }
@@ -126,7 +142,7 @@ export function createVoiceSession({
           submit(transcript.trim());
         } else if (active) {
           cancel();
-          timer = setTimeout(listen, 180);
+          timer = setTimeout(listen, 120);
         }
         return;
       }
@@ -143,9 +159,9 @@ export function createVoiceSession({
       if (!active || turn !== generation) return;
       if (transcript && transcript.trim()) {
         clearTimeout(timer);
-        timer = setTimeout(() => submit(transcript.trim()), 200);
+        submit(transcript.trim());
       } else {
-        timer = setTimeout(listen, 180);
+        timer = setTimeout(listen, 120);
       }
     };
 
@@ -166,7 +182,11 @@ export function createVoiceSession({
       if (!active || turn !== generation) return;
       const reply = data?.voice_reply || data?.reply;
       if (!reply || !browser.speechSynthesis || !browser.SpeechSynthesisUtterance) {
-        emit("paused", "");
+        if (silenceMs > 500 && active && turn === generation) {
+          listen();
+        } else {
+          emit("paused", "");
+        }
         return;
       }
       const speech = new browser.SpeechSynthesisUtterance(reply);
@@ -176,7 +196,7 @@ export function createVoiceSession({
         speech.voice = bestVoice;
         speech.lang = bestVoice.lang || effectiveLang;
       }
-      speech.rate = 0.98;
+      speech.rate = 1.02;
       speech.pitch = 1.0;
 
       const finishSpeech = () => {
@@ -184,11 +204,15 @@ export function createVoiceSession({
         if (active && turn === generation) listen();
       };
 
-      speech.onend = finishSpeech;
-      speech.onerror = () => {
-        clearTimeout(speechWatchdog);
-        if (active && turn === generation) listen();
+      speech.onstart = () => {
+        if (silenceMs > 500) {
+          clearTimeout(speechWatchdog);
+          const maxDuration = Math.min(5500, Math.max(2200, String(reply).length * 65));
+          speechWatchdog = setTimeout(finishSpeech, maxDuration);
+        }
       };
+      speech.onend = finishSpeech;
+      speech.onerror = finishSpeech;
 
       emit("speaking", "");
       try {
@@ -196,13 +220,19 @@ export function createVoiceSession({
       } catch {}
       browser.speechSynthesis.speak(speech);
 
-      // Watchdog for browsers where speechSynthesis.onend silently stalls
+      // Fast start watchdog: if browser TTS fails to start within 1.2s, immediately reopen mic
       if (silenceMs > 500) {
-        const watchdogMs = Math.min(12000, Math.max(3000, String(reply).length * 75));
-        speechWatchdog = setTimeout(finishSpeech, watchdogMs);
+        speechWatchdog = setTimeout(finishSpeech, 1200);
       }
     } catch {
-      if (active && turn === generation) emit("error", "Try again.");
+      if (active && turn === generation) {
+        emit("error", "Try again.");
+        if (silenceMs > 500) {
+          timer = setTimeout(() => {
+            if (active && turn === generation) listen();
+          }, 900);
+        }
+      }
     }
   };
 
@@ -217,6 +247,11 @@ export function createVoiceSession({
       if (status === "speaking") {
         cancel();
         emit("paused", "");
+        if (silenceMs > 500 && active) {
+          timer = setTimeout(() => {
+            if (active && status === "paused") listen();
+          }, 150);
+        }
       }
     },
     toggle() {
