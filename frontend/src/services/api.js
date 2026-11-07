@@ -51,10 +51,10 @@ api.interceptors.request.use(
     } else {
       config.headers['X-Portal-Context'] = 'customer';
     }
-    // Fast 1.2s cap so the AI Assistant responds instantly without hanging on cold starts
+    // 4.5s POST cap (> backend's 2.8s Gemini read timeout) so local ASGI requests never get aborted mid-flight
     if ((config.url || '').includes('/store/agent/') && !config.timeout) {
       const isGet = (config.method || 'get').toLowerCase() === 'get';
-      config.timeout = isGet ? 1500 : 1200;
+      config.timeout = isGet ? 2500 : 4500;
     }
     return config;
   },

@@ -1383,7 +1383,11 @@ class AgentService:
         if mem.get("last_order_id") and any(w in lower_p for w in ["that order", "this order", "settle it", "audit it", "capture it"]):
             if not re.search(r"\b(ord\d+\w*)\b", lower_p):
                 resolved_prompt = f"{normalized_prompt} ({mem['last_order_id']})"
-        elif mem.get("last_product") and not self._match_product_from_text(normalized_prompt):
+        elif (
+            mem.get("last_product")
+            and not self._match_product_from_text(normalized_prompt)
+            and not re.search(r"\b(clear|empty|all|everything|reset|wipe)\b", lower_p)
+        ):
             if re.search(r"\b(it|that|them|those|this item|that item|more)\b", lower_p) or any(w in lower_p for w in ["% off", "discount", "in stock", "how much"]):
                 resolved_prompt = f"{normalized_prompt} ({mem['last_product']})"
 
@@ -1496,7 +1500,7 @@ class AgentService:
         }
 
         try:
-            res = requests.post(url, json=payload, timeout=15.0)
+            res = requests.post(url, json=payload, timeout=(2.0, 2.8))
             if res.status_code != 200:
                 logger.warning("Gemini API status %s, using fast fallback", res.status_code)
                 fb = self._fallback_chat(resolved_prompt, session_id, persona)
@@ -2850,7 +2854,11 @@ class AgentService:
 
             # 1. Autonomous Multi-Item & Single-Item Add to Cart ("Add 2 milk and 1 bread to my cart", "Buy Bread")
             is_cost_question = any(lower.startswith(q) for q in ["how much", "what is the", "what's the", "cost of", "price of", "do you", "suggest"])
-            is_recipe_query = any(k in lower for k in ["making ", "cooking ", "suggest ", "requirements", "recipe", "ingredients", "biryani", "biriyani", "pulao"])
+            is_recipe_query = any(k in lower for k in [
+                "making ", "cooking ", "suggest ", "requirements", "recipe", "ingredients",
+                "biryani", "biriyani", "pulao", "dosa", "idli", "sambar", "upma", "poha",
+                "paratha", "omelette", "maggi", "noodles", "soup", "halwa", "kheer", "cake"
+            ])
             if not is_cost_question and not is_recipe_query and any(w in lower for w in ["add ", "put ", "buy ", "get me ", "i want ", "i'll take ", "order "]):
                 items_with_qty = self._extract_items_with_quantities(prompt)
                 if not items_with_qty and ("cart" in lower or "bag" in lower):
@@ -2883,7 +2891,10 @@ class AgentService:
                 "biryani", "biriyani", "pulao", "fried rice", "paneer", "curry", "masala",
                 "chai", "tea", "coffee", "dal", "roti", "dinner", "breakfast", "smoothie",
                 "recipe", "salad", "meal", "plan a meal", "basket", "ingredients",
-                "requirements", "making ", "cooking ", "prepare ", "sandwich", "snack"
+                "requirements", "making ", "cooking ", "prepare ", "sandwich", "snack",
+                "dosa", "idli", "sambar", "upma", "poha", "paratha", "omelette", "maggi",
+                "noodles", "soup", "halwa", "kheer", "cake", "burger", "pizza", "taco",
+                "lunch", "supper", "cook ", "dish"
             ]):
                 recipe_name = "Dinner"
                 if any(w in lower for w in ["biryani", "biriyani", "pulao"]):
@@ -3150,7 +3161,7 @@ class AgentService:
                 }
             }
             try:
-                res = requests.post(url, json=payload, timeout=20)
+                res = requests.post(url, json=payload, timeout=(2.0, 4.0))
                 if res.status_code == 200:
                     data = json.loads(res.json()["candidates"][0]["content"]["parts"][0]["text"])
                     extracted_items = data.get("extracted_items", [])
@@ -3256,7 +3267,7 @@ class AgentService:
         }
 
         try:
-            res = requests.post(url, json=payload, timeout=20)
+            res = requests.post(url, json=payload, timeout=(2.0, 4.0))
             if res.status_code == 200:
                 text = res.json()["candidates"][0]["content"]["parts"][0]["text"]
                 return json.loads(text)

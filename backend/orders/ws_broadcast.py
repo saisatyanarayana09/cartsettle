@@ -1,5 +1,7 @@
 import logging
 import asyncio
+import threading
+from django.conf import settings
 from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -10,7 +12,8 @@ logger = logging.getLogger(__name__)
 def _send_group(group_name: str, message: dict):
     """
     Safely delivers message to a channel layer group across both synchronous
-    contexts (standard Django views) and asynchronous event loops (async tests/views).
+    contexts (standard Django views) and asynchronous event loops (async tests/views)
+    without blocking or hanging Daphne ASGI HTTP teardown.
     """
     channel_layer = get_channel_layer()
     if not channel_layer:
@@ -23,8 +26,16 @@ def _send_group(group_name: str, message: dict):
 
     if loop and loop.is_running():
         loop.create_task(channel_layer.group_send(group_name, message))
-    else:
+    elif getattr(settings, "IS_TESTING", False):
         async_to_sync(channel_layer.group_send)(group_name, message)
+    else:
+        def _bg_send():
+            try:
+                async_to_sync(channel_layer.group_send)(group_name, message)
+            except Exception as exc:
+                logger.debug("WS background group_send error: %s", exc)
+
+        threading.Thread(target=_bg_send, daemon=True).start()
 
 
 def broadcast_order_created(order, customer_name, customer_phone="", items_count=0):
