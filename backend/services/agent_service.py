@@ -3181,6 +3181,29 @@ class AgentService:
 
     def _fallback_chat(self, prompt: str, session_id: str, persona: str) -> dict:
         """Smart data-driven fallback that answers product, order, or catalog questions from live DB."""
+        lower = (prompt or "").lower().strip()
+
+        # Conversational fallback checks
+        if any(w in lower for w in ["hello", "hi", "hey", "good morning", "good evening"]):
+            reply = "Store assistant ready. How can I assist with operations?" if persona == "owner" else "How can I help with your shopping today?"
+            broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
+            return {"reply": reply, "tools_used": [], "actions": []}
+
+        if any(w in lower for w in ["what can you do", "who are you", "help", "capabilities"]):
+            reply = "I help monitor live sales, track inventory, manage orders, and process supplier restock payouts." if persona == "owner" else "I help search products, add items to cart, recommend recipe bundles, check deals, and checkout."
+            broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
+            return {"reply": reply, "tools_used": [], "actions": []}
+
+        if any(w in lower for w in ["delivery", "fast", "time", "shipping", "deliver"]):
+            reply = "Express grocery delivery arrives within 15 to 25 minutes right to your door."
+            broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
+            return {"reply": reply, "tools_used": [], "actions": []}
+
+        if any(w in lower for w in ["payment", "pay", "paypal", "cod", "wallet"]):
+            reply = "We accept PayPal, Cash on Delivery, and Wallet with instant settlement."
+            broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
+            return {"reply": reply, "tools_used": [], "actions": []}
+
         matched_prods = self._match_products_from_text(prompt, limit=4)
         if matched_prods:
             cards = [AgentTools.serialize_card_product(p) for p in matched_prods]
@@ -3193,12 +3216,12 @@ class AgentService:
         in_stock_count = sum(1 for p in active_prods if p.stock_quantity > 0)
         orders_count = Order.objects.count()
         pending_count = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
-        if persona == "shopper" and active_prods:
-            cards = [AgentTools.serialize_card_product(p) for p in active_prods[:4]]
-            top_names = ", ".join(f"{c['name']} (${c['price']:.2f})" for c in cards[:3])
-            reply = f"{in_stock_count} items in stock including {top_names}."
+
+        if persona == "shopper":
+            reply = "Please tell me which groceries or ingredients you need."
+            cards = [AgentTools.serialize_card_product(p) for p in active_prods[:4]] if active_prods else []
             broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
-            return {"reply": reply, "tools_used": [], "actions": [{"type": "SEARCH_RESULTS", "items": cards}]}
+            return {"reply": reply, "tools_used": [], "actions": [{"type": "SEARCH_RESULTS", "items": cards}] if cards else []}
 
         reply = f"{len(active_prods)} live products with {in_stock_count} in stock and {orders_count} orders ({pending_count} pending)."
         broadcast_agent_thought(session_id, {"status": "complete", "response": reply})
