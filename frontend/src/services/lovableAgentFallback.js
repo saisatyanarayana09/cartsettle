@@ -204,11 +204,17 @@ function extractItemsWithQuantities(text) {
   return Array.from(map.values());
 }
 
-function normalizeVoiceTranscript(text) {
-  if (!text) return '';
-  let out = String(text).trim();
+function normalizeVoiceTranscript(rawText) {
+  if (!rawText || typeof rawText !== 'string') return '';
+  let out = rawText.trim();
+  if (!out) return '';
+
   const wordToNum = [
     [/\btwenty[\s-]+five\b/gi, '25'],
+    [/\btwenty[\s-]+four\b/gi, '24'],
+    [/\btwenty[\s-]+three\b/gi, '23'],
+    [/\btwenty[\s-]+two\b/gi, '22'],
+    [/\btwenty[\s-]+one\b/gi, '21'],
     [/\btwenty\b/gi, '20'],
     [/\bnineteen\b/gi, '19'],
     [/\beighteen\b/gi, '18'],
@@ -238,19 +244,99 @@ function normalizeVoiceTranscript(text) {
     out = out.replace(re, digit);
   }
 
-  const englishPhoneticMap = [
-    [/\b(?:straberry|strawbery|straberries)\b/gi, 'strawberries'],
-    [/\b(?:avacado|avacados)\b/gi, 'avocados'],
-    [/\b(?:yoghurt|yogart)\b/gi, 'yogurt'],
-    [/\b(?:cheepar|chipper)\b/gi, 'cheaper'],
-    [/\b(?:auder|ordo|odder)\b/gi, 'order'],
-    [/\b(?:setal|satel|settel)\b/gi, 'settle'],
-    [/\b(?:kansal|cansel)\b/gi, 'cancel'],
-    [/\b(?:fayvorit|fevret|favourite)\b/gi, 'favorite'],
-    [/\b(?:fayvorits|fevrets|favourites)\b/gi, 'favorites'],
-    [/\b(?:restok|re[\s-]+stock)\b/gi, 'restock'],
+  // Guard payment cards (credit card, debit card, etc.)
+  const PROTECTED_CARDS = [
+    [/\b(credit|debit|gift|id|pan|aadhaar|aadhar|sim|atm|bank|loyalty|scratch)\s+card\b/gi, '##$1_CARD##'],
+    [/\bcard\s+(number|pin|cvv|expiry|holder|details|statement)\b/gi, '##CARD_$1##'],
   ];
-  for (const [re, replacement] of englishPhoneticMap) {
+  for (const [re, token] of PROTECTED_CARDS) {
+    out = out.replace(re, token);
+  }
+
+  // CART Phonetic Normalization (card, part, car, court, cot, caught, kart, etc.)
+  out = out.replace(/\b(?:kart|caart|kaart|kaat|kurt)\b/gi, 'cart');
+  out = out.replace(/\b(to|into|in|from|my|the|this|that|view|show|open|check|clear|empty|clean|reset|see)\s+card\b/gi, '$1 cart');
+  out = out.replace(/\bcard\s+(total|items?|summary|contents?|value|status|count)\b/gi, 'cart $1');
+  if (/^\s*(?:my\s+|the\s+)?card\s*$/i.test(out)) {
+    out = out.replace(/\bcard\b/gi, 'cart');
+  }
+  out = out.replace(/\b(add\b.*?\bto)\s+card\b/gi, '$1 cart');
+  out = out.replace(/\b(put\b.*?\b(?:in|into))\s+card\b/gi, '$1 cart');
+
+  // "part" slips
+  out = out.replace(/\b(to|into|in|from|my|the|view|show|open|check|clear|empty)\s+(?:the\s+)?part\b/gi, '$1 cart');
+  out = out.replace(/\bpart\s+(total|items?|summary|contents?)\b/gi, 'cart $1');
+  out = out.replace(/\b(add\b.*?\b(?:to|into|in))\s+(?:the\s+)?part\b/gi, '$1 cart');
+
+  // "car" / "court" / "cot" / "caught" / "chart" slips
+  out = out.replace(/\b(to|into|in|from|view|show|open|check|clear|empty)\s+(?:the\s+|my\s+)?(?:car|court|cot|caught|chart)\b/gi, '$1 cart');
+  out = out.replace(/\b(?:car|court|cot|caught|chart)\s+(total|items?|summary|contents?)\b/gi, 'cart $1');
+  out = out.replace(/\b(add\b.*?\b(?:to|into|in))\s+(?:the\s+|my\s+)?(?:car|court|cot|caught|chart)\b/gi, '$1 cart');
+  if (/^\s*(?:my\s+|the\s+)?(?:car|court|cot|kart)\s*$/i.test(out)) {
+    out = out.replace(/\b(?:car|court|cot|kart)\b/gi, 'cart');
+  }
+
+  // Restore protected payment card tokens
+  out = out.replace(/##([a-z0-9]+)_CARD##/gi, '$1 card');
+  out = out.replace(/##CARD_([a-z0-9]+)##/gi, 'card $1');
+
+  // Command slips
+  const actionSlips = [
+    [/\b(?:check[\s-]*out|cheqout|chekout|chikout|check\s+aut)\b/gi, 'checkout'],
+    [/\b(?:setal|satel|settel|sattle)\b/gi, 'settle'],
+    [/\b(?:kansal|cansel|cancle)\b/gi, 'cancel'],
+    [/\b(?:auder|ordo|odder)\b/gi, 'order'],
+    [/\b(?:re[\s-]*order|riorder)\b/gi, 'reorder'],
+    [/\b(?:restok|re[\s-]+stock)\b/gi, 'restock'],
+    [/\b(?:cheepar|chipper|cheper)\b/gi, 'cheaper'],
+    [/\b(?:fayvorit|fevret|favourite|favourit)\b/gi, 'favorite'],
+    [/\b(?:fayvorits|fevrets|favourites|favourits)\b/gi, 'favorites'],
+    [/\b(?:remuv|remov|rimuv)\b/gi, 'remove'],
+    [/\b(?:dilit|delet)\b/gi, 'delete'],
+    [/\b(?:discont|discound|discout)\b/gi, 'discount'],
+  ];
+  for (const [re, replacement] of actionSlips) {
+    out = out.replace(re, replacement);
+  }
+
+  // Product phonetic slips
+  const productSlips = [
+    [/\b(?:straberry|strawbery|straberries|stoberry)\b/gi, 'strawberries'],
+    [/\b(?:avacado|avacados|abocado|avocadoes)\b/gi, 'avocados'],
+    [/\b(?:yoghurt|yogart|yougurt)\b/gi, 'yogurt'],
+    [/\b(?:paasta)\b/gi, 'pasta'],
+    [/\b(?:marinera)\b/gi, 'marinara'],
+    [/\b(?:grosary|groceris|grossary|grosery)\b/gi, 'groceries'],
+    [/\b(?:produs|prodice)\b/gi, 'produce'],
+    [/\b(?:dary|dayry|deri)\b/gi, 'dairy'],
+    [/\b(?:bekari|bekary)\b/gi, 'bakery'],
+    [/\b(?:milkk|melk)\b/gi, 'milk'],
+    [/\b(?:bred|braed)\b/gi, 'bread'],
+  ];
+  for (const [re, replacement] of productSlips) {
+    out = out.replace(re, replacement);
+  }
+
+  // Kirana vernacular & Hinglish
+  const vernacularMap = [
+    [/\b(?:doodh|dudh|dhudh|dood)\b/gi, 'milk'],
+    [/\b(?:ande|anday|anda)\b/gi, 'eggs'],
+    [/\b(?:chawal|chaaval|chaval)\b/gi, 'rice'],
+    [/\b(?:aata|ata)\b/gi, 'atta'],
+    [/\b(?:cheeni|chini|shakkar)\b/gi, 'sugar'],
+    [/\b(?:tamatar|tamator|tamater)\b/gi, 'tomato'],
+    [/\b(?:pyaaz|pyaz|kanda|piyaz)\b/gi, 'onion'],
+    [/\b(?:aalu|alu|batata)\b/gi, 'potato'],
+    [/\b(?:panir|panner|paner)\b/gi, 'paneer'],
+    [/\b(?:biriyani|briyani|birani)\b/gi, 'biryani'],
+    [/\b(?:chaai|chay)\b/gi, 'chai'],
+    [/\b(?:dahi)\b/gi, 'yogurt'],
+    [/\b(?:sasta|kam\s+(?:price|dam))\b/gi, 'cheaper'],
+    [/\b(?:hatao|nikalo)\b/gi, 'remove'],
+    [/\b(?:khali\s+karo|saaf\s+karo)\b/gi, 'clear cart'],
+    [/\b(?:total\s+kitna(?:\s+hua)?|kitna\s+hua|kitne\s+paise\s+hue|bill\s+kitna(?:\s+hua)?|kitna\s+bill)\b/gi, 'cart total'],
+  ];
+  for (const [re, replacement] of vernacularMap) {
     out = out.replace(re, replacement);
   }
 

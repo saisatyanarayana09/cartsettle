@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { normalizeVoiceTranscript } from '../utils/transcriptNormalizer';
 
 /**
  * Hook for Speech-to-Text using native browser SpeechRecognition API
@@ -62,7 +63,7 @@ export function useSpeechRecognition({ onResult, onFinal, lang = 'en-IN' } = {})
       setInterimTranscript(liveInterim);
 
       if (accumulatedFinal) {
-        const trimmed = accumulatedFinal.trim();
+        const trimmed = normalizeVoiceTranscript(accumulatedFinal);
         if (onResultRef.current) {
           onResultRef.current(trimmed);
         }

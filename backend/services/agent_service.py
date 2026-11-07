@@ -1293,12 +1293,16 @@ class AgentService:
             return ["Build a cart under $20", "Reorder my last order", f"Add 1 {short_prod} to my cart"]
 
     def _normalize_voice_transcript(self, text: str) -> str:
-        """Normalizes spoken English number words and common speech-to-text terms into clean intent text."""
+        """Normalizes spoken English number words, phonetic slips, vernacular Kirana terms, and contextual cart ambiguities."""
         if not text:
             return ""
         out = text.strip()
         word_to_num = [
             (r"\btwenty[\s-]+five\b", "25"),
+            (r"\btwenty[\s-]+four\b", "24"),
+            (r"\btwenty[\s-]+three\b", "23"),
+            (r"\btwenty[\s-]+two\b", "22"),
+            (r"\btwenty[\s-]+one\b", "21"),
             (r"\btwenty\b", "20"),
             (r"\bnineteen\b", "19"),
             (r"\beighteen\b", "18"),
@@ -1327,19 +1331,109 @@ class AgentService:
         for pattern, digit in word_to_num:
             out = re.sub(pattern, digit, out, flags=re.IGNORECASE)
 
-        english_phonetic_map = [
-            (r"\b(?:straberry|strawbery|straberries)\b", "strawberries"),
-            (r"\b(?:avacado|avacados)\b", "avocados"),
-            (r"\b(?:yoghurt|yogart)\b", "yogurt"),
-            (r"\b(?:cheepar|chipper)\b", "cheaper"),
-            (r"\b(?:auder|ordo|odder)\b", "order"),
-            (r"\b(?:setal|satel|settel)\b", "settle"),
-            (r"\b(?:kansal|cansel)\b", "cancel"),
-            (r"\b(?:fayvorit|fevret|favourite)\b", "favorite"),
-            (r"\b(?:fayvorits|fevrets|favourites)\b", "favorites"),
-            (r"\b(?:restok|re[\s-]+stock)\b", "restock"),
+        # 1. Guard Payment Cards (credit card, debit card, gift card, etc.)
+        protected_cards = [
+            (r"\b(credit|debit|gift|id|pan|aadhaar|aadhar|sim|atm|bank|loyalty|scratch)\s+card\b", r"##\1_CARD##"),
+            (r"\bcard\s+(number|pin|cvv|expiry|holder|details|statement)\b", r"##CARD_\1##"),
         ]
-        for pattern, replacement in english_phonetic_map:
+        for pattern, token in protected_cards:
+            out = re.sub(pattern, token, out, flags=re.IGNORECASE)
+
+        # 2. CART Phonetic Normalization (handling common STT slips: card, part, car, court, cot, caught, kart, chart, etc.)
+        out = re.sub(r"\b(?:kart|caart|kaart|kaat|kurt)\b", "cart", out, flags=re.IGNORECASE)
+        out = re.sub(
+            r"\b(to|into|in|from|my|the|this|that|view|show|open|check|clear|empty|clean|reset|see)\s+card\b",
+            r"\1 cart",
+            out,
+            flags=re.IGNORECASE
+        )
+        out = re.sub(r"\bcard\s+(total|items?|summary|contents?|value|status|count)\b", r"cart \1", out, flags=re.IGNORECASE)
+        if re.fullmatch(r"\s*(?:my\s+|the\s+)?card\s*", out, re.IGNORECASE):
+            out = re.sub(r"\bcard\b", "cart", out, flags=re.IGNORECASE)
+        out = re.sub(r"\b(add\b.*?\bto)\s+card\b", r"\1 cart", out, flags=re.IGNORECASE)
+        out = re.sub(r"\b(put\b.*?\b(?:in|into))\s+card\b", r"\1 cart", out, flags=re.IGNORECASE)
+
+        # "part" slips
+        out = re.sub(
+            r"\b(to|into|in|from|my|the|view|show|open|check|clear|empty)\s+(?:the\s+)?part\b",
+            r"\1 cart",
+            out,
+            flags=re.IGNORECASE
+        )
+        out = re.sub(r"\bpart\s+(total|items?|summary|contents?)\b", r"cart \1", out, flags=re.IGNORECASE)
+        out = re.sub(r"\b(add\b.*?\b(?:to|into|in))\s+(?:the\s+)?part\b", r"\1 cart", out, flags=re.IGNORECASE)
+
+        # "car" / "court" / "cot" / "caught" / "chart" slips
+        out = re.sub(
+            r"\b(to|into|in|from|view|show|open|check|clear|empty)\s+(?:the\s+|my\s+)?(?:car|court|cot|caught|chart)\b",
+            r"\1 cart",
+            out,
+            flags=re.IGNORECASE
+        )
+        out = re.sub(r"\b(?:car|court|cot|caught|chart)\s+(total|items?|summary|contents?)\b", r"cart \1", out, flags=re.IGNORECASE)
+        out = re.sub(r"\b(add\b.*?\b(?:to|into|in))\s+(?:the\s+|my\s+)?(?:car|court|cot|caught|chart)\b", r"\1 cart", out, flags=re.IGNORECASE)
+        if re.fullmatch(r"\s*(?:my\s+|the\s+)?(?:car|court|cot|kart)\s*", out, re.IGNORECASE):
+            out = re.sub(r"\b(?:car|court|cot|kart)\b", "cart", out, flags=re.IGNORECASE)
+
+        # Restore protected payment cards
+        out = re.sub(r"##([a-z0-9]+)_CARD##", r"\1 card", out, flags=re.IGNORECASE)
+        out = re.sub(r"##CARD_([a-z0-9]+)##", r"card \1", out, flags=re.IGNORECASE)
+
+        # 3. Action Slips
+        action_slips = [
+            (r"\b(?:check[\s-]*out|cheqout|chekout|chikout|check\s+aut)\b", "checkout"),
+            (r"\b(?:setal|satel|settel|sattle)\b", "settle"),
+            (r"\b(?:kansal|cansel|cancle)\b", "cancel"),
+            (r"\b(?:auder|ordo|odder)\b", "order"),
+            (r"\b(?:re[\s-]*order|riorder)\b", "reorder"),
+            (r"\b(?:restok|re[\s-]+stock)\b", "restock"),
+            (r"\b(?:cheepar|chipper|cheper)\b", "cheaper"),
+            (r"\b(?:fayvorit|fevret|favourite|favourit)\b", "favorite"),
+            (r"\b(?:fayvorits|fevrets|favourites|favourits)\b", "favorites"),
+            (r"\b(?:remuv|remov|rimuv)\b", "remove"),
+            (r"\b(?:dilit|delet)\b", "delete"),
+            (r"\b(?:discont|discound|discout)\b", "discount"),
+        ]
+        for pattern, replacement in action_slips:
+            out = re.sub(pattern, replacement, out, flags=re.IGNORECASE)
+
+        # 4. Product Phonetic Slips
+        product_slips = [
+            (r"\b(?:straberry|strawbery|straberries|stoberry)\b", "strawberries"),
+            (r"\b(?:avacado|avacados|abocado|avocadoes)\b", "avocados"),
+            (r"\b(?:yoghurt|yogart|yougurt)\b", "yogurt"),
+            (r"\b(?:paasta)\b", "pasta"),
+            (r"\b(?:marinera)\b", "marinara"),
+            (r"\b(?:grosary|groceris|grossary|grosery)\b", "groceries"),
+            (r"\b(?:produs|prodice)\b", "produce"),
+            (r"\b(?:dary|dayry|deri)\b", "dairy"),
+            (r"\b(?:bekari|bekary)\b", "bakery"),
+            (r"\b(?:milkk|melk)\b", "milk"),
+            (r"\b(?:bred|braed)\b", "bread"),
+        ]
+        for pattern, replacement in product_slips:
+            out = re.sub(pattern, replacement, out, flags=re.IGNORECASE)
+
+        # 5. Kirana Vernacular & Hinglish Mapping
+        vernacular_map = [
+            (r"\b(?:doodh|dudh|dhudh|dood)\b", "milk"),
+            (r"\b(?:ande|anday|anda)\b", "eggs"),
+            (r"\b(?:chawal|chaaval|chaval)\b", "rice"),
+            (r"\b(?:aata|ata)\b", "atta"),
+            (r"\b(?:cheeni|chini|shakkar)\b", "sugar"),
+            (r"\b(?:tamatar|tamator|tamater)\b", "tomato"),
+            (r"\b(?:pyaaz|pyaz|kanda|piyaz)\b", "onion"),
+            (r"\b(?:aalu|alu|batata)\b", "potato"),
+            (r"\b(?:panir|panner|paner)\b", "paneer"),
+            (r"\b(?:biriyani|briyani|birani)\b", "biryani"),
+            (r"\b(?:chaai|chay)\b", "chai"),
+            (r"\b(?:dahi)\b", "yogurt"),
+            (r"\b(?:sasta|kam\s+(?:price|dam))\b", "cheaper"),
+            (r"\b(?:hatao|nikalo)\b", "remove"),
+            (r"\b(?:khali\s+karo|saaf\s+karo)\b", "clear cart"),
+            (r"\b(?:total\s+kitna(?:\s+hua)?|kitna\s+hua|kitne\s+paise\s+hue|bill\s+kitna(?:\s+hua)?|kitna\s+bill)\b", "cart total"),
+        ]
+        for pattern, replacement in vernacular_map:
             out = re.sub(pattern, replacement, out, flags=re.IGNORECASE)
 
         out = re.sub(r"(\d+(?:\.\d+)?)\s*(?:percent|per\s+cent)\b", r"\1%", out, flags=re.IGNORECASE)
@@ -1468,6 +1562,12 @@ class AgentService:
 
         store_policy_note = "\nSTORE POLICIES: We accept Cash on Delivery (COD), Store Wallet, and PayPal. Delivery arrives within 15 to 25 minutes.\n"
 
+        cart_guard = (
+            "CRITICAL CART RULE: LIVE STORE SNAPSHOT is the store catalog, NOT the customer's cart. "
+            "The customer's cart is ONLY what is listed under CUSTOMER ACTIVE CART. "
+            "Never tell the customer they have store snapshot items in their cart unless they appear under CUSTOMER ACTIVE CART.\n"
+        )
+
         if persona == "shopper":
             system_instruction = (
                 "You are a concise, natural grocery store helper. "
@@ -1475,6 +1575,7 @@ class AgentService:
                 "Never use AI filler words like 'Sure!', 'Certainly', 'I have', emojis, or markdown symbols."
                 f"{recent_context_note}"
                 f"{cart_note}"
+                f"{cart_guard}"
                 f"{store_policy_note}\n"
                 f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
@@ -1877,18 +1978,26 @@ class AgentService:
             }
 
         # --- 00A. LIVE CART CONTENTS & TOTAL CALCULATION ---
-        if any(k in lower for k in [
-            "what is in my cart", "what's in my cart", "what is in cart", "show my cart",
-            "view cart", "check my cart", "cart contents", "items in my cart", "in my cart"
-        ]):
+        is_cart_summary = (
+            lower in ("cart", "my cart", "the cart", "open cart", "show cart", "check cart", "view cart", "view my cart", "cart items", "cart summary", "cart status", "cart details")
+            or any(k in lower for k in [
+                "what is in my cart", "what's in my cart", "what is in cart", "show my cart",
+                "view cart", "check my cart", "cart contents", "items in my cart", "in my cart",
+                "see my cart", "see cart", "check cart", "open cart", "whats in my cart", "what is in cart"
+            ])
+        )
+        if is_cart_summary and not any(k in lower for k in ["add ", "put ", "buy ", "clear", "remove", "delete", "empty"]):
             if cart_items and isinstance(cart_items, list) and len(cart_items) > 0:
                 summary = ", ".join(f"{ci.get('quantity', 1)} {ci.get('name')}" for ci in cart_items if ci.get("name"))
                 total_c = sum(float(ci.get('price', 0)) * int(ci.get('quantity', 1)) for ci in cart_items)
                 reply = f"Your cart has {summary} (${total_c:.2f} total)."
+                actions = [{"type": "SEARCH_RESULTS", "items": cart_items}]
+                if "open" in lower or lower == "cart":
+                    actions.append({"type": "NAVIGATE", "path": "/cart", "label": "Cart"})
                 return {
                     "reply": reply,
                     "tools_used": [{"name": "live_store_memory", "args": {"cart_items": len(cart_items)}}],
-                    "actions": [{"type": "SEARCH_RESULTS", "items": cart_items}],
+                    "actions": actions,
                     "tool_result": {"items": cart_items, "total": total_c}
                 }
             else:
