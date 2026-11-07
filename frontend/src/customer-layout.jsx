@@ -40,7 +40,7 @@ import WelcomeSequence from "./components/welcome/WelcomeSequence";
 import { readWelcomeName } from "./components/welcome/welcome-lifecycle";
 import { showIdleAssistant } from "./components/shopper/search-control.ts";
 
-function GlobalSearchBar({ settings, onActiveChange, onOpenAssistant }) {
+function GlobalSearchBar({ settings, onActiveChange, onOpenAssistant, onToggleAssistant, isAssistantOpen }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -318,11 +318,19 @@ function GlobalSearchBar({ settings, onActiveChange, onOpenAssistant }) {
           {showAskAI && (
             <Button
               type="button"
-              variant="ghost"
+              variant={isAssistantOpen ? "default" : "ghost"}
               size="sm"
-              onClick={() => { setIsOpen(false); onOpenAssistant?.(); }}
+              onClick={() => {
+                setIsOpen(false);
+                onToggleAssistant ? onToggleAssistant() : onOpenAssistant?.();
+              }}
               aria-label="Ask AI"
-              className="hidden md:inline-flex h-8 w-[72px] shrink-0 px-2 text-xs font-bold text-primary hover:bg-accent hover:text-accent-foreground"
+              aria-pressed={isAssistantOpen}
+              className={`hidden md:inline-flex h-8 shrink-0 px-2.5 text-xs font-bold transition-all rounded-md cursor-pointer ${
+                isAssistantOpen
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 shadow-xs ring-2 ring-emerald-500/20"
+                  : "text-primary hover:bg-accent hover:text-accent-foreground"
+              }`}
             >
               Ask AI
             </Button>
@@ -1013,6 +1021,8 @@ function CustomerHeader({
   setShowNotifications,
   setIsSearchActive,
   onOpenAssistant,
+  onToggleAssistant,
+  isAssistantOpen,
   location,
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -1136,7 +1146,7 @@ function CustomerHeader({
             </Link>
 
             <div className="flex-1 min-w-0 transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
-              <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} />
+              <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} onOpenAssistant={onOpenAssistant} onToggleAssistant={onToggleAssistant} isAssistantOpen={isAssistantOpen} />
             </div>
           </div>
         </div>
@@ -1157,7 +1167,7 @@ function CustomerHeader({
           {/* Center Search Bar (hidden on Cart & Checkout for funnel focus) */}
           <div className="flex-1 min-w-0 max-w-2xl mx-2 md:mx-4">
             {!isCartOrCheckout && (
-              <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} onOpenAssistant={onOpenAssistant} />
+              <GlobalSearchBar settings={storeSettings} onActiveChange={setIsSearchActive} onOpenAssistant={onOpenAssistant} onToggleAssistant={onToggleAssistant} isAssistantOpen={isAssistantOpen} />
             )}
           </div>
 
@@ -1286,33 +1296,36 @@ export function CustomerLayout({ children }) {
   }
 
   return (
-    <div className={`min-h-screen bg-[var(--color-vacation-cream,#f7f5f0)] dark:bg-[#090d16] flex flex-col justify-start text-[var(--color-vacation-charcoal,#323232)] dark:text-slate-100 transition-colors duration-200 antialiased ${isCartOrCheckout ? "pb-0" : "pb-20 md:pb-0"}`}>
+    <div className={`customer-layout-container ${isShopperAgentOpen ? "assistant-open" : ""} min-h-screen bg-[var(--color-vacation-cream,#f7f5f0)] dark:bg-[#090d16] flex flex-col justify-start text-[var(--color-vacation-charcoal,#323232)] dark:text-slate-100 transition-colors duration-200 antialiased ${isCartOrCheckout ? "pb-0" : "pb-20 md:pb-0"}`}>
+      <div className="customer-main-area flex-1 flex flex-col w-full min-w-0">
+        <TopAnnouncementMarquee settings={storeSettings} />
+        <WelcomeScreen />
+        <FestivePopupModal settings={storeSettings} />
+        <WhatsAppSupportWidget settings={storeSettings} />
 
-      <TopAnnouncementMarquee settings={storeSettings} />
-      <WelcomeScreen />
-      <FestivePopupModal settings={storeSettings} />
-      <WhatsAppSupportWidget settings={storeSettings} />
+        {/* Customer Header Component - Isolated state prevents CustomerLayout & bottom <nav> from re-rendering */}
+        <CustomerHeader
+          storeSettings={storeSettings}
+          isCustomer={isCustomer}
+          notifications={notifications}
+          user={user}
+          cartCount={cartCount}
+          showNotifications={showNotifications}
+          setShowNotifications={setShowNotifications}
+          setIsSearchActive={setIsSearchActive}
+          onOpenAssistant={() => setIsShopperAgentOpen(true)}
+          onToggleAssistant={() => setIsShopperAgentOpen((prev) => !prev)}
+          isAssistantOpen={isShopperAgentOpen}
+          location={location}
+        />
 
-      {/* Customer Header Component - Isolated state prevents CustomerLayout & bottom <nav> from re-rendering */}
-      <CustomerHeader
-        storeSettings={storeSettings}
-        isCustomer={isCustomer}
-        notifications={notifications}
-        user={user}
-        cartCount={cartCount}
-        showNotifications={showNotifications}
-        setShowNotifications={setShowNotifications}
-        setIsSearchActive={setIsSearchActive}
-        onOpenAssistant={() => setIsShopperAgentOpen(true)}
-        location={location}
-      />
-
-      {/* Main Content Area with Smooth Page Transition */}
-      <main className="flex-1 w-full flex flex-col">
-        <div key={location.pathname} className="flex-1 w-full flex flex-col animate-page-fade">
-          {children || <Outlet />}
-        </div>
-      </main>
+        {/* Main Content Area with Smooth Page Transition */}
+        <main className="flex-1 w-full flex flex-col">
+          <div key={location.pathname} className="flex-1 w-full flex flex-col animate-page-fade">
+            {children || <Outlet />}
+          </div>
+        </main>
+      </div>
 
       {/* 54/44 Asymmetric Navigation Bar (hidden on Cart & Checkout for funnel focus) */}
       {!isCartOrCheckout && (
@@ -1374,7 +1387,7 @@ export function CustomerLayout({ children }) {
           {/* Right 44%: Expansive Ask AI Hero Button with Exact h-12 (48px) and Emerald Glow Border */}
           <button
             type="button"
-            onClick={() => setIsShopperAgentOpen(true)}
+            onClick={() => setIsShopperAgentOpen((prev) => !prev)}
             aria-label="Open AI Shopping Assistant"
             className="flex items-center justify-center gap-2 h-12 w-[44%] max-w-[200px] rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-600/25 active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer border border-emerald-400/40"
           >

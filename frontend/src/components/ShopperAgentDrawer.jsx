@@ -28,6 +28,7 @@ import { ModeSwitch, PanelMenu, VoiceView } from "./voice/VoiceView";
 import { ActionCards } from "./voice/ActionCards";
 import { PaymentReview } from "./voice/PaymentReview";
 import { requiresPaymentReview } from "./voice/payment-review";
+import { LiveTaskActivity } from "./voice/LiveTaskActivity";
 
 function IconControl({ label, children, ...props }) {
   return (
@@ -95,6 +96,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   useEffect(() => { if (!isOpen) setPaymentReview(null); }, [isOpen]);
   const requestRef = useRef(false);
   const [addedItems, setAddedItems] = useState({});
+  const [currentTask, setCurrentTask] = useState(null);
 
   const panelRef = useRef(null);
 
@@ -184,15 +186,40 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           const type = act.type || act.action;
           if (type === "SWITCH_THEME" || type === "TOGGLE_DARK_MODE") {
             const targetTheme = act.theme || "dark";
+            setCurrentTask({ id: `theme-${Date.now()}`, state: "processing", label: `Switching to ${targetTheme} mode...` });
             toggleTheme?.(targetTheme);
             toast.success(`${targetTheme === "light" ? "Light" : "Dark"} mode activated`);
+            setCurrentTask({ id: `theme-${Date.now()}`, state: "success", label: `${targetTheme === "light" ? "Light" : "Dark"} mode active` });
             finalActions.push({ ...act, type: "SWITCH_THEME", theme: targetTheme });
           } else if (type === "ADD_TO_CART") {
             const items = act.items || (act.item ? [act.item] : [act]);
-            items.filter((it) => it && it.id).forEach((it) => handleAddToCart(it));
+            const validItems = items.filter((it) => it && it.id);
+            const firstItem = validItems[0];
+            const itemName = firstItem?.name || "Item";
+            const qty = firstItem?.quantity || 1;
+            const procLabel = validItems.length > 1
+              ? `Adding ${validItems.length} items to cart...`
+              : qty > 1
+              ? `Adding ${qty} × ${itemName} to cart...`
+              : `Adding ${itemName} to cart...`;
+            setCurrentTask({ id: `add-${Date.now()}`, state: "processing", label: procLabel });
+            try {
+              validItems.forEach((it) => handleAddToCart(it));
+              await flushCartSync?.();
+              const succLabel = validItems.length > 1
+                ? `Added ${validItems.length} items to cart`
+                : qty > 1
+                ? `Added ${qty} × ${itemName} to cart`
+                : `Added ${itemName} to cart`;
+              setCurrentTask({ id: `add-${Date.now()}`, state: "success", label: succLabel });
+            } catch {
+              setCurrentTask({ id: `add-${Date.now()}`, state: "error", label: `Could not add ${itemName}` });
+            }
             finalActions.push(act);
           } else if (type === "REMOVE_FROM_CART") {
             const targetList = Array.isArray(act.items) && act.items.length > 0 ? act.items : [act.item || act];
+            const remTarget = act.name || targetList[0]?.name || "item";
+            setCurrentTask({ id: `rem-${Date.now()}`, state: "processing", label: `Removing ${remTarget} from cart...` });
             const removedPreview = [];
             for (const rem of targetList) {
               const targetId = Number(rem.product_id || rem.id);
@@ -227,31 +254,43 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                 return next;
               });
             }
+            await flushCartSync?.();
             toast.success(`Removed ${act.name || "item"} from cart`);
+            setCurrentTask({ id: `rem-${Date.now()}`, state: "success", label: `Removed ${remTarget} from cart` });
             finalActions.push({ ...act, items: removedPreview });
           } else if (type === "UPDATE_CART_QTY") {
             const targetId = Number(act.product_id || act.item?.id);
             const qty = Math.max(0, Number(act.quantity ?? 1));
+            const targetName = act.name || "item";
+            setCurrentTask({ id: `upd-${Date.now()}`, state: "processing", label: `Updating ${targetName} to ${qty}...` });
             const existing = (cart?.items || []).find(
               (ci) => Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id) === targetId,
             );
             if (existing) {
               update?.(existing, qty);
+              await flushCartSync?.();
               toast.success(`Updated ${act.name || "item"} to ${qty}`);
+              setCurrentTask({ id: `upd-${Date.now()}`, state: "success", label: `Updated ${targetName} to ${qty}` });
               finalActions.push({ ...act, previous_quantity: Number(existing.quantity || 0) });
             } else if (act.item) {
               handleAddToCart({ ...act.item, quantity: qty });
+              await flushCartSync?.();
+              setCurrentTask({ id: `upd-${Date.now()}`, state: "success", label: `Updated ${targetName} to ${qty}` });
               finalActions.push(act);
             } else {
               finalActions.push(act);
             }
           } else if (type === "APPLY_PROMO") {
             const code = act.code || "SAVE10";
-            applyPromo?.(code)
-              .then(() => toast.success(`Applied promo ${code}!`))
-              .catch(() => {
-                toast.success(`Applied promo ${code}!`);
-              });
+            setCurrentTask({ id: `promo-${Date.now()}`, state: "processing", label: `Applying promo ${code}...` });
+            try {
+              await applyPromo?.(code);
+              toast.success(`Applied promo ${code}!`);
+              setCurrentTask({ id: `promo-${Date.now()}`, state: "success", label: `Applied promo ${code}` });
+            } catch {
+              toast.success(`Applied promo ${code}!`);
+              setCurrentTask({ id: `promo-${Date.now()}`, state: "success", label: `Applied promo ${code}` });
+            }
             finalActions.push(act);
           } else if (type === "AUTO_CHECKOUT" || type === "PAYMENT_REVIEW") {
             voice.stop();
@@ -297,6 +336,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             }
             finalActions.push(act);
           } else if (type === "CLEAR_CART") {
+            setCurrentTask({ id: `clear-${Date.now()}`, state: "processing", label: "Clearing shopping cart..." });
             const snapshot = (cart?.items || []).map((ci) => ({
               id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
               name: ci.product_name || ci.name || "Cart Item",
@@ -304,7 +344,9 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               price: Number(ci.unit_price ?? ci.price ?? 0),
             }));
             clearCart?.();
+            await flushCartSync?.();
             toast.success("Cleared your shopping cart!");
+            setCurrentTask({ id: `clear-${Date.now()}`, state: "success", label: "Shopping cart cleared" });
             finalActions.push({
               ...act,
               removed_items: snapshot.length > 0 ? snapshot : act.removed_items || [],
@@ -530,16 +572,33 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         onPointerDownCapture={voice.interrupt}
         className="shopper-panel shopper-theme bg-background text-foreground flex flex-col overflow-hidden outline-none"
       >
-        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-5 py-4">
-          <h2 id="shopper-title" className="assistant-wordmark">Cart<span>Settle</span></h2>
-          <div className="flex shrink-0 items-center gap-0.5">
-            <ModeSwitch
-              mode={mode}
-              onChange={(next) => {
-                voice.stop();
-                setMode(next);
-              }}
-            />
+        <header className="assistant-nav-header flex shrink-0 items-center justify-between border-b border-border px-4 py-3 bg-background/95 backdrop-blur-md z-10 select-none">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={mode === "voice" ? "Type instead" : "Talk instead"}
+            title={mode === "voice" ? "Type instead" : "Talk instead"}
+            className="size-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+            onClick={() => {
+              voice.stop();
+              const nextMode = mode === "voice" ? "chat" : "voice";
+              setMode(nextMode);
+              if (nextMode === "chat") {
+                setTimeout(() => {
+                  const textarea = panelRef.current?.querySelector("textarea");
+                  textarea?.focus();
+                }, 100);
+              }
+            }}
+          >
+            {mode === "voice" ? <Keyboard className="size-4" /> : <Mic className="size-4" />}
+          </Button>
+
+          <h2 id="shopper-title" className="text-sm font-semibold tracking-tight text-foreground">
+            Assistant
+          </h2>
+
+          <div className="flex items-center gap-0.5">
             <PanelMenu
               disabled={loading || messages.length === 1}
               onClear={() => setConfirmClear(true)}
@@ -549,12 +608,15 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               size="icon"
               aria-label="Close concierge"
               title="Close"
+              className="size-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
               onClick={close}
             >
-              <X />
+              <X className="size-4" />
             </Button>
           </div>
         </header>
+
+        <LiveTaskActivity task={currentTask} onDismiss={() => setCurrentTask(null)} />
 
         {confirmClear && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted px-4 py-2.5 text-sm">
