@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   ArrowUpRight,
@@ -15,12 +15,21 @@ import {
   Gift,
   Share2,
   Sparkles,
+  Calculator,
+  BarChart3,
+  Copy,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { optimizeImage } from "../../utils/image";
 
-const money = (value, currency = "USD") =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(value) || 0);
+const money = (value, currency = "USD") => {
+  const num = Number(value) || 0;
+  if (currency === "INR") {
+    return `\u20B9${Number.isInteger(num) ? num : num.toFixed(2)}`;
+  }
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(num);
+};
 
 function CompactProductCard({
   item,
@@ -33,6 +42,7 @@ function CompactProductCard({
   index = 0,
 }) {
   const [imageFailed, setImageFailed] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [quantity, setQuantity] = useState(Math.max(1, Number(item.quantity || 1)));
   const photo = item.image || item.thumbnail || item.image_url;
   const price = Number(item.price ?? item.offer_price ?? item.regular_price ?? 0);
@@ -51,17 +61,16 @@ function CompactProductCard({
     else setQuantity(Math.max(1, next));
   };
 
-  const formattedPrice =
-    currency === "INR"
-      ? `₹${Number.isInteger(price) ? price : price.toFixed(0)}`
-      : money(price, currency);
+  const formattedPrice = money(price, currency);
 
   return (
     <div
-      className={`assistant-product ${isAdded ? "is-added-card" : ""}`}
+      className={`assistant-product transition-all duration-200 ${
+        isAdded ? "is-added-card border-emerald-500/40 dark:border-emerald-400/30" : ""
+      }`}
       style={{ animationDelay: `${Math.min(index * 65, 260)}ms` }}
     >
-      <div className="assistant-photo">
+      <div className="assistant-photo relative overflow-hidden">
         {discountPct > 0 && (
           <span className="assistant-discount-tag">{discountPct}% OFF</span>
         )}
@@ -70,7 +79,9 @@ function CompactProductCard({
             src={optimizeImage(photo, 160)}
             alt={item.name}
             loading="lazy"
+            onLoad={() => setImageLoaded(true)}
             onError={() => setImageFailed(true)}
+            className={`transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           />
         ) : (
           <Package className="size-5 text-slate-400" />
@@ -103,8 +114,8 @@ function CompactProductCard({
                 onClick={() => change(selected - 1)}
                 className={
                   isAdded
-                    ? "text-white hover:bg-white/15 hover:text-white size-6 rounded-full"
-                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-6 rounded-full"
+                    ? "text-white hover:bg-white/15 hover:text-white size-6 rounded-full cursor-pointer"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-6 rounded-full cursor-pointer"
                 }
               >
                 <Minus className="size-3" />
@@ -118,8 +129,8 @@ function CompactProductCard({
                 onClick={() => change(selected + 1)}
                 className={
                   isAdded
-                    ? "text-white hover:bg-white/15 hover:text-white size-6 rounded-full"
-                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-6 rounded-full"
+                    ? "text-white hover:bg-white/15 hover:text-white size-6 rounded-full cursor-pointer"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-6 rounded-full cursor-pointer"
                 }
               >
                 <Plus className="size-3" />
@@ -138,7 +149,7 @@ function CompactProductCard({
                 size="sm"
                 disabled={disabled}
                 aria-label={`Add ${quantity} ${item.name} to cart`}
-                className="rounded-full bg-[#065f46] hover:bg-[#047857] text-white font-bold text-[11px] px-2.5 h-7 shadow-sm cursor-pointer"
+                className="rounded-full bg-[#065f46] hover:bg-[#047857] text-white font-bold text-[11px] px-2.5 h-7 shadow-sm cursor-pointer transition-transform active:scale-95"
                 onClick={() => onAdd?.({ ...item, quantity })}
               >
                 <Plus className="size-3 mr-0.5" /> Add
@@ -155,7 +166,7 @@ function RemovedMiniCard({ item, onUndo, busy }) {
   const [imageFailed, setImageFailed] = useState(false);
   const photo = item.image || item.thumbnail || item.image_url;
   return (
-    <div className="assistant-product opacity-75">
+    <div className="assistant-product opacity-75 border-rose-500/20">
       <div className="assistant-photo">
         {photo && !imageFailed ? (
           <img
@@ -176,7 +187,7 @@ function RemovedMiniCard({ item, onUndo, busy }) {
         </p>
       </div>
       {onUndo && (
-        <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndo([item])} className="shrink-0 text-xs">
+        <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndo([item])} className="shrink-0 text-xs cursor-pointer">
           Undo
         </Button>
       )}
@@ -190,7 +201,7 @@ function RestockRow({ item, onSend, onReviewPayment, busy }) {
   );
   return (
     <div className="space-y-2 py-2">
-      <p className="break-words text-sm font-semibold">{item.name}</p>
+      <p className="break-words text-sm font-semibold text-foreground">{item.name}</p>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">{item.stock ?? 0} left</span>
         <div className="flex items-center gap-2">
@@ -201,12 +212,13 @@ function RestockRow({ item, onSend, onReviewPayment, busy }) {
               aria-label={`Decrease ${item.name} reorder quantity`}
               disabled={quantity <= 1 || busy}
               onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+              className="cursor-pointer"
             >
-              <Minus />
+              <Minus className="size-3.5" />
             </Button>
             <output
               aria-label={`${item.name} reorder quantity`}
-              className="min-w-5 text-center text-xs"
+              className="min-w-5 text-center text-xs font-bold"
             >
               {quantity}
             </output>
@@ -216,13 +228,15 @@ function RestockRow({ item, onSend, onReviewPayment, busy }) {
               aria-label={`Increase ${item.name} reorder quantity`}
               disabled={busy}
               onClick={() => setQuantity((value) => value + 1)}
+              className="cursor-pointer"
             >
-              <Plus />
+              <Plus className="size-3.5" />
             </Button>
           </div>
           <Button
             size="sm"
             disabled={busy}
+            className="cursor-pointer font-bold shadow-xs"
             onClick={() =>
               onReviewPayment?.({
                 prompt: `Restock ${quantity} units of ${item.name} via PayPal Payout`,
@@ -239,13 +253,15 @@ function RestockRow({ item, onSend, onReviewPayment, busy }) {
   );
 }
 
-/** Auto-dismissing live theme preview card with 2.8s liquid dissolve */
+/** Auto-dismissing live theme preview card with liquid dissolve & hover pause */
 function AutoDismissThemeCard({ action, onToggleTheme, onDismiss }) {
   const [dismissed, setDismissed] = useState(false);
   const [exiting, setExiting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const isDark = action.theme !== "light";
 
   useEffect(() => {
+    if (isPaused) return;
     const exitTimer = setTimeout(() => setExiting(true), 2400);
     const removeTimer = setTimeout(() => {
       setDismissed(true);
@@ -255,13 +271,15 @@ function AutoDismissThemeCard({ action, onToggleTheme, onDismiss }) {
       clearTimeout(exitTimer);
       clearTimeout(removeTimer);
     };
-  }, [action, onDismiss]);
+  }, [action, onDismiss, isPaused]);
 
   if (dismissed) return null;
 
   return (
     <div
-      className={`flex flex-col items-center justify-center my-1.5 select-none ${
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      className={`flex flex-col items-center justify-center my-1.5 select-none transition-all duration-300 ${
         exiting ? "assistant-card-dissolve" : "assistant-card-materialize"
       }`}
     >
@@ -289,10 +307,11 @@ function AutoDismissThemeCard({ action, onToggleTheme, onDismiss }) {
   );
 }
 
-/** In-Assistant Live Order Status & ETA Card (Auto-Disappears after 4.8s) */
+/** In-Assistant Live Order Status & ETA Card with hover pause */
 function OrderStatusCard({ action, currency = "USD", onNavigate, onDismiss }) {
   const [dismissed, setDismissed] = useState(false);
   const [exiting, setExiting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const order = action.order || action;
   const stages = [
     { key: "NEW", label: "Placed" },
@@ -303,6 +322,7 @@ function OrderStatusCard({ action, currency = "USD", onNavigate, onDismiss }) {
   ];
 
   useEffect(() => {
+    if (isPaused) return;
     const exitTimer = setTimeout(() => setExiting(true), 4400);
     const removeTimer = setTimeout(() => {
       setDismissed(true);
@@ -312,7 +332,7 @@ function OrderStatusCard({ action, currency = "USD", onNavigate, onDismiss }) {
       clearTimeout(exitTimer);
       clearTimeout(removeTimer);
     };
-  }, [action, onDismiss]);
+  }, [action, onDismiss, isPaused]);
 
   if (dismissed) return null;
 
@@ -325,7 +345,9 @@ function OrderStatusCard({ action, currency = "USD", onNavigate, onDismiss }) {
   return (
     <div
       onClick={() => onNavigate?.(`/profile/orders`)}
-      className={`rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/90 dark:bg-[#151b26] px-4 py-3.5 shadow-sm cursor-pointer transition-colors hover:border-emerald-500/30 ${
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      className={`rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/90 dark:bg-[#151b26] px-4 py-3.5 shadow-sm cursor-pointer transition-colors hover:border-emerald-500/40 ${
         exiting ? "assistant-card-dissolve" : "assistant-card-materialize"
       }`}
     >
@@ -335,12 +357,14 @@ function OrderStatusCard({ action, currency = "USD", onNavigate, onDismiss }) {
           <span className="font-semibold text-slate-900 dark:text-white">
             Order #{order.id || "202601"}
           </span>
-          <span className="mx-1.5 text-slate-400">·</span>
+          <span className="mx-1.5 text-slate-400">&middot;</span>
           <span>Arriving in </span>
           <span className="font-semibold text-emerald-600 dark:text-emerald-400">{etaText}</span>
         </p>
         <span className="sr-only">Estimated Delivery: {etaText}</span>
-        <span className="sr-only">{stages[activeIdx]?.label || "On The Way"}</span>
+        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+          {stages[activeIdx]?.label || "On The Way"}
+        </span>
       </div>
 
       {/* Sleek Minimal Emerald Progress Line */}
@@ -354,7 +378,7 @@ function OrderStatusCard({ action, currency = "USD", onNavigate, onDismiss }) {
   );
 }
 
-/** Grocery Photo Checklist Card */
+/** Grocery Photo Checklist Card with live price totals */
 function GroceryChecklistCard({ action, currency = "USD", onAdd, busy }) {
   const checklist = action.checklist || action.items || [];
   const [selectedItems, setSelectedItems] = useState(() =>
@@ -370,6 +394,8 @@ function GroceryChecklistCard({ action, currency = "USD", onAdd, busy }) {
 
   const availableItems = checklist.filter((item) => item.in_stock && (item.product || item.id));
 
+  const selectedCount = availableItems.filter((_, idx) => selectedItems[idx]).length;
+
   const handleAddAllAvailable = () => {
     availableItems.forEach((item, idx) => {
       if (selectedItems[idx]) {
@@ -383,7 +409,7 @@ function GroceryChecklistCard({ action, currency = "USD", onAdd, busy }) {
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
+    <div className="space-y-3 rounded-2xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
         <div>
           <h3 className="text-sm font-bold text-foreground">Scanned Grocery Checklist</h3>
@@ -415,7 +441,7 @@ function GroceryChecklistCard({ action, currency = "USD", onAdd, busy }) {
                     isSelected ? "text-foreground" : "text-muted-foreground line-through"
                   }`}
                 >
-                  {item.quantity ? `${item.quantity} × ` : ""}{item.name}
+                  {item.quantity ? `${item.quantity} \u00D7 ` : ""}{item.name}
                 </span>
               </label>
 
@@ -424,7 +450,7 @@ function GroceryChecklistCard({ action, currency = "USD", onAdd, busy }) {
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                     {money(prodPrice, currency)}
                   </span>
-                  <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600">
+                  <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
                     In Stock
                   </span>
                 </div>
@@ -441,12 +467,12 @@ function GroceryChecklistCard({ action, currency = "USD", onAdd, busy }) {
       {availableItems.length > 0 && (
         <Button
           size="sm"
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-sm mt-1"
-          disabled={busy}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-sm mt-1 cursor-pointer transition-transform active:scale-[0.99]"
+          disabled={busy || selectedCount === 0}
           onClick={handleAddAllAvailable}
         >
           <Plus className="mr-1 size-3.5" />
-          Add Available Items to Cart ({availableItems.length})
+          Add Available Items to Cart ({selectedCount})
         </Button>
       )}
     </div>
@@ -489,13 +515,13 @@ function NotificationsCard({ action }) {
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
+    <div className="space-y-3 rounded-2xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-border/60 pb-2">
         <h3 className="text-sm font-bold text-foreground">Recent Notifications</h3>
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 text-xs text-muted-foreground"
+          className="h-7 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
           onClick={() => setCleared(true)}
         >
           Mark all as read
@@ -511,7 +537,7 @@ function NotificationsCard({ action }) {
               </span>
               <span className="text-[10px] text-muted-foreground">{notif.time}</span>
             </div>
-            <p className="text-xs text-muted-foreground">{notif.message}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{notif.message}</p>
           </div>
         ))}
       </div>
@@ -536,7 +562,7 @@ function ReferralStatusCard({ action }) {
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
+    <div className="space-y-3 rounded-2xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
         <div>
           <h3 className="text-sm font-bold text-foreground">Referral Rewards</h3>
@@ -548,11 +574,11 @@ function ReferralStatusCard({ action }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-center">
-        <div className="rounded-lg bg-secondary/50 p-2.5">
+        <div className="rounded-xl bg-secondary/50 p-2.5">
           <p className="text-base font-extrabold text-foreground">{ref.friends_invited}</p>
           <p className="text-[10px] text-muted-foreground font-medium">Friends Invited</p>
         </div>
-        <div className="rounded-lg bg-secondary/50 p-2.5">
+        <div className="rounded-xl bg-secondary/50 p-2.5">
           <p className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
             ${ref.rewards_earned.toFixed(2)}
           </p>
@@ -560,17 +586,136 @@ function ReferralStatusCard({ action }) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-lg border border-border/80 bg-background px-3 py-2 text-xs">
+      <div className="flex items-center justify-between rounded-xl border border-border/80 bg-background px-3 py-2 text-xs">
         <div className="font-mono font-bold tracking-wider text-foreground">{ref.code}</div>
         <Button
           variant="ghost"
           size="sm"
-          className="h-7 text-xs font-semibold text-emerald-600 hover:text-emerald-700"
+          className="h-7 text-xs font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
           onClick={copyCode}
         >
           {copied ? "Copied!" : "Copy Code"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** Mathematical Calculation Live Preview Card */
+function CalculationResultCard({ action }) {
+  const [copied, setCopied] = useState(false);
+  const expr = action.expression || "Calculation";
+  const result = action.result != null ? String(action.result) : "0";
+
+  const handleCopy = () => {
+    navigator.clipboard?.writeText(result);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="rounded-2xl border border-emerald-500/25 bg-slate-50/90 dark:bg-[#151b26] p-3.5 shadow-sm backdrop-blur-md space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="size-6 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <Calculator className="size-3.5 stroke-[2.2]" />
+          </div>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Calculation
+          </span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-[11px] font-medium text-slate-500 hover:text-foreground cursor-pointer"
+          onClick={handleCopy}
+        >
+          {copied ? (
+            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+              <Check className="size-3" /> Copied
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <Copy className="size-3" /> Copy
+            </span>
+          )}
+        </Button>
+      </div>
+
+      <div className="flex items-baseline justify-between gap-3 pt-0.5">
+        <code className="text-xs font-mono text-slate-600 dark:text-slate-300 truncate max-w-[200px]">
+          {expr}
+        </code>
+        <span className="text-lg font-black text-emerald-700 dark:text-emerald-400 shrink-0 font-mono tracking-tight">
+          = {result}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Structured Data Analysis Live Preview Card */
+function DataAnalysisCard({ action }) {
+  const summary = action.summary || "Data analysis complete.";
+  const stats = action.stats || {};
+  const hasStats = Object.keys(stats).length > 0;
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-slate-50/90 dark:bg-[#151b26] p-3.5 shadow-sm backdrop-blur-md space-y-2.5">
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 pb-2">
+        <div className="flex items-center gap-2">
+          <div className="size-6 rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+            <BarChart3 className="size-3.5 stroke-[2.2]" />
+          </div>
+          <span className="text-xs font-bold text-foreground">Data Breakdown</span>
+        </div>
+        <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-full">
+          Verified
+        </span>
+      </div>
+
+      <p className="text-xs font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+        {summary}
+      </p>
+
+      {hasStats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 text-center">
+          {stats.count != null && (
+            <div className="rounded-lg bg-black/5 dark:bg-white/5 p-1.5">
+              <p className="text-xs font-extrabold text-foreground">{stats.count}</p>
+              <p className="text-[9.5px] text-muted-foreground uppercase font-semibold">Points</p>
+            </div>
+          )}
+          {stats.sum != null && (
+            <div className="rounded-lg bg-black/5 dark:bg-white/5 p-1.5">
+              <p className="text-xs font-extrabold text-foreground">{stats.sum}</p>
+              <p className="text-[9.5px] text-muted-foreground uppercase font-semibold">Sum</p>
+            </div>
+          )}
+          {stats.avg != null && (
+            <div className="rounded-lg bg-black/5 dark:bg-white/5 p-1.5">
+              <p className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+                {stats.avg}
+              </p>
+              <p className="text-[9.5px] text-muted-foreground uppercase font-semibold">Average</p>
+            </div>
+          )}
+          {stats.min != null && stats.max != null && (
+            <div className="rounded-lg bg-black/5 dark:bg-white/5 p-1.5">
+              <p className="text-xs font-extrabold text-foreground">
+                {stats.min} &ndash; {stats.max}
+              </p>
+              <p className="text-[9.5px] text-muted-foreground uppercase font-semibold">Range</p>
+            </div>
+          )}
+          {stats.word_count != null && (
+            <div className="rounded-lg bg-black/5 dark:bg-white/5 p-1.5">
+              <p className="text-xs font-extrabold text-foreground">{stats.word_count}</p>
+              <p className="text-[9.5px] text-muted-foreground uppercase font-semibold">Words</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -631,6 +776,14 @@ function ActionContent({
     return <ReferralStatusCard action={action} />;
   }
 
+  if (type === "CALCULATION_RESULT") {
+    return <CalculationResultCard action={action} />;
+  }
+
+  if (type === "DATA_ANALYSIS") {
+    return <DataAnalysisCard action={action} />;
+  }
+
   if (type === "PROPOSED_LANGUAGE") {
     return (
       <div>
@@ -649,12 +802,12 @@ function ActionContent({
     const canUndo = onUndoQty && action.previous_quantity != null;
     return (
       <div className="flex items-center justify-between gap-2">
-        <p role="status" className="flex gap-2 items-center text-sm">
+        <p role="status" className="flex gap-2 items-center text-sm font-medium">
           <Check className="size-4 text-emerald-500" />
-          {action.name || "Item"} · {action.quantity} in cart
+          {action.name || "Item"} &middot; {action.quantity} in cart
         </p>
         {canUndo && (
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndoQty(action)}>
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndoQty(action)} className="cursor-pointer">
             Undo
           </Button>
         )}
@@ -670,7 +823,7 @@ function ActionContent({
       NAVIGATE: "Opened",
     };
     return (
-      <p role="status" className="flex gap-2 items-center text-sm">
+      <p role="status" className="flex gap-2 items-center text-sm font-medium">
         <Check className="size-4 text-emerald-500" />
         {titles[type]}
       </p>
@@ -702,7 +855,7 @@ function ActionContent({
           ))}
         </div>
         {onUndoRemove && removedList.length > 0 && (
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndoRemove(removedList)}>
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndoRemove(removedList)} className="cursor-pointer">
             Undo
           </Button>
         )}
@@ -721,10 +874,7 @@ function ActionContent({
       (sum, it) => sum + Number(it.price ?? it.offer_price ?? it.regular_price ?? 0),
       0,
     );
-    const formattedBundleTotal =
-      currency === "INR"
-        ? `₹${Number.isInteger(bundleTotal) ? bundleTotal : bundleTotal.toFixed(0)}`
-        : money(bundleTotal, currency);
+    const formattedBundleTotal = money(bundleTotal, currency);
 
     return (
       <div className="space-y-2">
@@ -733,7 +883,7 @@ function ActionContent({
             <div className="flex items-center gap-1.5 min-w-0">
               <Sparkles className="size-3.5 text-emerald-500 shrink-0" />
               <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                {action.recipe} Kit · {displayItems.length} items ({formattedBundleTotal})
+                {action.recipe} Kit &middot; {displayItems.length} items ({formattedBundleTotal})
               </h3>
             </div>
             <Button
@@ -776,9 +926,9 @@ function ActionContent({
     return (
       <div className="space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <h3 className="font-bold">{decision.product || decision.item?.name || "Price offer"}</h3>
+          <h3 className="font-bold text-foreground">{decision.product || decision.item?.name || "Price offer"}</h3>
           <span className="rounded-full bg-secondary px-2 py-0.5 font-bold text-primary">
-            {decision.counter_discount_pct ?? decision.discount_approved_pct ?? 0}% off ·{" "}
+            {decision.counter_discount_pct ?? decision.discount_approved_pct ?? 0}% off &middot;{" "}
             {money(decision.counter_price ?? decision.final_price, currency)}
           </span>
         </div>
@@ -804,10 +954,10 @@ function ActionContent({
     return (
       <div className="space-y-3">
         <div className="flex justify-between gap-2 text-sm">
-          <h3 className="font-semibold">Order #{order.id}</h3>
+          <h3 className="font-semibold text-foreground">Order #{order.id}</h3>
           <span className="text-muted-foreground">{order.status}</span>
         </div>
-        <p className="text-sm">
+        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
           {money(
             order.total_amount ?? order.total ?? order.authorized_amount ?? order.authorized,
             currency,
@@ -817,15 +967,16 @@ function ActionContent({
           <Button
             variant="outline"
             size="sm"
+            className="cursor-pointer"
             onClick={() =>
               onNavigate(persona === "shopper" ? "/profile/orders" : `/owner/orders/${order.id}`)
             }
           >
-            Open <ArrowUpRight />
+            Open <ArrowUpRight className="size-3.5 ml-1" />
           </Button>
           {persona === "shopper" && reorderItems.length > 0 && onReorder && (
-            <Button size="sm" disabled={busy} onClick={() => onReorder(reorderItems)}>
-              <Plus />
+            <Button size="sm" disabled={busy} onClick={() => onReorder(reorderItems)} className="cursor-pointer">
+              <Plus className="size-3.5 mr-1" />
               Reorder
             </Button>
           )}
@@ -833,6 +984,7 @@ function ActionContent({
             <Button
               size="sm"
               disabled={busy}
+              className="cursor-pointer font-bold"
               onClick={() =>
                 onReviewPayment?.({
                   prompt: `Settle order ${order.id}`,
@@ -842,7 +994,7 @@ function ActionContent({
                 })
               }
             >
-              <Check />
+              <Check className="size-3.5 mr-1" />
               Settle
             </Button>
           )}
@@ -869,14 +1021,15 @@ function ActionContent({
   if (type === "ORDER_SETTLED")
     return (
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Order #{action.order_id} settled</h3>
-        <p className="text-sm">{money(action.captured, currency)}</p>
+        <h3 className="text-sm font-semibold text-foreground">Order #{action.order_id} settled</h3>
+        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{money(action.captured, currency)}</p>
         <Button
           variant="outline"
           size="sm"
+          className="cursor-pointer"
           onClick={() => onNavigate(`/owner/orders/${action.order_id}`)}
         >
-          Receipt <ArrowUpRight />
+          Receipt <ArrowUpRight className="size-3.5 ml-1" />
         </Button>
       </div>
     );
@@ -885,15 +1038,15 @@ function ActionContent({
     const receipt = action.receipt || action;
     return (
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold">Payout {receipt.status?.toLowerCase() || "sent"}</h3>
-        <p className="text-sm">{money(receipt.amount_paid, currency)}</p>
+        <h3 className="text-sm font-semibold text-foreground">Payout {receipt.status?.toLowerCase() || "sent"}</h3>
+        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{money(receipt.amount_paid, currency)}</p>
         {receipt.product && (
           <p className="text-xs text-muted-foreground">
-            {receipt.product} · {receipt.new_stock} in stock
+            {receipt.product} &middot; {receipt.new_stock} in stock
           </p>
         )}
         {receipt.payout_batch_id && (
-          <p className="break-all text-xs text-muted-foreground">{receipt.payout_batch_id}</p>
+          <p className="break-all text-xs font-mono text-muted-foreground">{receipt.payout_batch_id}</p>
         )}
       </div>
     );
@@ -916,10 +1069,10 @@ function ActionContent({
     return (
       <div className="space-y-3">
         <p className="text-sm">
-          {action.total} products · {action.in_stock} in stock
+          {action.total} products &middot; {action.in_stock} in stock
         </p>
-        <Button variant="outline" size="sm" onClick={() => onNavigate("/owner/products")}>
-          Products <ArrowUpRight />
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/owner/products")} className="cursor-pointer">
+          Products <ArrowUpRight className="size-3.5 ml-1" />
         </Button>
       </div>
     );
@@ -929,8 +1082,8 @@ function ActionContent({
       <div className="space-y-2">
         {(action.products || []).map((item, index) => (
           <div key={item.id || index} className="flex justify-between gap-2 text-sm">
-            <span>{item.name}</span>
-            <span>{item.margin_pct}%</span>
+            <span className="text-foreground">{item.name}</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{item.margin_pct}%</span>
           </div>
         ))}
       </div>
@@ -939,9 +1092,9 @@ function ActionContent({
   if (type === "PRODUCT_UPDATED")
     return (
       <div className="space-y-2">
-        <p className="text-sm">{action.product?.name} updated</p>
-        <Button variant="outline" size="sm" onClick={() => onNavigate("/owner/products")}>
-          Products <ArrowUpRight />
+        <p className="text-sm text-foreground">{action.product?.name} updated</p>
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/owner/products")} className="cursor-pointer">
+          Products <ArrowUpRight className="size-3.5 ml-1" />
         </Button>
       </div>
     );
@@ -950,13 +1103,13 @@ function ActionContent({
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 text-sm">
-          <h3 className="font-semibold">{action.count || 0} orders settled</h3>
-          <span className="font-semibold text-primary">
+          <h3 className="font-semibold text-foreground">{action.count || 0} orders settled</h3>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
             {money(action.total_captured, currency)}
           </span>
         </div>
-        <Button variant="outline" size="sm" onClick={() => onNavigate("/owner/orders")}>
-          Orders <ArrowUpRight />
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/owner/orders")} className="cursor-pointer">
+          Orders <ArrowUpRight className="size-3.5 ml-1" />
         </Button>
       </div>
     );
@@ -965,16 +1118,16 @@ function ActionContent({
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 text-sm">
-          <h3 className="font-semibold">Order #{action.order_id} placed</h3>
+          <h3 className="font-semibold text-foreground">Order #{action.order_id} placed</h3>
           <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-semibold text-primary">
             {action.payment_method || "COD"}
           </span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Total: {money(action.total, currency)} · Delivery PIN: {action.delivery_pin || "—"}
+          Total: {money(action.total, currency)} &middot; Delivery PIN: {action.delivery_pin || "\u2014"}
         </p>
-        <Button variant="outline" size="sm" onClick={() => onNavigate("/profile/orders")}>
-          Track Order <ArrowUpRight />
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/profile/orders")} className="cursor-pointer">
+          Track Order <ArrowUpRight className="size-3.5 ml-1" />
         </Button>
       </div>
     );
@@ -983,13 +1136,13 @@ function ActionContent({
     return (
       <div className="flex items-center justify-between gap-2 text-sm">
         <div>
-          <p className="font-semibold">Promo {action.code} applied</p>
+          <p className="font-semibold text-foreground">Promo {action.code} applied</p>
           <p className="text-xs text-muted-foreground">
             {action.discount_pct || 10}% savings unlocked
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => onNavigate("/cart")}>
-          View Bag <ArrowUpRight />
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/cart")} className="cursor-pointer">
+          View Bag <ArrowUpRight className="size-3.5 ml-1" />
         </Button>
       </div>
     );
@@ -997,10 +1150,10 @@ function ActionContent({
   if (type === "SWAP_SUMMARY")
     return (
       <div className="space-y-1.5 text-sm">
-        <p className="font-semibold">
-          Swapped {action.removed?.name} → {action.added?.name}
+        <p className="font-semibold text-foreground">
+          Swapped {action.removed?.name} &rarr; {action.added?.name}
         </p>
-        <p className="text-xs font-medium text-primary">
+        <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
           Saved {money(action.savings, currency)} instantly
         </p>
       </div>
@@ -1009,9 +1162,9 @@ function ActionContent({
   if (type === "CANCEL_ORDER")
     return (
       <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="font-semibold">Order #{action.order_id} cancelled</span>
-        <Button variant="outline" size="sm" onClick={() => onNavigate("/profile/orders")}>
-          Orders <ArrowUpRight />
+        <span className="font-semibold text-foreground">Order #{action.order_id} cancelled</span>
+        <Button variant="outline" size="sm" onClick={() => onNavigate("/profile/orders")} className="cursor-pointer">
+          Orders <ArrowUpRight className="size-3.5 ml-1" />
         </Button>
       </div>
     );
@@ -1026,6 +1179,8 @@ const visibleTypes = new Set([
   "GROCERY_CHECKLIST",
   "NOTIFICATIONS_CARD",
   "REFERRAL_STATUS_CARD",
+  "CALCULATION_RESULT",
+  "DATA_ANALYSIS",
   "PROPOSED_LANGUAGE",
   "PAYMENT_REVIEW",
   "SWITCH_ADDRESS",
@@ -1063,12 +1218,13 @@ export function ActionCards({ actions = [], ...props }) {
         .map((action, index) => (
           <motion.div
             key={index}
-            initial={reduced ? false : { y: 14, opacity: 0 }}
+            layout={reduced ? false : "position"}
+            initial={reduced ? false : { y: 12, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={
               reduced
                 ? { duration: 0 }
-                : { type: "spring", stiffness: 280, damping: 26, delay: index * 0.07 }
+                : { type: "spring", stiffness: 320, damping: 28, delay: Math.min(index * 0.05, 0.2) }
             }
             className="assistant-action"
           >

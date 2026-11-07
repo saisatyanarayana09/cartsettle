@@ -3,6 +3,14 @@ import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { validPaymentDetails } from "./payment-review";
 
+const formatCurrency = (value, currency = "USD") => {
+  const num = Number(value) || 0;
+  if (currency === "INR") {
+    return `\u20B9${Number.isInteger(num) ? num : num.toFixed(2)}`;
+  }
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(num);
+};
+
 export function PaymentReview({
   review,
   onConfirm,
@@ -61,7 +69,7 @@ export function PaymentReview({
             </div>
           </div>
           <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-            ₹{placedOrder.total}
+            {formatCurrency(placedOrder.total, review?.currency || "INR")}
           </span>
         </div>
         <div className="assistant-auto-dismiss-bar mt-2.5 rounded-full" />
@@ -84,10 +92,7 @@ export function PaymentReview({
           className="text-sm font-bold outline-none text-slate-900 dark:text-white"
         >
           {ready
-            ? new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: review.currency || "USD",
-              }).format(Number(review.amount))
+            ? formatCurrency(review.amount, review.currency || "USD")
             : hasInlineCheckout
               ? "Checkout"
               : "Review payment details"}
@@ -101,7 +106,7 @@ export function PaymentReview({
               </span>
             )}
             <span className="text-base font-extrabold text-slate-900 dark:text-white">
-              ₹{effectiveTotal.toFixed(2)}
+              {formatCurrency(effectiveTotal, review?.currency || "INR")}
             </span>
           </div>
         )}

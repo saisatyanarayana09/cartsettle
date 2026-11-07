@@ -161,3 +161,41 @@ it("renders auto-dismiss theme switch card and handles undo", () => {
   fireEvent.click(undoBtn);
   expect(onToggleTheme).toHaveBeenCalledWith("dark");
 });
+
+it("renders calculation result preview card with expression and result", () => {
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "CALCULATION_RESULT",
+          expression: "50 * 12 + 100",
+          result: 700,
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText("Calculation")).toBeInTheDocument();
+  expect(screen.getByText("50 * 12 + 100")).toBeInTheDocument();
+  expect(screen.getByText("= 700")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Copy/i })).toBeInTheDocument();
+});
+
+it("renders data breakdown preview card with metrics summary and chips", () => {
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "DATA_ANALYSIS",
+          summary: "Summary: 3 points analyzed.",
+          stats: { count: 3, sum: 150, avg: 50 },
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText("Data Breakdown")).toBeInTheDocument();
+  expect(screen.getByText("Summary: 3 points analyzed.")).toBeInTheDocument();
+  expect(screen.getByText("3")).toBeInTheDocument();
+  expect(screen.getByText("150")).toBeInTheDocument();
+  expect(screen.getByText("50")).toBeInTheDocument();
+});
+
