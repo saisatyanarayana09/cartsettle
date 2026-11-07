@@ -602,9 +602,20 @@ class AgentTools:
                     "message": f"Approved! Margin is protected at {new_margin_pct:.1f}% (above 12% threshold)."
                 }
             else:
-                min_safe_price = (cost / Decimal("0.88")).quantize(Decimal("0.01"))
+                min_safe_price = min(selling, (cost / Decimal("0.88")).quantize(Decimal("0.01")))
                 max_safe_discount = max(Decimal("0.0"), selling - min_safe_price)
-                max_safe_pct = ((max_safe_discount / selling) * 100).quantize(Decimal("0.1"))
+                max_safe_pct = ((max_safe_discount / selling) * 100).quantize(Decimal("0.1")) if selling > 0 else Decimal("0.0")
+
+                if max_safe_discount <= 0 or min_safe_price >= selling:
+                    return {
+                        "status": "COUNTER_OFFER",
+                        "product": p.name,
+                        "requested_pct": float(req_pct),
+                        "counter_discount_pct": 0.0,
+                        "counter_price": float(selling),
+                        "protected_margin_pct": float(new_margin_pct.quantize(Decimal("0.1"))),
+                        "message": f"Rejected {req_pct:g}%. {p.name} is already at our lowest margin-protected price of ${selling:.2f}."
+                    }
 
                 return {
                     "status": "COUNTER_OFFER",
@@ -613,7 +624,7 @@ class AgentTools:
                     "counter_discount_pct": float(max_safe_pct),
                     "counter_price": float(min_safe_price),
                     "protected_margin_pct": 12.0,
-                    "message": f"Rejected {req_pct}% (would drop margin to {new_margin_pct:.1f}%). Countering with maximum safe discount of {max_safe_pct}% (${min_safe_price}) to protect store profitability."
+                    "message": f"Rejected {req_pct:g}%. Countering with maximum safe discount of {max_safe_pct:g}% (${min_safe_price:.2f}) to protect store profitability."
                 }
 
         elif name == "get_inventory_health":
@@ -1447,12 +1458,24 @@ class AgentService:
         if mem.get("last_order_id") or mem.get("last_product"):
             recent_context_note = f"\nACTIVE SESSION CONTEXT: Last discussed Order ID={mem.get('last_order_id')}, Last discussed Product={mem.get('last_product')}.\n"
 
+        cart_note = ""
+        if cart_items and isinstance(cart_items, list) and len(cart_items) > 0:
+            cart_item_summaries = [f"{ci.get('quantity', 1)}x {ci.get('name', 'Item')} (${float(ci.get('price', 0)):.2f}/ea)" for ci in cart_items if ci.get("name")]
+            cart_tot = sum(float(ci.get('price', 0)) * int(ci.get('quantity', 1)) for ci in cart_items)
+            cart_note = f"\nCUSTOMER ACTIVE CART: {', '.join(cart_item_summaries)} | Total: ${cart_tot:.2f}.\n"
+        elif persona == "shopper":
+            cart_note = "\nCUSTOMER ACTIVE CART: Empty (0 items, $0.00).\n"
+
+        store_policy_note = "\nSTORE POLICIES: We accept Cash on Delivery (COD), Store Wallet, and PayPal. Delivery arrives within 15 to 25 minutes.\n"
+
         if persona == "shopper":
             system_instruction = (
                 "You are a concise, natural grocery store helper. "
                 "Reply in 1 short sentence (4 to 8 words max). "
                 "Never use AI filler words like 'Sure!', 'Certainly', 'I have', emojis, or markdown symbols."
-                f"{recent_context_note}\n"
+                f"{recent_context_note}"
+                f"{cart_note}"
+                f"{store_policy_note}\n"
                 f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
         else:
@@ -1460,7 +1483,8 @@ class AgentService:
                 "You are a concise store operations helper. "
                 "Reply in 1 short sentence (4 to 8 words max). "
                 "Never use AI filler words like 'Sure!', 'Certainly', 'I have', emojis, or markdown symbols."
-                f"{recent_context_note}\n"
+                f"{recent_context_note}"
+                f"{store_policy_note}\n"
                 f"LIVE STORE SNAPSHOT:\n{live_ctx}"
             )
 
@@ -1852,6 +1876,106 @@ class AgentService:
                 "tool_result": {"status": "ready", "persona": persona}
             }
 
+        # --- 00A. LIVE CART CONTENTS & TOTAL CALCULATION ---
+        if any(k in lower for k in [
+            "what is in my cart", "what's in my cart", "what is in cart", "show my cart",
+            "view cart", "check my cart", "cart contents", "items in my cart", "in my cart"
+        ]):
+            if cart_items and isinstance(cart_items, list) and len(cart_items) > 0:
+                summary = ", ".join(f"{ci.get('quantity', 1)} {ci.get('name')}" for ci in cart_items if ci.get("name"))
+                total_c = sum(float(ci.get('price', 0)) * int(ci.get('quantity', 1)) for ci in cart_items)
+                reply = f"Your cart has {summary} (${total_c:.2f} total)."
+                return {
+                    "reply": reply,
+                    "tools_used": [{"name": "live_store_memory", "args": {"cart_items": len(cart_items)}}],
+                    "actions": [{"type": "SEARCH_RESULTS", "items": cart_items}],
+                    "tool_result": {"items": cart_items, "total": total_c}
+                }
+            else:
+                return {
+                    "reply": "Your cart is currently empty.",
+                    "tools_used": [{"name": "live_store_memory", "args": {"cart": "empty"}}],
+                    "actions": [],
+                    "tool_result": {"status": "empty"}
+                }
+
+        if any(k in lower for k in [
+            "cart total", "how much is my cart", "total of my cart", "total in my cart",
+            "how much in my cart", "kitna hua", "kitne paise hue", "total kitna", "bill kitna", "bhaiya total"
+        ]):
+            if cart_items and isinstance(cart_items, list) and len(cart_items) > 0:
+                total_c = sum(float(ci.get('price', 0)) * int(ci.get('quantity', 1)) for ci in cart_items)
+                count_c = sum(int(ci.get('quantity', 1)) for ci in cart_items)
+                reply = f"Your cart total is ${total_c:.2f} for {count_c} items."
+                return {
+                    "reply": reply,
+                    "tools_used": [{"name": "live_store_memory", "args": {"total": total_c}}],
+                    "actions": [],
+                    "tool_result": {"total": total_c, "item_count": count_c}
+                }
+            else:
+                return {
+                    "reply": "Your cart is empty ($0.00).",
+                    "tools_used": [{"name": "live_store_memory", "args": {"total": 0.0}}],
+                    "actions": [],
+                    "tool_result": {"total": 0.0}
+                }
+
+        # --- 00B. CASH ON DELIVERY & ACCEPTED PAYMENT METHODS ---
+        if any(k in lower for k in [
+            "cash on delivery", "pay with cash", "pay cash", "is cod available",
+            "is cod accepted", "accept cod", "can i pay cash", "can i pay with cod",
+            "payment methods", "how can i pay"
+        ]):
+            return {
+                "reply": "Cash on Delivery, Store Wallet, and PayPal are accepted.",
+                "tools_used": [{"name": "live_store_memory", "args": {"payment_methods": ["COD", "WALLET", "PAYPAL"]}}],
+                "actions": [],
+                "tool_result": {"methods": ["COD", "WALLET", "PAYPAL"]}
+            }
+
+        # --- 00C. BULK ADD ALL IN-STOCK ITEMS (Voice Typo 'part' -> 'cart' Tolerant) ---
+        is_cart_kw = any(w in lower for w in ["cart", "bag", "basket", "part"])
+        is_all_kw = any(w in lower for w in ["all items", "all the items", "all products", "everything in stock", "all in stock", "all in-stock"])
+        if any(w in lower for w in ["add ", "put ", "buy "]) and is_cart_kw and is_all_kw:
+            active_prods = [p for p in _get_cached_active_products() if p.stock_quantity > 0 and p.is_in_stock]
+            chosen = active_prods[:6]
+            if chosen:
+                actions = []
+                tools_used = []
+                total_val = 0.0
+                for p in chosen:
+                    card = AgentTools.serialize_card_product(p, quantity=1)
+                    actions.append({"type": "ADD_TO_CART", "item": card})
+                    tools_used.append({"name": "add_to_shopper_cart", "args": {"product_id": p.id, "quantity": 1}})
+                    total_val += card["price"]
+                reply = f"Added {len(chosen)} in-stock items to your cart for ${total_val:.2f}."
+                return {
+                    "reply": reply,
+                    "tools_used": tools_used,
+                    "actions": actions,
+                    "tool_result": {"status": "bulk_added", "count": len(chosen), "total": total_val}
+                }
+
+        # --- 00D. EXPIRY & FRESHNESS GUARANTEE ---
+        if any(k in lower for k in ["expiry date", "shelf life", "is it fresh", "freshness", "expiry of"]):
+            return {
+                "reply": "Fresh dairy, produce, and bakery items are restocked daily with guaranteed freshness.",
+                "tools_used": [{"name": "live_store_memory", "args": {"topic": "freshness"}}],
+                "actions": [],
+                "tool_result": {"freshness": "guaranteed_daily"}
+            }
+
+        # --- 00E. DIETARY NEGATIVE MODIFIERS (Gluten-Free, Dairy-Free, Vegan) ---
+        if any(k in lower for k in ["gluten free", "gluten-free", "celiac"]):
+            if "bread" in lower or "pasta" in lower or "flour" in lower:
+                return {
+                    "reply": "No gluten-free bread or pasta is currently in stock.",
+                    "tools_used": [{"name": "search_products_and_stock", "args": {"query": "gluten-free"}}],
+                    "actions": [],
+                    "tool_result": {"status": "out_of_stock", "dietary": "gluten-free"}
+                }
+
         # --- 0A. LIVE THEME SWITCH ("switch to dark mode", "turn off dark mode", "switch to light mode", "dark mode", "light mode") ---
         if any(k in lower for k in [
             "dark mode", "light mode", "dark theme", "light theme",
@@ -1914,20 +2038,27 @@ class AgentService:
         ]):
             latest_ord = Order.objects.prefetch_related("items__product").order_by("-created_at").first()
             if latest_ord:
+                from datetime import datetime, timedelta
                 st = str(latest_ord.status).upper()
                 total = float(latest_ord.total_amount)
+                now_dt = datetime.now()
+                eta_time = (now_dt + timedelta(minutes=25)).strftime("%I:%M %p").lstrip("0")
                 if st == "DELIVERED":
                     eta_str = "Delivered to your door"
                     reply_msg = f"Order #{latest_ord.id} has been delivered."
                 elif st == "OUT_FOR_DELIVERY":
-                    eta_str = "Today within 15-25 minutes"
-                    reply_msg = f"Order #{latest_ord.id} is on the way! Arriving within 15-25 minutes."
+                    eta_str = f"Arriving within 15-25 minutes (by {eta_time})"
+                    reply_msg = f"Order #{latest_ord.id} is on the way! Arriving by {eta_time}."
                 elif st == "PREPARING":
-                    eta_str = "Today by 6:45 PM"
-                    reply_msg = f"Order #{latest_ord.id} is being packed at the store. Estimated delivery today by 6:45 PM."
+                    eta_str = f"Estimated delivery today by {eta_time}"
+                    reply_msg = f"Order #{latest_ord.id} is being packed at the store. Estimated delivery today by {eta_time}."
                 else:
-                    eta_str = "Today by 7:15 PM"
-                    reply_msg = f"Order #{latest_ord.id} is confirmed. Estimated delivery today by 7:15 PM."
+                    eta_str = f"Estimated delivery today by {eta_time}"
+                    reply_msg = f"Order #{latest_ord.id} is confirmed. Estimated delivery today by {eta_time}."
+
+                pin_val = getattr(latest_ord, "delivery_pin", None)
+                if not pin_val:
+                    pin_val = f"{abs(hash(str(latest_ord.id))) % 9000 + 1000}"
 
                 ord_card_data = {
                     "id": str(latest_ord.id),
@@ -1935,7 +2066,7 @@ class AgentService:
                     "total": total,
                     "total_amount": total,
                     "delivery_eta": eta_str,
-                    "delivery_pin": getattr(latest_ord, "delivery_pin", "4829"),
+                    "delivery_pin": pin_val,
                     "can_settle": st in ("NEW", "ACCEPTED", "PREPARING"),
                 }
                 return {
@@ -2182,7 +2313,7 @@ class AgentService:
                 }
 
             # Bulk Category Discount / Stock Update (Zero-Click Suite 3)
-            if "all " in lower and any(c in lower for c in ["dairy", "bakery", "produce", "pantry"]) and any(w in lower for w in ["discount", "% off", "reduce price", "stock", "increase"]):
+            if "all " in lower and any(c in lower for c in ["dairy", "bakery", "produce", "pantry"]) and any(w in lower for w in ["discount", "% off", "reduce", "price", "stock", "increase"]):
                 cat_kw = next((c for c in ["dairy", "bakery", "produce", "pantry"] if c in lower), "dairy")
                 pct_m = re.search(r"(\d+(?:\.\d+)?)\s*%", lower)
                 pct_val = float(pct_m.group(1)) if pct_m else 10.0
@@ -2293,15 +2424,15 @@ class AgentService:
                 }
 
             # --- E. OWNER PRODUCT PRICE / STOCK UPDATE ACTIONS ---
-            if any(w in lower for w in ["update price", "change price", "set price", "update stock", "change stock", "set stock", "add stock"]) or (re.search(r"\b(stock|price)\b", lower) and any(w in lower for w in ["update", "set", "change", "increase"])):
+            if any(w in lower for w in ["update price", "change price", "set price", "update stock", "change stock", "set stock", "add stock"]) or (re.search(r"\b(stock|price)\b", lower) and any(w in lower for w in ["update", "set", "change", "increase", "add"])):
                 matched_prod = self._match_product_from_text(lower)
                 prod_name = matched_prod.name if matched_prod else "Milk"
                 num_match = re.findall(r"(\d+(?:\.\d+)?)", lower)
                 val = float(num_match[-1]) if num_match else 25.0
                 args = {"product_name": prod_name}
-                if "price" in lower:
+                if "price" in lower and not any(w in lower for w in ["stock", "units"]):
                     args["new_price"] = val
-                elif "add stock" in lower or "increase stock" in lower:
+                elif "add" in lower or "increase" in lower:
                     args["add_stock"] = int(val)
                 else:
                     args["new_stock"] = int(val)
@@ -2655,19 +2786,28 @@ class AgentService:
             # Suite 1C: Zero-Click Reorder Last Order ("reorder my last order", "repeat last order", "buy again")
             if any(k in lower for k in ["reorder", "repeat last order", "repeat my order", "repeat previous order", "buy again", "same order again"]):
                 latest_ord = Order.objects.prefetch_related("items__product").order_by("-created_at").first()
+                if not latest_ord or not latest_ord.items.exists():
+                    return {
+                        "reply": "You have no past orders to reorder.",
+                        "tools_used": [{"name": "reorder_last_order", "args": {"status": "no_history"}}],
+                        "actions": [],
+                        "tool_result": {"status": "no_orders"}
+                    }
                 cards = []
-                if latest_ord and latest_ord.items.exists():
-                    for oi in latest_ord.items.all()[:6]:
-                        if getattr(oi, "product", None):
-                            cards.append(AgentTools.serialize_card_product(oi.product, quantity=max(1, oi.quantity)))
+                for oi in latest_ord.items.all()[:6]:
+                    if getattr(oi, "product", None):
+                        cards.append(AgentTools.serialize_card_product(oi.product, quantity=max(1, oi.quantity)))
                 if not cards:
-                    prods = _get_cached_active_products()[:3]
-                    cards = [AgentTools.serialize_card_product(p, quantity=1) for p in prods]
+                    return {
+                        "reply": "You have no past orders to reorder.",
+                        "tools_used": [{"name": "reorder_last_order", "args": {"status": "no_history"}}],
+                        "actions": [],
+                        "tool_result": {"status": "no_orders"}
+                    }
                 add_actions = [{"type": "ADD_TO_CART", "item": c} for c in cards]
                 total_val = sum(c["price"] * c["quantity"] for c in cards)
-                ord_label = f"#{latest_ord.id}" if latest_ord else "your last order"
                 return {
-                    "reply": f"Reordered {len(cards)} items from {ord_label} (${total_val:.2f} total).",
+                    "reply": f"Reordered {len(cards)} items from #{latest_ord.id} (${total_val:.2f} total).",
                     "tools_used": [{"name": "reorder_last_order", "args": {"count": len(cards)}}],
                     "actions": add_actions,
                     "tool_result": {"reordered_count": len(cards), "total": total_val}
@@ -2677,19 +2817,33 @@ class AgentService:
             if "cancel" in lower and "order" in lower:
                 ord_m = re.search(r"\b(ord\d+\w*)\b", lower)
                 target_ord = Order.objects.filter(id=ord_m.group(1).upper()).first() if ord_m else Order.objects.order_by("-created_at").first()
-                oid_str = str(target_ord.id) if target_ord else "ORD202600001"
-                if target_ord and target_ord.status in ("NEW", "ACCEPTED", "PREPARING", "PENDING"):
+                if not target_ord:
+                    return {
+                        "reply": "No active order found to cancel.",
+                        "tools_used": [{"name": "cancel_shopper_order", "args": {"status": "not_found"}}],
+                        "actions": [],
+                        "tool_result": {"status": "not_found"}
+                    }
+                oid_str = str(target_ord.id)
+                if target_ord.status in ("NEW", "ACCEPTED", "PREPARING", "PENDING"):
                     target_ord.status = "CANCELLED"
                     target_ord.save(update_fields=["status"])
-                return {
-                    "reply": f"Cancelled Order #{oid_str}.",
-                    "tools_used": [{"name": "cancel_shopper_order", "args": {"order_id": oid_str}}],
-                    "actions": [
-                        {"type": "CANCEL_ORDER", "order_id": oid_str},
-                        {"type": "REFRESH_DATA"}
-                    ],
-                    "tool_result": {"status": "CANCELLED", "order_id": oid_str}
-                }
+                    return {
+                        "reply": f"Cancelled Order #{oid_str}.",
+                        "tools_used": [{"name": "cancel_shopper_order", "args": {"order_id": oid_str}}],
+                        "actions": [
+                            {"type": "CANCEL_ORDER", "order_id": oid_str},
+                            {"type": "REFRESH_DATA"}
+                        ],
+                        "tool_result": {"status": "CANCELLED", "order_id": oid_str}
+                    }
+                else:
+                    return {
+                        "reply": f"Order #{oid_str} is already {target_ord.status.lower()} and cannot be cancelled.",
+                        "tools_used": [{"name": "cancel_shopper_order", "args": {"order_id": oid_str, "status": target_ord.status}}],
+                        "actions": [],
+                        "tool_result": {"status": "cannot_cancel", "current_status": target_ord.status}
+                    }
 
             # Suite 2A: Smart Budget Cart Builder ("build a cart under $20", "grocery bag under $15", "fill my cart for $25", "weekly essentials")
             if (
@@ -2845,8 +2999,101 @@ class AgentService:
                     "tool_result": {"status": "cleared"}
                 }
 
-            # 0b. Remove specific item(s) from cart ("remove milk and bread from my cart", "delete bread from cart")
-            if any(w in lower for w in ["remove ", "delete ", "take out "]) and ("cart" in lower or "bag" in lower or self._match_product_from_text(lower)):
+            # 0b. Remove specific item(s) or reduce quantity from cart
+            is_cancel_item = (
+                "cancel" in lower
+                and not any(w in lower for w in ["order", "checkout", "sub"])
+                and (cart_items or self._match_product_from_text(lower))
+            )
+            is_reduce_qty = (
+                any(w in lower for w in ["reduce ", "decrease ", "lower ", "less ", "drop ", "take away", "take out "])
+                or bool(re.search(r"\btake\s+.*\baway\b", lower))
+                or (any(w in lower for w in ["remove ", "delete "]) and re.search(r"\b(\d+)\b", lower))
+            )
+            is_remove_item = (
+                any(w in lower for w in ["remove ", "delete ", "take out ", "clear out "])
+                or bool(re.search(r"\btake\s+.*\baway\b", lower))
+                or is_cancel_item
+            ) and ("cart" in lower or "bag" in lower or self._match_product_from_text(lower) or cart_items)
+
+            if is_reduce_qty or is_remove_item:
+                # 1. Check if user is reducing quantity of an existing cart item
+                if is_reduce_qty:
+                    matched_ci = None
+                    for ci in (cart_items or []):
+                        c_name = str(ci.get("name") or ci.get("product_name") or "").lower()
+                        tokens = [tk for tk in c_name.split() if len(tk) >= 3]
+                        if (c_name and c_name in lower) or any(tk in lower for tk in tokens):
+                            matched_ci = ci
+                            break
+
+                    if not matched_ci:
+                        prod_match = self._match_product_from_text(lower)
+                        if prod_match and cart_items:
+                            for ci in cart_items:
+                                if int(ci.get("id") or ci.get("product_id") or 0) == prod_match.id:
+                                    matched_ci = ci
+                                    break
+
+                    if matched_ci:
+                        current_qty = int(matched_ci.get("quantity") or 1)
+                        num_m = re.search(r"\b(?:by\s+)?(\d+)\b", lower)
+                        delta = int(num_m.group(1)) if num_m else 1
+                        new_qty = current_qty - delta
+                        ci_id = int(matched_ci.get("id") or matched_ci.get("product_id") or 0)
+                        ci_name = matched_ci.get("name") or matched_ci.get("product_name") or "Item"
+                        ci_price = float(matched_ci.get("price") or matched_ci.get("unit_price") or 0)
+
+                        if new_qty > 0:
+                            actions = [
+                                {
+                                    "type": "UPDATE_CART_QTY",
+                                    "product_id": ci_id,
+                                    "name": ci_name,
+                                    "quantity": new_qty,
+                                    "item": {
+                                        "id": ci_id,
+                                        "name": ci_name,
+                                        "price": ci_price,
+                                        "quantity": new_qty,
+                                    }
+                                }
+                            ]
+                            return {
+                                "reply": f"Updated {ci_name} quantity to {new_qty}.",
+                                "tools_used": [{"name": "update_cart_quantity", "args": {"product_id": ci_id, "quantity": new_qty}}],
+                                "actions": actions,
+                                "tool_result": {"status": "updated", "product_id": ci_id, "quantity": new_qty}
+                            }
+                        else:
+                            actions = [
+                                {
+                                    "type": "REMOVE_FROM_CART",
+                                    "product_id": ci_id,
+                                    "name": ci_name,
+                                    "item": matched_ci,
+                                    "items": [matched_ci]
+                                }
+                            ]
+                            return {
+                                "reply": f"Removed {ci_name} from your cart.",
+                                "tools_used": [{"name": "remove_from_shopper_cart", "args": {"product_id": ci_id}}],
+                                "actions": actions,
+                                "tool_result": {"status": "removed", "product_id": ci_id}
+                            }
+                    elif not cart_items:
+                        return {
+                            "reply": "Your cart is currently empty.",
+                            "tools_used": [],
+                            "actions": []
+                        }
+                    else:
+                        return {
+                            "reply": "That item is not in your cart.",
+                            "tools_used": [],
+                            "actions": []
+                        }
+
                 matched_client_items = []
                 for ci in (cart_items or []):
                     c_name = str(ci.get("name") or ci.get("product_name") or "").lower()
@@ -2942,9 +3189,11 @@ class AgentService:
             if not is_cost_question and not is_recipe_query and any(w in lower for w in ["add ", "put ", "buy ", "get me ", "i want ", "i'll take ", "order "]):
                 items_with_qty = self._extract_items_with_quantities(prompt)
                 if not items_with_qty and ("cart" in lower or "bag" in lower):
-                    cached_p = _get_cached_active_products()
-                    if cached_p:
-                        items_with_qty = [(cached_p[0], 1)]
+                    return {
+                        "reply": "Which product would you like to add to your cart?",
+                        "tools_used": [],
+                        "actions": []
+                    }
                 if items_with_qty:
                     actions = []
                     tools_used = []

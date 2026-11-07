@@ -820,9 +820,68 @@ export function handleLovableAgentFallback(config) {
     actions = [{ type: 'CLEAR_CART', removed_items: Array.isArray(body.cart_items) ? body.cart_items : [] }];
     tools_used = [{ name: 'clear_shopper_cart', args: {} }];
   }
-  // 10b. Remove specific item(s) from cart
-  else if ((lower.includes('remove ') || lower.includes('delete ') || lower.includes('take out ')) && (lower.includes('cart') || lower.includes('bag') || matchSingleProduct(prompt))) {
+  // 10b. Remove specific item(s) or reduce quantity from cart
+  else if (
+    (
+      ['reduce ', 'decrease ', 'lower ', 'less ', 'drop ', 'take away', 'take out '].some((w) => lower.includes(w)) ||
+      (['remove ', 'delete '].some((w) => lower.includes(w)) && /\b\d+\b/.test(lower)) ||
+      (lower.includes('cancel') && !['order', 'checkout', 'sub'].some((w) => lower.includes(w))) ||
+      ['remove ', 'delete ', 'take out '].some((w) => lower.includes(w))
+    ) && (lower.includes('cart') || lower.includes('bag') || matchSingleProduct(prompt) || (Array.isArray(body.cart_items) && body.cart_items.length > 0))
+  ) {
     const clientCart = Array.isArray(body.cart_items) ? body.cart_items : [];
+    const isReduceQty = ['reduce ', 'decrease ', 'lower ', 'less ', 'drop ', 'take away'].some((w) => lower.includes(w)) ||
+      /\btake\s+.*\baway\b/.test(lower) ||
+      (['remove ', 'delete ', 'take out '].some((w) => lower.includes(w)) && /\b\d+\b/.test(lower));
+
+    if (isReduceQty) {
+      let matchedCi = null;
+      for (const ci of clientCart) {
+        const cName = String(ci.name || ci.product_name || '').toLowerCase();
+        const tokens = cName.split(/\s+/).filter((t) => t.length >= 3);
+        if ((cName && lower.includes(cName)) || tokens.some((tk) => lower.includes(tk))) {
+          matchedCi = ci;
+          break;
+        }
+      }
+      if (!matchedCi) {
+        const pMatch = matchSingleProduct(prompt);
+        if (pMatch && clientCart.length > 0) {
+          matchedCi = clientCart.find((ci) => Number(ci.id || ci.product_id) === pMatch.id);
+        }
+      }
+      if (matchedCi) {
+        const currentQty = Number(matchedCi.quantity || 1);
+        const numM = lower.match(/\b(?:by\s+)?(\d+)\b/);
+        const delta = numM ? Number(numM[1]) : 1;
+        const newQty = currentQty - delta;
+        const ciId = Number(matchedCi.id || matchedCi.product_id || 0);
+        const ciName = matchedCi.name || matchedCi.product_name || 'Item';
+        const ciPrice = Number(matchedCi.price || matchedCi.unit_price || 0);
+        if (newQty > 0) {
+          const cardItem = { id: ciId, name: ciName, price: ciPrice, quantity: newQty };
+          reply = `Updated ${ciName} quantity to ${newQty}.`;
+          actions = [{ type: 'UPDATE_CART_QTY', product_id: ciId, name: ciName, quantity: newQty, item: cardItem }];
+          tools_used = [{ name: 'update_cart_quantity', args: { product_id: ciId, quantity: newQty } }];
+        } else {
+          reply = `Removed ${ciName} from your cart.`;
+          actions = [{ type: 'REMOVE_FROM_CART', product_id: ciId, name: ciName, item: matchedCi, items: [matchedCi] }];
+          tools_used = [{ name: 'remove_from_shopper_cart', args: { product_id: ciId } }];
+        }
+        return { reply, voice_reply: reply, mode, actions, tools_used, follow_ups, latency_ms: 12 };
+      } else if (clientCart.length === 0) {
+        reply = 'Your cart is currently empty.';
+        actions = [];
+        tools_used = [];
+        return { reply, voice_reply: reply, mode, actions, tools_used, follow_ups, latency_ms: 12 };
+      } else {
+        reply = 'That item is not in your cart.';
+        actions = [];
+        tools_used = [];
+        return { reply, voice_reply: reply, mode, actions, tools_used, follow_ups, latency_ms: 12 };
+      }
+    }
+
     const matchedFromClientCart = clientCart.filter((ci) => {
       const cName = String(ci.name || ci.product_name || '').toLowerCase();
       const tokens = cName.split(/\s+/).filter((t) => t.length >= 3);
@@ -901,6 +960,12 @@ export function handleLovableAgentFallback(config) {
       itemsWithQty = subset.map((it) => ({ prod: it, qty: Number(it.quantity || 1) }));
     }
     if (itemsWithQty.length === 0) {
+      if (lower.includes('cart') || lower.includes('bag')) {
+        reply = 'Which product would you like to add to your cart?';
+        actions = [];
+        tools_used = [];
+        return { reply, voice_reply: reply, mode, actions, tools_used, follow_ups, latency_ms: 12 };
+      }
       itemsWithQty = [{ prod: getLiveCatalog()[0] || DEMO_PRODUCTS[0], qty: 1 }];
     }
     actions = [];
