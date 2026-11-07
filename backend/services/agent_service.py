@@ -485,7 +485,13 @@ class AgentTools:
             r_lower = recipe.lower()
 
             # Match recipe keywords first
-            if "pasta" in r_lower or "dinner" in r_lower or "italian" in r_lower:
+            if "biryani" in r_lower or "biriyani" in r_lower or "pulao" in r_lower:
+                preferred_keywords = ["Rice", "Basmati", "Yogurt", "Milk", "Atta", "Marinara", "Cheese"]
+            elif "paneer" in r_lower or "curry" in r_lower or "masala" in r_lower:
+                preferred_keywords = ["Paneer", "Cheese", "Marinara", "Yogurt", "Milk", "Bread", "Atta"]
+            elif "chai" in r_lower or "tea" in r_lower or "coffee" in r_lower:
+                preferred_keywords = ["Milk", "Bread", "Sourdough", "Yogurt"]
+            elif "pasta" in r_lower or "dinner" in r_lower or "italian" in r_lower:
                 preferred_keywords = ["Pasta", "Marinara", "Parmesan", "Bread"]
             elif "breakfast" in r_lower or "morning" in r_lower or "smoothie" in r_lower:
                 preferred_keywords = ["Milk", "Eggs", "Yogurt", "Strawberries", "Bread"]
@@ -1797,15 +1803,31 @@ class AgentService:
         """Sub-50ms instant execution for all shop operations while strictly blocking Settings."""
         lower = prompt.lower().strip()
 
-        # --- 0A. LIVE THEME SWITCH ("switch to dark mode", "switch to light mode", "dark mode", "light mode") ---
+        # --- 0A. LIVE THEME SWITCH ("switch to dark mode", "turn off dark mode", "switch to light mode", "dark mode", "light mode") ---
         if any(k in lower for k in [
             "dark mode", "light mode", "dark theme", "light theme",
             "switch theme", "toggle theme", "night mode", "day mode"
         ]):
-            target_theme = "light" if ("light" in lower or "day" in lower) else "dark"
+            wants_off_dark = (
+                "off dark" in lower
+                or "disable dark" in lower
+                or "exit dark" in lower
+                or "stop dark" in lower
+                or ("turn off" in lower and "dark" in lower)
+            )
+            wants_off_light = (
+                "off light" in lower
+                or "disable light" in lower
+                or ("turn off" in lower and "light" in lower)
+            )
+            target_theme = (
+                "light"
+                if wants_off_dark
+                else ("dark" if wants_off_light else ("light" if ("light" in lower or "day" in lower) else "dark"))
+            )
             label = "Light Mode" if target_theme == "light" else "Dark Mode"
             return {
-                "reply": f"{label} activated.",
+                "reply": f"Switched to {label}.",
                 "tools_used": [{"name": "switch_theme", "args": {"theme": target_theme}}],
                 "actions": [{"type": "SWITCH_THEME", "theme": target_theme}],
                 "tool_result": {"status": "switched", "theme": target_theme}
@@ -2781,8 +2803,9 @@ class AgentService:
                 return {"reply": res.get("message"), "tools_used": [{"name": "manage_promo_code", "args": {"action": "list"}}], "actions": [], "tool_result": res}
 
             # 1. Autonomous Multi-Item & Single-Item Add to Cart ("Add 2 milk and 1 bread to my cart", "Buy Bread")
-            is_cost_question = any(lower.startswith(q) for q in ["how much", "what is the", "what's the", "cost of", "price of", "do you"])
-            if not is_cost_question and any(w in lower for w in ["add ", "put ", "buy ", "get me ", "i want ", "i'll take ", "order "]):
+            is_cost_question = any(lower.startswith(q) for q in ["how much", "what is the", "what's the", "cost of", "price of", "do you", "suggest"])
+            is_recipe_query = any(k in lower for k in ["making ", "cooking ", "suggest ", "requirements", "recipe", "ingredients", "biryani", "biriyani", "pulao"])
+            if not is_cost_question and not is_recipe_query and any(w in lower for w in ["add ", "put ", "buy ", "get me ", "i want ", "i'll take ", "order "]):
                 items_with_qty = self._extract_items_with_quantities(prompt)
                 if not items_with_qty and ("cart" in lower or "bag" in lower):
                     cached_p = _get_cached_active_products()
@@ -2809,12 +2832,23 @@ class AgentService:
                         reply = f"Added {joined} for ${grand_total:.2f} total."
                     return {"reply": reply, "tools_used": tools_used, "actions": actions, "tool_result": last_res}
 
-            # 2. Recipe Basket Recommendations ("suggest a dinner recipe basket", "breakfast ingredients", "berry smoothie")
-            if any(k in lower for k in ["dinner", "breakfast", "smoothie", "recipe", "salad", "meal", "plan a meal", "basket", "ingredients"]):
+            # 2. Universal Dish & Recipe Basket Recommendations ("making biryani", "suggest biryani requirements", "dinner recipe", "breakfast")
+            if any(k in lower for k in [
+                "biryani", "biriyani", "pulao", "fried rice", "paneer", "curry", "masala",
+                "chai", "tea", "coffee", "dal", "roti", "dinner", "breakfast", "smoothie",
+                "recipe", "salad", "meal", "plan a meal", "basket", "ingredients",
+                "requirements", "making ", "cooking ", "prepare ", "sandwich", "snack"
+            ]):
                 recipe_name = "Dinner"
-                if "pasta" in lower or "dinner" in lower or "meal" in lower:
+                if any(w in lower for w in ["biryani", "biriyani", "pulao"]):
+                    recipe_name = "Hyderabadi Biryani"
+                elif any(w in lower for w in ["paneer", "curry", "masala"]):
+                    recipe_name = "Paneer Butter Masala"
+                elif any(w in lower for w in ["chai", "tea", "coffee"]):
+                    recipe_name = "Masala Chai & Bakery"
+                elif "pasta" in lower or "dinner" in lower or "meal" in lower:
                     recipe_name = "Pasta Dinner"
-                elif "breakfast" in lower:
+                elif "breakfast" in lower or "sandwich" in lower:
                     recipe_name = "Breakfast"
                 elif "smoothie" in lower:
                     recipe_name = "Berry Smoothie"
@@ -2822,13 +2856,13 @@ class AgentService:
                     recipe_name = "Fresh Salad"
 
                 budget_match = re.search(r"\$(\d+)", lower)
-                budget = float(budget_match.group(1)) if budget_match else 20.0
+                budget = float(budget_match.group(1)) if budget_match else 25.0
 
                 res = AgentTools.execute_tool("recommend_recipe_basket", {"recipe_name": recipe_name, "budget": budget}, session_id)
                 items = res.get("items", [])
                 total_p = res.get("total_price", sum(float(i.get("price", 0)) for i in items))
                 item_names = ", ".join(i["name"] for i in items[:3])
-                reply = f"{len(items)} items for {recipe_name} at ${total_p:.2f} total: {item_names}."
+                reply = f"Here are {len(items)} essentials for {recipe_name} ({item_names}) at ${total_p:.2f} total."
                 actions = [{"type": "RECOMMEND_BASKET", "items": items, "recipe": recipe_name}]
                 return {"reply": reply, "tools_used": [{"name": "recommend_recipe_basket", "args": {"recipe_name": recipe_name, "budget": budget}}], "actions": actions, "tool_result": res}
 

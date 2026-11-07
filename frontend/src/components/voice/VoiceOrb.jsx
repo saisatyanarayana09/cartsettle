@@ -1,9 +1,9 @@
 import React from "react";
 
 /**
- * VoiceOrb: Flagship Photorealistic 3D Emerald & Crystal-Glass Ribbon Sphere
- * with multi-layered emerald plasma glow, acoustic ripple rings, counter-rotating
- * caustic light refraction, and continuous 3D rotational physics.
+ * VoiceOrb: Flagship Photorealistic 3D Emerald & Crystal-Glass Ribbon Sphere.
+ * Pure 3D glass sculpture with zero circular ring borders behind it — blends
+ * seamlessly into the Full-Screen AI Assistant Aurora & Edge-Light Shader.
  */
 export function VoiceOrb({
   status = "idle",
@@ -31,39 +31,20 @@ export function VoiceOrb({
         "--orb-scale": scale.toFixed(3),
       }}
     >
-      {/* Layer 1: Deep Ambient Emerald & Aqua Plasma Backlight */}
+      {/* Soft Diffused Backlight (No Circular Ring Borders) */}
       <div
-        className="voice-orb-aura absolute rounded-full pointer-events-none transition-all duration-500 ease-out"
+        className="voice-orb-aura absolute rounded-full pointer-events-none transition-all duration-700 ease-out"
         data-state={status}
         aria-hidden="true"
       />
 
-      {/* Layer 2: Expanding Acoustic Emerald Ripple Rings */}
-      <div
-        className="voice-orb-pulse-ring absolute rounded-full pointer-events-none"
-        data-state={status}
-        aria-hidden="true"
-      />
-      <div
-        className="voice-orb-pulse-ring voice-orb-pulse-ring-delay absolute rounded-full pointer-events-none"
-        data-state={status}
-        aria-hidden="true"
-      />
-
-      {/* Layer 3: Orbital Conic Glow Halo around the Sphere */}
-      <div
-        className="voice-orb-orbital-halo absolute rounded-full pointer-events-none"
-        data-state={status}
-        aria-hidden="true"
-      />
-
-      {/* Layer 4: Photorealistic 3D Emerald & Glass Ribbon Sphere */}
+      {/* Photorealistic 3D Emerald & Glass Ribbon Sphere */}
       <div
         className="voice-orb-sphere relative flex items-center justify-center rounded-full overflow-hidden transition-transform duration-300 ease-out"
         data-state={status}
         style={{
-          width: "156px",
-          height: "156px",
+          width: "152px",
+          height: "152px",
           transform: `scale(${scale})`,
         }}
       >
@@ -88,14 +69,14 @@ export function VoiceOrb({
           aria-hidden="true"
         />
 
-        {/* Stationary Spherical Glass Rim & Luminous Emerald Inner Refraction */}
+        {/* Stationary Spherical Glass Rim & Inner Refraction */}
         <div
           className="voice-orb-glass-rim absolute inset-0 rounded-full pointer-events-none"
           aria-hidden="true"
         />
       </div>
 
-      {/* Layer 5: Luminous Emerald Floor Contact Reflection Shadow */}
+      {/* Soft Emerald Floor Contact Shadow */}
       <div
         className="voice-orb-floor-shadow pointer-events-none"
         data-state={status}

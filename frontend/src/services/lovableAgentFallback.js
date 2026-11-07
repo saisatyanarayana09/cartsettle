@@ -327,15 +327,31 @@ export function handleLovableAgentFallback(config) {
     ? ['Check pending orders', 'Check low stock', 'Which product has the highest margin?']
     : ['What is the cheapest item?', 'Add 1 Whole Milk', '15% off Strawberries'];
 
-  // 0A. Live Theme Switch ("switch to dark mode", "switch to light mode")
+  // 0A. Live Theme Switch ("switch to dark mode", "turn off dark mode", "switch to light mode")
   if (
     ['dark mode', 'light mode', 'dark theme', 'light theme', 'switch theme', 'toggle theme', 'night mode', 'day mode'].some((k) =>
       lower.includes(k)
     )
   ) {
-    const targetTheme = lower.includes('light') || lower.includes('day') ? 'light' : 'dark';
+    const wantsOffDark =
+      lower.includes('off dark') ||
+      lower.includes('disable dark') ||
+      lower.includes('exit dark') ||
+      lower.includes('stop dark') ||
+      (lower.includes('turn off') && lower.includes('dark'));
+    const wantsOffLight =
+      lower.includes('off light') ||
+      lower.includes('disable light') ||
+      (lower.includes('turn off') && lower.includes('light'));
+    const targetTheme = wantsOffDark
+      ? 'light'
+      : wantsOffLight
+        ? 'dark'
+        : lower.includes('light') || lower.includes('day')
+          ? 'light'
+          : 'dark';
     const label = targetTheme === 'light' ? 'Light Mode' : 'Dark Mode';
-    reply = `${label} activated.`;
+    reply = `Switched to ${label}.`;
     actions = [{ type: 'SWITCH_THEME', theme: targetTheme }];
     tools_used = [{ name: 'switch_theme', args: { theme: targetTheme } }];
   }
@@ -808,14 +824,28 @@ export function handleLovableAgentFallback(config) {
     ];
     tools_used = [{ name: 'remove_from_shopper_cart', args: { product_id: firstCard.id } }];
   }
-  // 11. Multi-Item or Single-Item Add to Cart
+  // 11. Multi-Item or Single-Item Add to Cart (including contextual "add all of them" / "add these")
   else if (
-    !['how much', 'what is', 'cost of', 'price of', 'do you'].some((q) => lower.startsWith(q)) &&
+    !['how much', 'what is', 'cost of', 'price of', 'do you', 'suggest'].some((q) => lower.startsWith(q)) &&
+    !['making ', 'cooking ', 'suggest ', 'requirements', 'recipe', 'ingredients'].some((k) => lower.includes(k)) &&
     ['add ', 'put ', 'buy ', 'get me ', 'i want ', "i'll take ", 'to my cart', 'to cart'].some((w) => lower.includes(w))
   ) {
     let itemsWithQty = extractItemsWithQuantities(prompt);
+    if (
+      itemsWithQty.length === 0 &&
+      Array.isArray(mem.last_suggested_items) &&
+      mem.last_suggested_items.length > 0 &&
+      ['all', 'them', 'these', 'those', 'both', 'first', 'suggested', 'items', 'products'].some((w) => lower.includes(w))
+    ) {
+      const subset = lower.includes('first two') || lower.includes('first 2')
+        ? mem.last_suggested_items.slice(0, 2)
+        : lower.includes('first')
+          ? mem.last_suggested_items.slice(0, 1)
+          : mem.last_suggested_items;
+      itemsWithQty = subset.map((it) => ({ prod: it, qty: Number(it.quantity || 1) }));
+    }
     if (itemsWithQty.length === 0) {
-      itemsWithQty = [{ prod: DEMO_PRODUCTS[0], qty: 1 }];
+      itemsWithQty = [{ prod: getLiveCatalog()[0] || DEMO_PRODUCTS[0], qty: 1 }];
     }
     actions = [];
     tools_used = [];
@@ -832,14 +862,68 @@ export function handleLovableAgentFallback(config) {
       ? `Added ${parts[0]} for $${grandTotal.toFixed(2)}.`
       : `Added ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]} for $${grandTotal.toFixed(2)} total.`;
   }
-  // 12. Recipe basket
-  else if (['dinner', 'breakfast', 'smoothie', 'recipe', 'basket', 'meal', 'salad', 'ingredients'].some((k) => lower.includes(k))) {
-    const recipe = lower.includes('breakfast') ? 'Breakfast' : (lower.includes('salad') ? 'Fresh Salad' : 'Pasta Dinner');
-    const items = [DEMO_PRODUCTS[5], DEMO_PRODUCTS[6], DEMO_PRODUCTS[7], DEMO_PRODUCTS[1]].map((p) => serializeCardItem(p, 1));
+  // 12. Universal Dish, Recipe & Occasion Ingredient Engine (Biryani, Paneer, Chai, Breakfast, Pasta, Salad, Smoothie)
+  else if (
+    [
+      'biryani', 'biriyani', 'pulao', 'fried rice', 'paneer', 'curry', 'masala',
+      'chai', 'tea', 'coffee', 'dal', 'roti', 'dinner', 'breakfast', 'lunch',
+      'smoothie', 'recipe', 'basket', 'meal', 'salad', 'ingredients',
+      'requirements', 'making ', 'cooking ', 'prepare ', 'sandwich', 'snack', 'party',
+    ].some((k) => lower.includes(k))
+  ) {
+    const catalog = getLiveCatalog();
+    let recipe = 'Chef Special';
+    let keywords = [];
+
+    if (lower.includes('biryani') || lower.includes('biriyani') || lower.includes('pulao')) {
+      recipe = 'Hyderabadi Biryani';
+      keywords = ['rice', 'basmati', 'yogurt', 'curd', 'ghee', 'milk', 'spice', 'onion', 'tomato', 'sauce', 'atta', 'cheese'];
+    } else if (lower.includes('paneer') || lower.includes('curry') || lower.includes('masala')) {
+      recipe = 'Paneer Butter Masala';
+      keywords = ['paneer', 'cheese', 'tomato', 'sauce', 'milk', 'butter', 'yogurt', 'bread', 'atta'];
+    } else if (lower.includes('chai') || lower.includes('tea') || lower.includes('coffee')) {
+      recipe = 'Masala Chai & Bakery';
+      keywords = ['milk', 'tea', 'bread', 'sourdough', 'honey', 'yogurt'];
+    } else if (lower.includes('breakfast') || lower.includes('sandwich') || lower.includes('toast')) {
+      recipe = 'Morning Breakfast';
+      keywords = ['egg', 'bread', 'sourdough', 'milk', 'avocado', 'yogurt', 'strawberry'];
+    } else if (lower.includes('salad') || lower.includes('healthy')) {
+      recipe = 'Fresh Garden Salad';
+      keywords = ['avocado', 'strawberry', 'cheese', 'yogurt', 'tomato'];
+    } else if (lower.includes('smoothie') || lower.includes('berry')) {
+      recipe = 'Berry Protein Smoothie';
+      keywords = ['strawberry', 'yogurt', 'milk', 'avocado'];
+    } else {
+      recipe = 'Pasta Dinner';
+      keywords = ['pasta', 'marinara', 'sauce', 'cheese', 'parmigiano', 'bread'];
+    }
+
+    const picked = [];
+    const seenIds = new Set();
+    for (const kw of keywords) {
+      for (const p of catalog) {
+        if (!seenIds.has(p.id) && (p.name.toLowerCase().includes(kw) || (p.aliases || []).includes(kw) || String(p.category || '').toLowerCase().includes(kw))) {
+          picked.push(p);
+          seenIds.add(p.id);
+          if (picked.length >= 4) break;
+        }
+      }
+      if (picked.length >= 4) break;
+    }
+    for (const p of catalog) {
+      if (picked.length >= 4) break;
+      if (!seenIds.has(p.id)) {
+        picked.push(p);
+        seenIds.add(p.id);
+      }
+    }
+
+    const items = picked.slice(0, 4).map((p) => serializeCardItem(p, 1));
+    mem.last_suggested_items = items;
     const total = items.reduce((s, i) => s + i.price, 0);
-    reply = `${items.length} items for ${recipe} at $${total.toFixed(2)} total: ${items.slice(0, 3).map((i) => i.name).join(', ')}.`;
+    reply = `Here are ${items.length} essentials for ${recipe} (${items.slice(0, 3).map((i) => i.name).join(', ')}) at $${total.toFixed(2)} total.`;
     actions = [{ type: 'RECOMMEND_BASKET', items, recipe }];
-    tools_used = [{ name: 'recommend_recipe_basket', args: { recipe_name: recipe, budget: 20 } }];
+    tools_used = [{ name: 'recommend_recipe_basket', args: { recipe_name: recipe, budget: 25 } }];
   }
   // 13. Multi-Item Cost Calculation ("How much for 2 milk and 1 bread?")
   else if (['how much', 'total for', 'cost for', 'price for', 'cost of'].some((k) => lower.includes(k)) && extractItemsWithQuantities(prompt).length > 0 && (extractItemsWithQuantities(prompt).length > 1 || extractItemsWithQuantities(prompt)[0].qty > 1)) {
@@ -900,9 +984,26 @@ export function handleLovableAgentFallback(config) {
     actions = [{ type: 'SEARCH_RESULTS', items }];
     tools_used = [{ name: 'search_products_and_stock', args: { query: label } }];
   }
-  // Unknown requests need real AI, never a fabricated live catalog summary.
+  // 16. Conversational Q&A & Smart Store Concierge (Never return an empty reply that turns into "Done.")
   else {
-    return { reply: '', voice_reply: '', actions: [], tools_used: [], follow_ups: [], needs_ai: true };
+    const catalog = getLiveCatalog();
+    if (/^(hi|hello|hey|good morning|good evening|namaste)\b/i.test(lower)) {
+      reply = 'Hello! Tell me what dish you are cooking today or what groceries you need.';
+      actions = [];
+    } else if (lower.includes('delivery') || lower.includes('fast') || lower.includes('time') || lower.includes('long')) {
+      reply = 'Express grocery delivery arrives in 15 to 25 minutes right to your door.';
+      actions = [];
+    } else if (lower.includes('payment') || lower.includes('pay') || lower.includes('cod') || lower.includes('wallet')) {
+      reply = 'We support Cash on Delivery, Store Wallet, and PayPal with instant settlement.';
+      actions = [];
+    } else {
+      const topItems = catalog.slice(0, 3).map((p) => serializeCardItem(p, 1));
+      mem.last_suggested_items = topItems;
+      const names = topItems.map((i) => i.name).join(', ');
+      reply = `Here are our top fresh picks today: ${names}.`;
+      actions = [{ type: 'SEARCH_RESULTS', items: topItems }];
+      tools_used = [{ name: 'search_products_and_stock', args: { query: rawPrompt } }];
+    }
   }
 
   // Track last discussed product in session memory for follow-up pronouns

@@ -73,37 +73,222 @@
 .dark .shopper-theme { background: #0b0f17; color: #f8fafc; }
 .assistant-wordmark { font-family: "Nunito", sans-serif; font-size: 20px; font-weight: 900; }
 .assistant-wordmark span { color: var(--color-accent-gold); }
-.voice-stage { position: relative; display: flex; flex: 1; flex-direction: column; justify-content: space-between; min-height: 0; overflow: hidden; background: #ffffff; }
-.dark .voice-stage { background: #0b0f17; }
-/* Top card stage: starts cleanly at the top so cards never clip off-screen */
-.voice-live-stage { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 20px 16px; display: flex; flex-direction: column; justify-content: flex-start; }
+.voice-stage { position: relative; display: flex; flex: 1; flex-direction: column; justify-content: space-between; min-height: 0; overflow: hidden; background: #ffffff; isolation: isolate; }
+.dark .voice-stage { background: #070b12; }
+
+/* ==========================================================================
+   Full-Screen Living Aurora & 4-Edge Perimeter Glow (Task + Voice Reactive)
+   ========================================================================== */
+.voice-fullscreen-aurora {
+  position: absolute;
+  inset: -18%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: calc(0.55 + (var(--text-energy, 0.25) * 0.42));
+  filter: blur(42px);
+  transition: background 650ms cubic-bezier(0.16, 1, 0.3, 1), opacity 380ms ease;
+  background:
+    radial-gradient(circle at 50% 82%, rgba(16, 185, 129, 0.26) 0%, rgba(20, 184, 166, 0.12) 38%, transparent 70%),
+    radial-gradient(circle at 18% 20%, rgba(52, 211, 153, 0.14) 0%, transparent 52%),
+    radial-gradient(circle at 84% 26%, rgba(6, 182, 212, 0.12) 0%, transparent 50%);
+  animation: fullscreen-aurora-drift 11s ease-in-out infinite alternate;
+}
+.dark .voice-fullscreen-aurora {
+  opacity: calc(0.68 + (var(--text-energy, 0.25) * 0.32));
+  background:
+    radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.38) 0%, rgba(6, 182, 212, 0.18) 42%, transparent 72%),
+    radial-gradient(circle at 15% 18%, rgba(52, 211, 153, 0.20) 0%, transparent 54%),
+    radial-gradient(circle at 86% 24%, rgba(14, 165, 233, 0.16) 0%, transparent 52%);
+}
+
+/* Task & State Palettes for Full-Screen Aurora */
+.voice-fullscreen-aurora[data-glow="listening"],
+.voice-fullscreen-aurora[data-glow="speaking-input"] {
+  animation-duration: 4.2s;
+  background:
+    radial-gradient(circle at 50% 78%, rgba(16, 185, 129, 0.45) 0%, rgba(6, 182, 212, 0.26) 45%, transparent 74%),
+    radial-gradient(circle at 20% 22%, rgba(45, 212, 191, 0.28) 0%, transparent 55%),
+    radial-gradient(circle at 82% 20%, rgba(56, 189, 248, 0.24) 0%, transparent 55%);
+}
+.voice-fullscreen-aurora[data-glow="thinking"] {
+  animation-duration: 2.6s;
+  background:
+    radial-gradient(circle at 50% 75%, rgba(6, 182, 212, 0.44) 0%, rgba(99, 102, 241, 0.26) 44%, transparent 74%),
+    radial-gradient(circle at 24% 20%, rgba(16, 185, 129, 0.28) 0%, transparent 55%),
+    radial-gradient(circle at 80% 28%, rgba(139, 92, 246, 0.24) 0%, transparent 56%);
+}
+.voice-fullscreen-aurora[data-glow="discovery"] {
+  animation-duration: 6s;
+  background:
+    radial-gradient(circle at 50% 78%, rgba(16, 185, 129, 0.38) 0%, rgba(245, 158, 11, 0.20) 44%, transparent 74%),
+    radial-gradient(circle at 20% 18%, rgba(251, 191, 36, 0.22) 0%, transparent 55%),
+    radial-gradient(circle at 82% 24%, rgba(20, 184, 166, 0.22) 0%, transparent 55%);
+}
+.voice-fullscreen-aurora[data-glow="cart-add"] {
+  animation-duration: 4.5s;
+  background:
+    radial-gradient(circle at 50% 76%, rgba(16, 185, 129, 0.50) 0%, rgba(52, 211, 153, 0.28) 46%, transparent 75%),
+    radial-gradient(circle at 22% 22%, rgba(16, 185, 129, 0.30) 0%, transparent 56%),
+    radial-gradient(circle at 80% 22%, rgba(110, 231, 183, 0.24) 0%, transparent 54%);
+}
+.voice-fullscreen-aurora[data-glow="checkout"] {
+  animation-duration: 5s;
+  background:
+    radial-gradient(circle at 50% 76%, rgba(245, 158, 11, 0.36) 0%, rgba(16, 185, 129, 0.26) 46%, transparent 75%),
+    radial-gradient(circle at 22% 18%, rgba(251, 191, 36, 0.28) 0%, transparent 56%),
+    radial-gradient(circle at 82% 24%, rgba(16, 185, 129, 0.24) 0%, transparent 56%);
+}
+.voice-fullscreen-aurora[data-glow="order-track"] {
+  animation-duration: 5.5s;
+  background:
+    radial-gradient(circle at 50% 78%, rgba(14, 165, 233, 0.40) 0%, rgba(16, 185, 129, 0.24) 45%, transparent 74%),
+    radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.26) 0%, transparent 55%),
+    radial-gradient(circle at 82% 24%, rgba(99, 102, 241, 0.22) 0%, transparent 55%);
+}
+.voice-fullscreen-aurora[data-glow="theme-switch"] {
+  animation-duration: 3.8s;
+  background:
+    radial-gradient(circle at 50% 76%, rgba(139, 92, 246, 0.40) 0%, rgba(245, 158, 11, 0.24) 46%, transparent 75%),
+    radial-gradient(circle at 22% 20%, rgba(168, 85, 247, 0.28) 0%, transparent 55%),
+    radial-gradient(circle at 80% 22%, rgba(251, 191, 36, 0.24) 0%, transparent 55%);
+}
+.voice-fullscreen-aurora[data-glow="cart-remove"] {
+  animation-duration: 4.8s;
+  background:
+    radial-gradient(circle at 50% 78%, rgba(244, 63, 94, 0.34) 0%, rgba(251, 146, 60, 0.20) 45%, transparent 74%),
+    radial-gradient(circle at 22% 20%, rgba(251, 113, 133, 0.22) 0%, transparent 54%);
+}
+
+/* 4-Edge Living Perimeter Border Glow around the full AI Assistant screen */
+.voice-fullscreen-edge-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 36px rgba(16, 185, 129, calc(0.10 + (var(--text-energy, 0.25) * 0.16))),
+    inset 0 0 2px rgba(52, 211, 153, 0.28);
+  transition: box-shadow 500ms ease;
+}
+.dark .voice-fullscreen-edge-glow {
+  box-shadow:
+    inset 0 0 48px rgba(16, 185, 129, calc(0.16 + (var(--text-energy, 0.25) * 0.22))),
+    inset 0 0 2px rgba(52, 211, 153, 0.36);
+}
+.voice-fullscreen-edge-glow[data-glow="checkout"],
+.voice-fullscreen-edge-glow[data-glow="discovery"] {
+  box-shadow:
+    inset 0 0 52px rgba(245, 158, 11, 0.22),
+    inset 0 0 24px rgba(16, 185, 129, 0.22);
+}
+.voice-fullscreen-edge-glow[data-glow="order-track"],
+.voice-fullscreen-edge-glow[data-glow="thinking"] {
+  box-shadow:
+    inset 0 0 52px rgba(14, 165, 233, 0.26),
+    inset 0 0 24px rgba(99, 102, 241, 0.20);
+}
+.voice-fullscreen-edge-glow[data-glow="theme-switch"] {
+  box-shadow:
+    inset 0 0 54px rgba(139, 92, 246, 0.28),
+    inset 0 0 24px rgba(245, 158, 11, 0.20);
+}
+
+@keyframes fullscreen-aurora-drift {
+  0% {
+    transform: translate3d(0%, 0%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-3%, 2%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(3%, -2%, 0) scale(1.03);
+  }
+}
+
+/* Top card stage: starts cleanly at the top, never scrolls horizontally */
+.voice-live-stage {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+  padding: 12px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.voice-live-stage::-webkit-scrollbar {
+  width: 4px;
+  height: 0px;
+}
+.voice-live-stage::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
 .voice-live-stage, .voice-bottom { position: relative; z-index: 1; }
 .assistant-request { margin: 0 0 16px; font-size: 18px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
-.assistant-live-cards { display: grid; gap: 10px; }
+.assistant-live-cards { display: grid; gap: 10px; max-width: 100%; overflow-x: hidden; }
 .assistant-action { padding: 14px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff; box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.05); }
 .dark .assistant-action { background: #141a24; border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.45); }
 /* In voice mode, cards render directly on the minimalist canvas without a double wrapper border */
 .voice-stage .assistant-action { padding: 0; border: none; background: transparent; box-shadow: none; backdrop-filter: none; }
+
+/* Card Materialize & Liquid Blur-Dissolve Choreography */
+.assistant-card-materialize {
+  animation: card-spring-materialize 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.assistant-card-dissolve {
+  animation: card-liquid-dissolve 360ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+@keyframes card-spring-materialize {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes card-liquid-dissolve {
+  0% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(-10px) scale(0.94);
+  }
+}
 
 /* Flagship Mini Home-Screen Product Card */
 .assistant-product {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 11px 12px;
   border-radius: 18px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
   border: 1px solid #e2e8f0;
   box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.07);
-  transition: border-color .2s, box-shadow .2s;
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .dark .assistant-product {
-  background: #141a24;
-  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(20, 26, 36, 0.88);
+  border-color: rgba(255, 255, 255, 0.09);
   box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5);
 }
-.assistant-product + .assistant-product { margin-top: 10px; }
+.assistant-product + .assistant-product { margin-top: 8px; }
 .assistant-photo {
   position: relative;
   width: 52px;
@@ -147,9 +332,9 @@
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
   border-radius: 9999px;
-  height: 34px;
-  padding: 0 4px;
-  gap: 2px;
+  height: 30px;
+  padding: 0 3px;
+  gap: 1px;
 }
 .dark .assistant-stepper {
   background: rgba(255, 255, 255, 0.08);
@@ -167,11 +352,30 @@
   border-color: #10b981;
   color: #ffffff;
 }
-.assistant-stepper button { width: 26px; height: 26px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; }
-.assistant-stepper output { min-width: 20px; text-align: center; font-size: 13px; font-weight: 700; color: inherit; }
+.assistant-stepper button { width: 24px; height: 24px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; }
+.assistant-stepper output { min-width: 18px; text-align: center; font-size: 12px; font-weight: 700; color: inherit; }
 
-.assistant-payment { flex-shrink: 0; padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--secondary); max-height: 50dvh; overflow-y: auto; }
-.voice-bottom { position: relative; flex-shrink: 0; padding-top: 8px; padding-bottom: 28px; }
+.assistant-payment {
+  flex-shrink: 0;
+  margin: 10px 16px 6px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.12);
+  max-height: 56dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 2;
+}
+.dark .assistant-payment {
+  background: rgba(20, 26, 36, 0.92);
+  border-color: rgba(52, 211, 153, 0.25);
+  box-shadow: 0 20px 44px -8px rgba(0, 0, 0, 0.65);
+}
+.voice-bottom { position: relative; flex-shrink: 0; padding-top: 4px; padding-bottom: 22px; }
 .assistant-cartbar { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px 10px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 9999px; background: var(--secondary); font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color .2s; }
 .assistant-cartbar:hover { background: var(--muted); }
 .assistant-cartbar:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
@@ -204,33 +408,34 @@
 
 /* ==========================================================================
    Flagship Sculptural 3D Emerald & Glass Ribbon Orb + Kinetic Typography
+   (Zero circular border rings — pure ambient aura + 3D sphere)
    ========================================================================== */
 .voice-orb-container {
   padding: 12px;
   touch-action: manipulation;
 }
 
-/* Layer 1: Deep Ambient Emerald & Aqua Plasma Backlight */
+/* Layer 1: Soft Borderless Ambient Emerald & Aqua Plasma Backlight */
 .voice-orb-aura {
-  width: 216px;
-  height: 216px;
+  width: 220px;
+  height: 220px;
   background: radial-gradient(
     circle,
-    rgba(16, 185, 129, 0.34) 0%,
+    rgba(16, 185, 129, 0.36) 0%,
     rgba(52, 211, 153, 0.16) 44%,
-    rgba(6, 182, 212, 0.06) 64%,
-    transparent 76%
+    rgba(6, 182, 212, 0.05) 66%,
+    transparent 78%
   );
-  filter: blur(22px);
+  filter: blur(26px);
   animation: orb-aura-pulse 3.2s ease-in-out infinite alternate;
 }
 .dark .voice-orb-aura {
   background: radial-gradient(
     circle,
-    rgba(52, 211, 153, 0.56) 0%,
-    rgba(16, 185, 129, 0.32) 45%,
-    rgba(6, 182, 212, 0.14) 65%,
-    transparent 78%
+    rgba(52, 211, 153, 0.54) 0%,
+    rgba(16, 185, 129, 0.28) 45%,
+    rgba(6, 182, 212, 0.12) 66%,
+    transparent 80%
   );
 }
 .voice-orb-aura[data-state="listening"],
@@ -238,10 +443,10 @@
 .voice-orb-aura[data-state="working"] {
   background: radial-gradient(
     circle,
-    rgba(16, 185, 129, 0.52) 0%,
+    rgba(16, 185, 129, 0.56) 0%,
     rgba(52, 211, 153, 0.28) 46%,
-    rgba(20, 184, 166, 0.12) 66%,
-    transparent 78%
+    rgba(20, 184, 166, 0.12) 68%,
+    transparent 80%
   );
   animation: orb-aura-active 1.3s ease-in-out infinite alternate;
 }
@@ -251,77 +456,14 @@
   background: radial-gradient(
     circle,
     rgba(52, 211, 153, 0.72) 0%,
-    rgba(16, 185, 129, 0.42) 48%,
-    rgba(45, 212, 191, 0.2) 68%,
-    transparent 80%
+    rgba(16, 185, 129, 0.40) 48%,
+    rgba(45, 212, 191, 0.18) 68%,
+    transparent 82%
   );
   animation: orb-aura-active 1.3s ease-in-out infinite alternate;
 }
 
-/* Layer 2: Expanding Acoustic Emerald Ripple Rings */
-.voice-orb-pulse-ring {
-  width: 158px;
-  height: 158px;
-  border: 1.5px solid rgba(16, 185, 129, 0.32);
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.22);
-  animation: orb-ring-ripple 3.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-}
-.dark .voice-orb-pulse-ring {
-  border-color: rgba(52, 211, 153, 0.42);
-  box-shadow: 0 0 22px rgba(52, 211, 153, 0.32);
-}
-.voice-orb-pulse-ring-delay {
-  animation-delay: 1.6s;
-}
-.voice-orb-pulse-ring[data-state="listening"],
-.voice-orb-pulse-ring[data-state="speaking"] {
-  border-color: rgba(16, 185, 129, 0.55);
-  box-shadow: 0 0 24px rgba(16, 185, 129, 0.38);
-  animation-duration: 2s;
-}
-.dark .voice-orb-pulse-ring[data-state="listening"],
-.dark .voice-orb-pulse-ring[data-state="speaking"] {
-  border-color: rgba(110, 231, 183, 0.65);
-  box-shadow: 0 0 28px rgba(52, 211, 153, 0.48);
-}
-.voice-orb-pulse-ring-delay[data-state="listening"],
-.voice-orb-pulse-ring-delay[data-state="speaking"] {
-  animation-delay: 1s;
-}
-
-/* Layer 3: Orbital Conic Glow Halo around the Sphere */
-.voice-orb-orbital-halo {
-  width: 168px;
-  height: 168px;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgba(16, 185, 129, 0.45) 75deg,
-    rgba(167, 243, 208, 0.75) 130deg,
-    rgba(20, 184, 166, 0.4) 190deg,
-    transparent 270deg,
-    rgba(16, 185, 129, 0.25) 330deg,
-    transparent 360deg
-  );
-  filter: blur(8px);
-  opacity: 0.72;
-  animation: orb-conic-spin 5s linear infinite;
-}
-.dark .voice-orb-orbital-halo {
-  opacity: 0.92;
-  filter: blur(9px);
-}
-.voice-orb-orbital-halo[data-state="listening"],
-.voice-orb-orbital-halo[data-state="speaking"] {
-  opacity: 0.95;
-  animation-duration: 2.6s;
-}
-.voice-orb-orbital-halo[data-state="working"] {
-  opacity: 1;
-  animation-duration: 1.2s;
-}
-
-/* Layer 4: Sculptural 3D Glass Sphere */
+/* Layer 2: Sculptural 3D Glass Sphere */
 .voice-orb-sphere {
   box-shadow:
     0 18px 40px -8px rgba(6, 95, 70, 0.38),
@@ -426,24 +568,6 @@
   0% { transform: scale(0.96); opacity: 0.88; }
   100% { transform: scale(1.18); opacity: 1; }
 }
-@keyframes orb-ring-ripple {
-  0% {
-    transform: scale(0.95);
-    opacity: 0.72;
-  }
-  70% {
-    opacity: 0.24;
-  }
-  100% {
-    transform: scale(1.38);
-    opacity: 0;
-  }
-}
-@keyframes orb-conic-spin {
-  0% { transform: rotate(0deg) scale(1.02); }
-  50% { transform: rotate(180deg) scale(1.06); }
-  100% { transform: rotate(360deg) scale(1.02); }
-}
 @keyframes orb-conic-reverse {
   0% { transform: rotate(360deg); }
   100% { transform: rotate(0deg); }
@@ -479,7 +603,7 @@
   100% { transform: scaleX(0.88); opacity: 0.72; }
 }
 
-/* Center Floating Headline Typography */
+/* Center Floating Headline Typography with Entity Glow */
 .kinetic-words-container {
   display: flex;
   flex-wrap: wrap;
@@ -487,13 +611,13 @@
   align-items: center;
   gap: 4px 7px;
   padding: 4px 12px;
-  max-width: 280px;
+  max-width: 310px;
   margin: 0 auto;
 }
 .kinetic-word {
   display: inline-block;
-  font-size: 22px;
-  line-height: 1.24;
+  font-size: 20px;
+  line-height: 1.26;
   font-weight: 700;
   letter-spacing: -0.025em;
   color: #0f172a;
@@ -501,6 +625,14 @@
 }
 .dark .kinetic-word {
   color: #ffffff;
+}
+.kinetic-word-highlight {
+  color: #059669;
+  text-shadow: 0 0 18px rgba(16, 185, 129, 0.32);
+}
+.dark .kinetic-word-highlight {
+  color: #34d399;
+  text-shadow: 0 0 22px rgba(52, 211, 153, 0.55);
 }
 @keyframes kinetic-fade-in {
   0% {
@@ -544,10 +676,13 @@
 /* Auto-Dismiss Card Indicator */
 .assistant-auto-dismiss-bar {
   height: 2px;
-  background: #10b981;
+  background: linear-gradient(90deg, #10b981, #34d399);
   width: 100%;
   transform-origin: left;
-  animation: auto-dismiss-shrink 2.5s linear forwards;
+  animation: auto-dismiss-shrink 2.6s linear forwards;
+}
+.assistant-auto-dismiss-slow {
+  animation-duration: 4.5s;
 }
 @keyframes auto-dismiss-shrink {
   from { transform: scaleX(1); }

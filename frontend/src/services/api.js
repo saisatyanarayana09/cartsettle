@@ -51,10 +51,10 @@ api.interceptors.request.use(
     } else {
       config.headers['X-Portal-Context'] = 'customer';
     }
-    // Enforce a 1.8s fast timeout cap on AI Agent endpoints so Render Free Tier cold starts never block the user
+    // Allow sufficient time for Gemini LLM responses while still falling back gracefully on cold starts
     if ((config.url || '').includes('/store/agent/') && !config.timeout) {
       const isGet = (config.method || 'get').toLowerCase() === 'get';
-      config.timeout = isGet ? 1200 : 1800;
+      config.timeout = isGet ? 2000 : 6500;
     }
     return config;
   },

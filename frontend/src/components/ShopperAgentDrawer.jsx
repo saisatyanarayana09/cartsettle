@@ -29,6 +29,7 @@ import { ActionCards } from "./voice/ActionCards";
 import { PaymentReview } from "./voice/PaymentReview";
 import { requiresPaymentReview } from "./voice/payment-review";
 import { LiveTaskActivity } from "./voice/LiveTaskActivity";
+import { playCartActionChime, playOrderConfirmedChime } from "./voice/soundFx";
 
 function IconControl({ label, children, ...props }) {
   return (
@@ -257,8 +258,12 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         history: newMessages.map((m) => ({ role: m.role, content: m.content })),
       });
 
-      const reply = (res.data?.reply || "Done.").trim();
       const rawActions = Array.isArray(res.data?.actions) ? res.data.actions : [];
+      const fallbackReply =
+        rawActions.length > 0
+          ? "Here are your live options."
+          : "Tell me what dish you are making or which groceries to add.";
+      const reply = (res.data?.reply || fallbackReply).trim();
       const toolsUsed = res.data?.tools_used || [];
       const followUps = res.data?.follow_ups || [];
       const latencyMs = res.data?.latency_ms || 10;
@@ -522,6 +527,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     };
     add(prodObj, item.quantity || 1);
     setAddedItems((prev) => ({ ...prev, [item.id]: true }));
+    playCartActionChime();
     toast.success(`Added ${item.name}`);
   };
 
@@ -590,6 +596,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     toast.success("Added your last order to the cart");
   };
 
+  const [stageDismissedMsgLen, setStageDismissedMsgLen] = useState(0);
+
   const voice = useVoiceSession({
     active: isOpen && mode === "voice" && !paymentReview,
     onPrompt: (text) => handleSend(text, "voice"),
@@ -608,13 +616,51 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     "NOTIFICATIONS_CARD",
     "REFERRAL_STATUS_CARD",
   ];
-  const recentCartActions = [...messages].reverse().find((message) =>
-    message.actions?.some((action) => ACTION_TYPES_VOICE.includes(action.type)))?.actions || [];
-  const voiceActions = (
-    latestReply?.actions?.some((action) => ACTION_TYPES_VOICE.includes(action.type))
-      ? latestReply.actions.filter((action) => ACTION_TYPES_VOICE.includes(action.type))
-      : recentCartActions.filter((action) => ACTION_TYPES_VOICE.includes(action.type))
-  ).slice(0, 1);
+
+  // Self-cleaning stage: only display actions from the latest turn, and hide immediately during checkout or after auto-dismiss
+  const rawLatestVoiceActions =
+    !paymentReview && stageDismissedMsgLen !== messages.length && Array.isArray(latestReply?.actions)
+      ? latestReply.actions.filter((action) => ACTION_TYPES_VOICE.includes(action.type)).slice(0, 1)
+      : [];
+  const voiceActions = rawLatestVoiceActions;
+  const activeActionType = voiceActions[0]?.type || "";
+
+  // Auto-disappear ephemeral action cards once their live preview completes
+  useEffect(() => {
+    if (!voiceActions.length) return undefined;
+    const actType = voiceActions[0]?.type;
+    let ttlMs = 0;
+    if (actType === "ADD_TO_CART" || actType === "REMOVE_FROM_CART" || actType === "CLEAR_CART") {
+      ttlMs = 6200;
+    } else if (actType === "RECOMMEND_BASKET" || actType === "SEARCH_RESULTS") {
+      ttlMs = 14000;
+    } else if (actType === "NOTIFICATIONS_CARD" || actType === "REFERRAL_STATUS_CARD") {
+      ttlMs = 7500;
+    }
+    if (!ttlMs) return undefined;
+    const t = setTimeout(() => {
+      setStageDismissedMsgLen(messages.length);
+    }, ttlMs);
+    return () => clearTimeout(t);
+  }, [messages.length, activeActionType]);
+
+  // Compute full-screen dynamic glow theme from current task
+  const activeTaskType = paymentReview
+    ? "checkout"
+    : loading
+      ? "thinking"
+      : activeActionType === "RECOMMEND_BASKET" || activeActionType === "SEARCH_RESULTS"
+        ? "discovery"
+        : activeActionType === "ADD_TO_CART"
+          ? "cart-add"
+          : activeActionType === "ORDER_STATUS_CARD"
+            ? "order-track"
+            : activeActionType === "SWITCH_THEME" || activeActionType === "TOGGLE_DARK_MODE"
+              ? "theme-switch"
+              : activeActionType === "REMOVE_FROM_CART" || activeActionType === "CLEAR_CART"
+                ? "cart-remove"
+                : "idle";
+
   const latestUser = [...messages].reverse().find((message) => message.role === "user");
 
   useEffect(() => {
@@ -782,8 +828,34 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           </div>
         )}
 
-        <PaymentReview review={paymentReview} onCancel={() => setPaymentReview(null)}
-          onOpen={() => { close(); navigate("/checkout"); }} busy={loading} />
+        <PaymentReview
+          review={paymentReview}
+          onCancel={() => setPaymentReview(null)}
+          onOpen={() => {
+            close();
+            navigate("/checkout");
+          }}
+          busy={loading}
+          cartItems={liveItems}
+          cartTotal={cartTotal}
+          onPlaceInlineOrder={(orderInfo) => {
+            playOrderConfirmedChime();
+            clearCart?.();
+            setAddedItems({});
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: `Order #${orderInfo.id} confirmed! Arriving in 15 to 20 minutes.`,
+                actions: [],
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              },
+            ]);
+            setTimeout(() => {
+              setPaymentReview(null);
+            }, 2900);
+          }}
+        />
         {mode === "voice" ? (
           <VoiceView
             voice={voice}
@@ -793,6 +865,19 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             lastUserText={latestUser?.content}
             cartCount={cartCount}
             cartTotal={cartTotal}
+            activeTaskType={activeTaskType}
+            quickPrompts={
+              !voiceActions.length && !paymentReview
+                ? [
+                    "Suggest Biryani requirements",
+                    cartCount > 0 ? "Place my order" : "What is my order status?",
+                    "Turn off dark mode",
+                  ]
+                : []
+            }
+            onSelectPrompt={(promptText) => {
+              handleSend(promptText, "voice").catch(() => {});
+            }}
             onViewCart={() => {
               close();
               navigate("/cart");
@@ -808,6 +893,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               onUpdate={(item, quantity) => update?.(item, quantity)}
               addedItems={addedItems}
               onToggleTheme={toggleTheme}
+              onDismiss={() => setStageDismissedMsgLen(messages.length)}
               onUndoAdd={handleUndoAdd}
               onUndoRemove={handleUndoRemove}
               onUndoQty={handleUndoQty}

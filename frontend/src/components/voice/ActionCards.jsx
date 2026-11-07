@@ -22,7 +22,16 @@ import { optimizeImage } from "../../utils/image";
 const money = (value, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(value) || 0);
 
-function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, cartItems, onUpdate }) {
+function CompactProductCard({
+  item,
+  currency = "USD",
+  added,
+  onAdd,
+  disabled,
+  cartItems,
+  onUpdate,
+  index = 0,
+}) {
   const [imageFailed, setImageFailed] = useState(false);
   const [quantity, setQuantity] = useState(Math.max(1, Number(item.quantity || 1)));
   const photo = item.image || item.thumbnail || item.image_url;
@@ -48,7 +57,10 @@ function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, ca
       : money(price, currency);
 
   return (
-    <div className="assistant-product">
+    <div
+      className={`assistant-product ${isAdded ? "is-added-card" : ""}`}
+      style={{ animationDelay: `${Math.min(index * 65, 260)}ms` }}
+    >
       <div className="assistant-photo">
         {discountPct > 0 && (
           <span className="assistant-discount-tag">{discountPct}% OFF</span>
@@ -65,63 +77,75 @@ function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, ca
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-bold text-slate-900 dark:text-white tracking-tight truncate">
-          {item.name}
-        </p>
-        <p className="mt-0.5 text-[13px] font-medium text-slate-500 dark:text-slate-400">
-          {item.unit || item.pack_size || "1 L"} · {formattedPrice}
-        </p>
-      </div>
-
-      <div className="assistant-product-controls shrink-0">
-        <div className={isAdded ? "assistant-stepper is-added" : "assistant-stepper"}>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Decrease ${item.name} quantity`}
-            disabled={disabled || (!live && selected <= 1)}
-            onClick={() => change(selected - 1)}
-            className={
-              isAdded
-                ? "text-white hover:bg-white/15 hover:text-white size-7 rounded-full"
-                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-7 rounded-full"
-            }
-          >
-            <Minus className="size-3.5" />
-          </Button>
-          <output aria-label={`${item.name} quantity`}>{selected}</output>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Increase ${item.name} quantity`}
-            disabled={disabled}
-            onClick={() => change(selected + 1)}
-            className={
-              isAdded
-                ? "text-white hover:bg-white/15 hover:text-white size-7 rounded-full"
-                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-7 rounded-full"
-            }
-          >
-            <Plus className="size-3.5" />
-          </Button>
+      {/* 2-Row Content Column so Title & Stepper/Add Never Overflow Horizontally */}
+      <div className="min-w-0 flex-1 flex flex-col justify-between gap-1.5">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <p className="text-[13.5px] font-bold text-slate-900 dark:text-white tracking-tight truncate">
+            {item.name}
+          </p>
+          <span className="text-[13px] font-extrabold text-emerald-700 dark:text-emerald-400 shrink-0">
+            {formattedPrice}
+          </span>
         </div>
 
-        {isAdded ? (
-          <span role="status" className="sr-only">
-            Added to cart
-          </span>
-        ) : (
-          <Button
-            size="sm"
-            disabled={disabled}
-            aria-label={`Add ${quantity} ${item.name} to cart`}
-            className="rounded-full bg-[#065f46] hover:bg-[#047857] text-white font-bold text-xs px-3.5 h-8 shadow-sm cursor-pointer"
-            onClick={() => onAdd?.({ ...item, quantity })}
-          >
-            <Plus className="size-3 mr-1" /> Add
-          </Button>
-        )}
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <p className="text-[11.5px] font-medium text-slate-500 dark:text-slate-400 truncate">
+            {item.unit || item.pack_size || "1 unit"}
+          </p>
+
+          <div className="assistant-product-controls shrink-0">
+            <div className={isAdded ? "assistant-stepper is-added" : "assistant-stepper"}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Decrease ${item.name} quantity`}
+                disabled={disabled || (!live && selected <= 1)}
+                onClick={() => change(selected - 1)}
+                className={
+                  isAdded
+                    ? "text-white hover:bg-white/15 hover:text-white size-6 rounded-full"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-6 rounded-full"
+                }
+              >
+                <Minus className="size-3" />
+              </Button>
+              <output aria-label={`${item.name} quantity`}>{selected}</output>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Increase ${item.name} quantity`}
+                disabled={disabled}
+                onClick={() => change(selected + 1)}
+                className={
+                  isAdded
+                    ? "text-white hover:bg-white/15 hover:text-white size-6 rounded-full"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-6 rounded-full"
+                }
+              >
+                <Plus className="size-3" />
+              </Button>
+            </div>
+
+            {isAdded ? (
+              <span
+                role="status"
+                className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 dark:bg-emerald-400/20 px-2 py-0.5 text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+              >
+                <Check className="size-2.5 stroke-[2.5]" /> Added
+              </span>
+            ) : (
+              <Button
+                size="sm"
+                disabled={disabled}
+                aria-label={`Add ${quantity} ${item.name} to cart`}
+                className="rounded-full bg-[#065f46] hover:bg-[#047857] text-white font-bold text-[11px] px-2.5 h-7 shadow-sm cursor-pointer"
+                onClick={() => onAdd?.({ ...item, quantity })}
+              >
+                <Plus className="size-3 mr-0.5" /> Add
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -215,31 +239,43 @@ function RestockRow({ item, onSend, onReviewPayment, busy }) {
   );
 }
 
-/** Auto-dismissing theme action card with 2.5s timer */
+/** Auto-dismissing live theme preview card with 2.8s liquid dissolve */
 function AutoDismissThemeCard({ action, onToggleTheme, onDismiss }) {
   const [dismissed, setDismissed] = useState(false);
+  const [exiting, setExiting] = useState(false);
   const isDark = action.theme !== "light";
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const exitTimer = setTimeout(() => setExiting(true), 2400);
+    const removeTimer = setTimeout(() => {
       setDismissed(true);
       onDismiss?.(action);
-    }, 2500);
-    return () => clearTimeout(timer);
+    }, 2800);
+    return () => {
+      clearTimeout(exitTimer);
+      clearTimeout(removeTimer);
+    };
   }, [action, onDismiss]);
 
   if (dismissed) return null;
 
   return (
-    <div className="flex flex-col items-center justify-center my-1 select-none">
-      <div className="rounded-full bg-black/5 dark:bg-white/10 px-3.5 py-1 text-xs text-muted-foreground border border-black/5 dark:border-white/10 shadow-sm flex items-center gap-2">
-        <span className="font-medium text-foreground">
+    <div
+      className={`flex flex-col items-center justify-center my-1.5 select-none ${
+        exiting ? "assistant-card-dissolve" : "assistant-card-materialize"
+      }`}
+    >
+      <div className="rounded-2xl bg-slate-900/5 dark:bg-white/10 px-4 py-2 text-xs text-muted-foreground border border-slate-200/80 dark:border-white/15 shadow-md backdrop-blur-md flex items-center gap-3">
+        <span className="size-6 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-500">
+          {isDark ? <Moon className="size-3.5" /> : <Sun className="size-3.5" />}
+        </span>
+        <span className="font-semibold text-foreground">
           {isDark ? "Switched to Dark Mode" : "Switched to Light Mode"}
         </span>
         <Button
           variant="ghost"
           size="sm"
-          className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+          className="h-6 px-2 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-foreground cursor-pointer"
           onClick={() => {
             setDismissed(true);
             onToggleTheme?.(isDark ? "light" : "dark");
@@ -248,13 +284,15 @@ function AutoDismissThemeCard({ action, onToggleTheme, onDismiss }) {
           Undo
         </Button>
       </div>
-      <div className="assistant-auto-dismiss-bar mt-1.5 w-16 rounded-full" />
+      <div className="assistant-auto-dismiss-bar mt-1.5 w-24 rounded-full" />
     </div>
   );
 }
 
-/** In-Assistant Live Order Status & ETA Card */
-function OrderStatusCard({ action, currency = "USD", onNavigate }) {
+/** In-Assistant Live Order Status & ETA Card (Auto-Disappears after 4.8s) */
+function OrderStatusCard({ action, currency = "USD", onNavigate, onDismiss }) {
+  const [dismissed, setDismissed] = useState(false);
+  const [exiting, setExiting] = useState(false);
   const order = action.order || action;
   const stages = [
     { key: "NEW", label: "Placed" },
@@ -263,6 +301,20 @@ function OrderStatusCard({ action, currency = "USD", onNavigate }) {
     { key: "OUT_FOR_DELIVERY", label: "On The Way" },
     { key: "DELIVERED", label: "Delivered" },
   ];
+
+  useEffect(() => {
+    const exitTimer = setTimeout(() => setExiting(true), 4400);
+    const removeTimer = setTimeout(() => {
+      setDismissed(true);
+      onDismiss?.(action);
+    }, 4800);
+    return () => {
+      clearTimeout(exitTimer);
+      clearTimeout(removeTimer);
+    };
+  }, [action, onDismiss]);
+
+  if (dismissed) return null;
 
   const currentStatus = String(order.status || "ACCEPTED").toUpperCase();
   const currentStageIndex = stages.findIndex((s) => s.key === currentStatus);
@@ -273,8 +325,11 @@ function OrderStatusCard({ action, currency = "USD", onNavigate }) {
   return (
     <div
       onClick={() => onNavigate?.(`/profile/orders`)}
-      className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/90 dark:bg-[#151b26] px-4 py-3.5 shadow-sm cursor-pointer transition-colors hover:border-emerald-500/30"
+      className={`rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/90 dark:bg-[#151b26] px-4 py-3.5 shadow-sm cursor-pointer transition-colors hover:border-emerald-500/30 ${
+        exiting ? "assistant-card-dissolve" : "assistant-card-materialize"
+      }`}
     >
+      <div className="assistant-auto-dismiss-bar assistant-auto-dismiss-slow mb-2.5 rounded-full" />
       <div className="flex items-center justify-between gap-2">
         <p className="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate">
           <span className="font-semibold text-slate-900 dark:text-white">
@@ -554,7 +609,14 @@ function ActionContent({
   }
 
   if (type === "ORDER_STATUS_CARD") {
-    return <OrderStatusCard action={action} currency={currency} onNavigate={onNavigate} />;
+    return (
+      <OrderStatusCard
+        action={action}
+        currency={currency}
+        onNavigate={onNavigate}
+        onDismiss={onDismiss}
+      />
+    );
   }
 
   if (type === "GROCERY_CHECKLIST") {
@@ -654,17 +716,47 @@ function ActionContent({
       : type === "ADD_TO_CART"
         ? [action.item || action]
         : [];
+    const displayItems = items.slice(0, action.recipe ? 4 : 3);
+    const bundleTotal = displayItems.reduce(
+      (sum, it) => sum + Number(it.price ?? it.offer_price ?? it.regular_price ?? 0),
+      0,
+    );
+    const formattedBundleTotal =
+      currency === "INR"
+        ? `₹${Number.isInteger(bundleTotal) ? bundleTotal : bundleTotal.toFixed(0)}`
+        : money(bundleTotal, currency);
+
     return (
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {action.recipe && (
-          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 px-1">
-            {action.recipe}
-          </h3>
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-emerald-500/10 dark:bg-emerald-400/10 border border-emerald-500/20 px-3 py-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Sparkles className="size-3.5 text-emerald-500 shrink-0" />
+              <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                {action.recipe} Kit · {displayItems.length} items ({formattedBundleTotal})
+              </h3>
+            </div>
+            <Button
+              size="sm"
+              disabled={busy}
+              className="h-6 px-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-xs shrink-0 cursor-pointer"
+              onClick={() => {
+                displayItems.forEach((it, idx) => {
+                  setTimeout(() => {
+                    addProduct({ ...it, quantity: Number(it.quantity || 1) });
+                  }, idx * 90);
+                });
+              }}
+            >
+              <Plus className="size-3 mr-0.5" /> Add All
+            </Button>
+          </div>
         )}
-        <div className="space-y-2.5">
-          {items.slice(0, 3).map((item, index) => (
+        <div className="space-y-2">
+          {displayItems.map((item, index) => (
             <CompactProductCard
               key={item.id || index}
+              index={index}
               item={item}
               currency={currency}
               added={type === "ADD_TO_CART" ? true : addedItems?.[item.id]}
