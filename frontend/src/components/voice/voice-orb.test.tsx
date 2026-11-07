@@ -40,13 +40,16 @@ describe("VoiceOrb", () => {
     expect(containerEl).toHaveStyle({ "--orb-level": "0.750" });
     const sphere = container.querySelector(".voice-orb-sphere");
     expect(sphere).toHaveAttribute("data-state", "listening");
+    expect(container.querySelector(".voice-orb-plasma-ribbon-a")).toBeInTheDocument();
+    expect(container.querySelector(".voice-orb-plasma-ribbon-b")).toBeInTheDocument();
+    expect(container.querySelector(".voice-orb-acoustic-core")).toBeInTheDocument();
     expect(container.querySelector(".voice-orb-pulse-ring")).toBeNull();
     expect(container.querySelector(".voice-orb-orbital-halo")).toBeNull();
   });
 });
 
 describe("lovableAgentFallback intelligence", () => {
-  it("suggests biryani requirements and supports contextual add-all and turn off dark mode", async () => {
+  it("suggests biryani requirements, clears cart items in real time, and supports turn off dark mode", async () => {
     const { handleLovableAgentFallback } = await import("../../services/lovableAgentFallback");
 
     const biryaniRes = handleLovableAgentFallback({
@@ -74,6 +77,30 @@ describe("lovableAgentFallback intelligence", () => {
     });
     const addActions = addAllRes.actions?.filter((a: any) => a.type === "ADD_TO_CART") || [];
     expect(addActions.length).toBeGreaterThan(0);
+
+    const clearAllRes = handleLovableAgentFallback({
+      method: "post",
+      data: {
+        message: "remove all cart items",
+        persona: "shopper",
+        session_id: "test-biryani-session",
+        cart_items: [{ id: 109, name: "Royal Basmati Rice (1kg)", price: 110, quantity: 1 }],
+      },
+    });
+    expect(clearAllRes.actions?.some((a: any) => a.type === "CLEAR_CART")).toBe(true);
+
+    const removeSingleRes = handleLovableAgentFallback({
+      method: "post",
+      data: {
+        message: "remove sourdough bread from cart",
+        persona: "shopper",
+        session_id: "test-biryani-session",
+        cart_items: [{ id: 505, name: "Artisan Sourdough Bread", price: 55, quantity: 2 }],
+      },
+    });
+    const remAction = removeSingleRes.actions?.find((a: any) => a.type === "REMOVE_FROM_CART");
+    expect(remAction).toBeDefined();
+    expect(remAction.product_id).toBe(505);
 
     const themeOffRes = handleLovableAgentFallback({
       method: "post",

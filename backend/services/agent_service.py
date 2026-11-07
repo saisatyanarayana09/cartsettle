@@ -2741,12 +2741,21 @@ class AgentService:
                     "tool_result": {"path": path, "filter": q_term}
                 }
 
-            # 0. Clear Cart ("clear my cart", "empty cart", "remove the cart items", "remove all cart items")
-            if any(k in lower for k in [
-                "clear cart", "clear my cart", "empty cart", "empty my cart",
-                "remove the cart items", "remove cart items", "remove all cart items",
-                "remove all items from cart", "remove items from cart", "delete cart items"
-            ]):
+            # 0. Clear Cart ("clear", "clear my cart", "clear the cart", "empty cart", "remove all cart items", "remove all")
+            if (
+                lower in ("clear", "clear it", "empty")
+                or any(k in lower for k in [
+                    "clear cart", "clear my cart", "clear the cart", "empty cart", "empty my cart", "empty the cart",
+                    "remove the cart items", "remove cart items", "remove all cart items", "remove all items",
+                    "remove all from cart", "remove all from my cart", "remove items from cart", "remove everything",
+                    "delete all", "delete cart items", "delete all items", "clean cart", "reset cart"
+                ])
+                or (
+                    any(w in lower for w in ("remove", "delete", "clear"))
+                    and any(w in lower for w in ("all", "everything"))
+                    and any(w in lower for w in ("cart", "bag", "item"))
+                )
+            ):
                 return {
                     "reply": "Removed all items from your cart.",
                     "tools_used": [{"name": "clear_shopper_cart", "args": {}}],
@@ -2755,7 +2764,37 @@ class AgentService:
                 }
 
             # 0b. Remove specific item(s) from cart ("remove milk and bread from my cart", "delete bread from cart")
-            if any(w in lower for w in ["remove ", "delete "]) and ("cart" in lower or "bag" in lower or self._match_product_from_text(lower)):
+            if any(w in lower for w in ["remove ", "delete ", "take out "]) and ("cart" in lower or "bag" in lower or self._match_product_from_text(lower)):
+                matched_client_items = []
+                for ci in (cart_items or []):
+                    c_name = str(ci.get("name") or ci.get("product_name") or "").lower()
+                    tokens = [tk for tk in c_name.split() if len(tk) >= 3]
+                    if (c_name and c_name in lower) or any(tk in lower for tk in tokens):
+                        matched_client_items.append({
+                            "id": int(ci.get("id") or ci.get("product_id") or 0),
+                            "name": ci.get("name") or ci.get("product_name") or "Item",
+                            "price": float(ci.get("price") or 0),
+                            "quantity": int(ci.get("quantity") or 1),
+                        })
+                if matched_client_items:
+                    names_str = ", ".join(c["name"] for c in matched_client_items)
+                    first_card = matched_client_items[0]
+                    actions = [
+                        {
+                            "type": "REMOVE_FROM_CART",
+                            "product_id": first_card["id"],
+                            "name": names_str,
+                            "item": first_card,
+                            "items": matched_client_items,
+                        }
+                    ]
+                    return {
+                        "reply": f"Removed {names_str} from your cart.",
+                        "tools_used": [{"name": "remove_from_shopper_cart", "args": {"product_id": first_card["id"]}}],
+                        "actions": actions,
+                        "tool_result": {"status": "removed", "product_id": first_card["id"], "items": matched_client_items}
+                    }
+
                 items_to_remove = self._extract_items_with_quantities(prompt)
                 if not items_to_remove:
                     single_m = self._match_product_from_text(lower)
@@ -2779,6 +2818,13 @@ class AgentService:
                         "tools_used": [{"name": "remove_from_shopper_cart", "args": {"product_id": first_card["id"], "items": [c["id"] for c in serialized_removed]}}],
                         "actions": actions,
                         "tool_result": {"status": "removed", "product_id": first_card["id"], "items": serialized_removed}
+                    }
+                else:
+                    return {
+                        "reply": "Removed all items from your cart.",
+                        "tools_used": [{"name": "clear_shopper_cart", "args": {}}],
+                        "actions": [{"type": "CLEAR_CART", "removed_items": cart_items or []}],
+                        "tool_result": {"status": "cleared"}
                     }
 
             # 0c. Bargaining / Discount Negotiation for Shopper ("can I get 15% off strawberries?", "discount on milk")

@@ -1,5 +1,5 @@
-import React from "react";
-import { Keyboard, Mic, MoreHorizontal, Trash2, Sparkles } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Keyboard, Mic, MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMicLevel } from "./useMicLevel";
 import { VoiceOrb } from "./VoiceOrb";
@@ -45,26 +45,36 @@ export function PanelMenu({ onClear, disabled }) {
   );
 }
 
-const STATUS_TEXT = {
-  listening: "Listening...",
-  working: "Synthesizing...",
-  speaking: "Speaking",
-  paused: "Tap orb to speak",
-  idle: "Tap orb to speak",
-};
-
 const HIGHLIGHT_TOKEN_RE =
-  /^(?:[₹$]\d+(?:\.\d+)?|\d+(?:\.\d+)?%?|#?[A-Z0-9]*\d{3,}|biryani|hyderabadi|paneer|masala|light|dark|added|confirmed|delivered|preparing|saved)$/i;
+  /^(?:[₹$]\d+(?:\.\d+)?|\d+(?:\.\d+)?%?|#?[A-Z0-9]*\d{3,}|biryani|hyderabadi|paneer|masala|light|dark|added|removed|cleared|confirmed|paypal)$/i;
 
-/** Kinetic Floating Words: Displays spoken/reply words with staggered blur-to-focus motion graphics */
-function KineticWords({ text, status }) {
+/** Condense long AI paragraphs into a crisp <=12-word 1–2 line caption for the Voice screen */
+function condenseForVoiceCaption(rawText) {
+  if (!rawText) return "";
+  const cleaned = String(rawText)
+    .replace(/\$(\d+(?:\.\d+)?)/g, (_, n) => {
+      const val = Number(n);
+      return `₹${Number.isInteger(val) ? val : val.toFixed(2)}`;
+    })
+    .replace(/\s*\([^)]*\)/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0] || cleaned;
+  const words = firstSentence.split(/\s+/).filter(Boolean);
+  if (words.length <= 12) return firstSentence;
+  return `${words.slice(0, 12).join(" ")}...`;
+}
+
+/** Compact 1–2 Line Kinetic Caption: Subtle 14.5px typography that auto-fades 3s after speech */
+function KineticWords({ text, status, faded }) {
   if (!text) return null;
-  const words = text.split(/\s+/).filter(Boolean);
+  const condensed = status === "listening" ? text : condenseForVoiceCaption(text);
+  const words = condensed.split(/\s+/).filter(Boolean);
   return (
     <div
       role="status"
       aria-live="polite"
-      className="kinetic-words-container"
+      className={`kinetic-words-container ${faded ? "voice-caption-faded" : ""}`}
       data-state={status}
     >
       {words.map((word, idx) => {
@@ -76,7 +86,7 @@ function KineticWords({ text, status }) {
             className={
               isHighlighted ? "kinetic-word kinetic-word-highlight" : "kinetic-word"
             }
-            style={{ animationDelay: `${Math.min(idx * 28, 340)}ms` }}
+            style={{ animationDelay: `${Math.min(idx * 22, 240)}ms` }}
           >
             {word}
           </span>
@@ -90,14 +100,9 @@ export function VoiceView({
   voice,
   children,
   busy,
-  hint = "How can I help you?",
+  hint = "Tap orb to speak",
   replyText,
-  cartCount = 0,
-  cartTotal = 0,
-  onViewCart,
   activeTaskType = "idle",
-  quickPrompts = [],
-  onSelectPrompt,
 }) {
   const status = busy && voice.status !== "speaking" ? "working" : voice.status;
   const hasTranscript = Boolean(voice.transcript && voice.transcript.trim());
@@ -123,6 +128,22 @@ export function VoiceView({
     ? voice.transcript
     : replyText || voice.transcript || hint;
 
+  // Auto-fade the AI caption 3 seconds after speech finishes so text never crowds the screen
+  const [captionFaded, setCaptionFaded] = useState(false);
+  useEffect(() => {
+    setCaptionFaded(false);
+    if (
+      (status === "idle" || status === "paused") &&
+      replyText &&
+      !showLiveTranscript
+    ) {
+      const fadeTimer = setTimeout(() => {
+        setCaptionFaded(true);
+      }, 3000);
+      return () => clearTimeout(fadeTimer);
+    }
+  }, [status, replyText, showLiveTranscript]);
+
   // Determine the full-screen dynamic aurora & edge-light palette from task + voice state
   const glowPalette =
     activeTaskType && activeTaskType !== "idle"
@@ -133,12 +154,9 @@ export function VoiceView({
           ? "speaking-input"
           : status;
 
-  const formattedTotal = Number.isInteger(Number(cartTotal))
-    ? Number(cartTotal).toString()
-    : Number(cartTotal || 0).toFixed(2);
-
   const handleToggle = () => {
     if (busy && voice.status !== "speaking") return;
+    setCaptionFaded(false);
     playOrbWakeChime();
     voice.toggle();
   };
@@ -160,7 +178,7 @@ export function VoiceView({
         "--text-energy": Math.min(1, (displayText?.length || 0) / 48).toFixed(2),
       }}
     >
-      {/* Full-Screen Living Aurora Backdrop & 4-Edge Perimeter Shader */}
+      {/* Unified Full-Screen Living Aurora Backdrop & 4-Edge Perimeter Shader */}
       <div
         className="voice-fullscreen-aurora"
         data-glow={glowPalette}
@@ -174,56 +192,21 @@ export function VoiceView({
         aria-hidden="true"
       />
 
-      {/* Top Self-Cleaning Ephemeral Live Card Stage */}
+      {/* Unified Spatial Stage: Live Cards Float Directly Above the Orb */}
       <div className="voice-live-stage">
         <div className="assistant-live-cards">{children}</div>
       </div>
 
-      {/* Center-Bottom Floating Kinetic Typography & Sculptural 3D Orb */}
-      <div className="voice-bottom flex flex-col items-center justify-end z-10 px-5 pb-7">
-        {/* Floating Headline Typography */}
-        <div className="mb-5 w-full text-center flex flex-col items-center">
-          <KineticWords text={displayText} status={status} />
-
-          {cartCount > 0 ? (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onViewCart?.();
-              }}
-              aria-label={`View cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}, total ${Number(cartTotal || 0).toFixed(2)}`}
-              className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 dark:bg-emerald-400/10 border border-emerald-500/20 text-[12.5px] font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition-all cursor-pointer"
-            >
-              <span>{cartCount} {cartCount === 1 ? "item" : "items"}</span>
-              <span className="opacity-50">·</span>
-              <span>₹{formattedTotal} in cart</span>
-            </button>
-          ) : STATUS_TEXT[status] ? (
-            <p className="mt-2 text-xs font-medium text-slate-400 dark:text-slate-500 tracking-wide">
-              {STATUS_TEXT[status]}
-            </p>
-          ) : null}
-
-          {/* Quick Demo Voice Chips when stage is clean */}
-          {Array.isArray(quickPrompts) && quickPrompts.length > 0 && !showLiveTranscript && (
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 max-w-[340px]">
-              {quickPrompts.slice(0, 3).map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => onSelectPrompt?.(chip)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-900/5 dark:bg-white/5 hover:bg-emerald-500/15 dark:hover:bg-emerald-400/15 text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 border border-slate-200/70 dark:border-white/10 transition-all cursor-pointer"
-                >
-                  <Sparkles className="size-2.5 text-emerald-500 shrink-0" />
-                  <span className="truncate max-w-[145px]">{chip}</span>
-                </button>
-              ))}
-            </div>
-          )}
+      {/* Bottom Compact Caption & Living 3D Internal-Plasma Orb */}
+      <div className="voice-bottom flex flex-col items-center justify-end z-10 px-5 pb-6">
+        <div className="mb-3.5 w-full text-center flex flex-col items-center min-h-[38px] justify-center">
+          <KineticWords
+            text={displayText}
+            status={status}
+            faded={captionFaded}
+          />
         </div>
 
-        {/* Sculptural 3D Emerald & Glass Ribbon Orb */}
         <VoiceOrb
           status={status}
           micLevel={micLevel}
@@ -234,7 +217,7 @@ export function VoiceView({
         />
 
         {voice.status === "unavailable" && (
-          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500 text-center">
+          <p className="mt-2.5 text-xs text-slate-400 dark:text-slate-500 text-center">
             Voice is unavailable. Use the keyboard icon above.
           </p>
         )}

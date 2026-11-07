@@ -308,12 +308,16 @@ export function handleLovableAgentFallback(config) {
 
   // Contextual Pronoun Resolution ('it', 'that', 'them', 'those')
   const lowerRaw = prompt.toLowerCase();
+  const isBulkOrClearPhrase =
+    /\b(clear|empty|all|everything|both|these|suggested)\b/i.test(lowerRaw) ||
+    lowerRaw.includes('cart items') ||
+    lowerRaw.includes('items from cart');
   if (mem.last_order_id && ['that order', 'this order', 'settle it', 'audit it', 'capture it'].some((w) => lowerRaw.includes(w))) {
     if (!/\bord\d+\w*\b/i.test(lowerRaw)) {
       prompt = `${prompt} (${mem.last_order_id})`;
     }
-  } else if (mem.last_product && !matchSingleProduct(prompt)) {
-    if (/\b(it|that|them|those|this item|that item|more)\b/i.test(lowerRaw) || ['% off', 'discount', 'in stock', 'how much'].some((w) => lowerRaw.includes(w))) {
+  } else if (mem.last_product && !isBulkOrClearPhrase && !matchSingleProduct(prompt)) {
+    if (/\b(it|that|this item|that item|more)\b/i.test(lowerRaw) || ['% off', 'discount', 'in stock', 'how much'].some((w) => lowerRaw.includes(w))) {
       prompt = `${prompt} (${mem.last_product})`;
     }
   }
@@ -792,37 +796,84 @@ export function handleLovableAgentFallback(config) {
       tools_used = [{ name: 'inspect_margin', args: {} }];
     }
   }
-  // 10. Clear cart ("clear my cart", "remove the cart items", "remove all cart items")
+  // 10. Clear cart ("clear", "clear my cart", "clear the cart", "remove all cart items", "remove all", "empty cart")
   else if (
-    ['clear cart', 'clear my cart', 'empty cart', 'empty my cart', 'remove the cart items', 'remove cart items', 'remove all cart items', 'remove all items from cart'].some((k) =>
-      lower.includes(k)
-    )
+    lower === 'clear' ||
+    lower === 'clear it' ||
+    lower === 'empty' ||
+    [
+      'clear cart', 'clear my cart', 'clear the cart', 'empty cart', 'empty my cart', 'empty the cart', 'empty bag',
+      'remove the cart items', 'remove cart items', 'remove all cart items', 'remove all items',
+      'remove all from cart', 'remove all from my cart', 'remove items from cart', 'remove everything',
+      'delete all', 'delete cart items', 'delete all items', 'clean cart', 'reset cart',
+    ].some((k) => lower.includes(k)) ||
+    ((lower.includes('remove') || lower.includes('delete') || lower.includes('clear')) &&
+      (lower.includes('all') || lower.includes('everything')) &&
+      (lower.includes('cart') || lower.includes('bag') || lower.includes('item')))
   ) {
     reply = 'Removed all items from your cart.';
     actions = [{ type: 'CLEAR_CART', removed_items: Array.isArray(body.cart_items) ? body.cart_items : [] }];
     tools_used = [{ name: 'clear_shopper_cart', args: {} }];
   }
   // 10b. Remove specific item(s) from cart
-  else if ((lower.includes('remove ') || lower.includes('delete ')) && (lower.includes('cart') || lower.includes('bag') || matchSingleProduct(prompt))) {
-    let itemsWithQty = extractItemsWithQuantities(prompt);
-    if (itemsWithQty.length === 0) {
-      const single = matchSingleProduct(prompt) || DEMO_PRODUCTS[0];
-      itemsWithQty = [{ prod: single, qty: 1 }];
+  else if ((lower.includes('remove ') || lower.includes('delete ') || lower.includes('take out ')) && (lower.includes('cart') || lower.includes('bag') || matchSingleProduct(prompt))) {
+    const clientCart = Array.isArray(body.cart_items) ? body.cart_items : [];
+    const matchedFromClientCart = clientCart.filter((ci) => {
+      const cName = String(ci.name || ci.product_name || '').toLowerCase();
+      const tokens = cName.split(/\s+/).filter((t) => t.length >= 3);
+      return (cName && lower.includes(cName)) || tokens.some((tk) => lower.includes(tk));
+    });
+
+    if (matchedFromClientCart.length > 0) {
+      const serializedRemoved = matchedFromClientCart.map((ci) => ({
+        id: Number(ci.id || ci.product_id || ci.product),
+        name: ci.name || ci.product_name || 'Item',
+        price: Number(ci.price || ci.unit_price || 0),
+        quantity: Number(ci.quantity || 1),
+      }));
+      const namesStr = serializedRemoved.map((c) => c.name).join(', ');
+      const firstCard = serializedRemoved[0];
+      reply = `Removed ${namesStr} from your cart.`;
+      actions = [
+        {
+          type: 'REMOVE_FROM_CART',
+          product_id: firstCard.id,
+          name: namesStr,
+          item: firstCard,
+          items: serializedRemoved,
+        },
+      ];
+      tools_used = [{ name: 'remove_from_shopper_cart', args: { product_id: firstCard.id } }];
+    } else {
+      let itemsWithQty = extractItemsWithQuantities(prompt);
+      if (itemsWithQty.length === 0) {
+        const single = matchSingleProduct(prompt);
+        if (single) {
+          itemsWithQty = [{ prod: single, qty: 1 }];
+        }
+      }
+      if (itemsWithQty.length === 0) {
+        // User asked to remove from cart without a specific item -> clear the cart
+        reply = 'Removed all items from your cart.';
+        actions = [{ type: 'CLEAR_CART', removed_items: clientCart }];
+        tools_used = [{ name: 'clear_shopper_cart', args: {} }];
+      } else {
+        const serializedRemoved = itemsWithQty.map(({ prod, qty }) => serializeCardItem(prod, qty));
+        const namesStr = itemsWithQty.map(({ prod }) => prod.name).join(', ');
+        const firstCard = serializedRemoved[0];
+        reply = `Removed ${namesStr} from your cart.`;
+        actions = [
+          {
+            type: 'REMOVE_FROM_CART',
+            product_id: firstCard.id,
+            name: namesStr,
+            item: firstCard,
+            items: serializedRemoved,
+          },
+        ];
+        tools_used = [{ name: 'remove_from_shopper_cart', args: { product_id: firstCard.id } }];
+      }
     }
-    const serializedRemoved = itemsWithQty.map(({ prod, qty }) => serializeCardItem(prod, qty));
-    const namesStr = itemsWithQty.map(({ prod }) => prod.name).join(', ');
-    const firstCard = serializedRemoved[0];
-    reply = `Removed ${namesStr} from your cart.`;
-    actions = [
-      {
-        type: 'REMOVE_FROM_CART',
-        product_id: firstCard.id,
-        name: namesStr,
-        item: firstCard,
-        items: serializedRemoved,
-      },
-    ];
-    tools_used = [{ name: 'remove_from_shopper_cart', args: { product_id: firstCard.id } }];
   }
   // 11. Multi-Item or Single-Item Add to Cart (including contextual "add all of them" / "add these")
   else if (
@@ -862,37 +913,48 @@ export function handleLovableAgentFallback(config) {
       ? `Added ${parts[0]} for $${grandTotal.toFixed(2)}.`
       : `Added ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]} for $${grandTotal.toFixed(2)} total.`;
   }
-  // 12. Universal Dish, Recipe & Occasion Ingredient Engine (Biryani, Paneer, Chai, Breakfast, Pasta, Salad, Smoothie)
+  // 12. Universal Dish, Recipe & Occasion Ingredient Engine (25+ Indian & Global Dishes)
   else if (
     [
-      'biryani', 'biriyani', 'pulao', 'fried rice', 'paneer', 'curry', 'masala',
-      'chai', 'tea', 'coffee', 'dal', 'roti', 'dinner', 'breakfast', 'lunch',
+      'biryani', 'biriyani', 'pulao', 'fried rice', 'paneer', 'butter chicken', 'curry', 'masala',
+      'dal', 'tadka', 'chole', 'dosa', 'idli', 'roti', 'paratha',
+      'chai', 'tea', 'coffee', 'dinner', 'breakfast', 'lunch',
       'smoothie', 'recipe', 'basket', 'meal', 'salad', 'ingredients',
-      'requirements', 'making ', 'cooking ', 'prepare ', 'sandwich', 'snack', 'party',
+      'requirements', 'making ', 'cooking ', 'prepare ', 'sandwich', 'burger', 'pizza', 'taco',
+      'baking', 'cake', 'oatmeal', 'snack', 'party', 'protein', 'keto',
     ].some((k) => lower.includes(k))
   ) {
     const catalog = getLiveCatalog();
     let recipe = 'Chef Special';
     let keywords = [];
 
-    if (lower.includes('biryani') || lower.includes('biriyani') || lower.includes('pulao')) {
+    if (lower.includes('biryani') || lower.includes('biriyani') || lower.includes('pulao') || lower.includes('fried rice')) {
       recipe = 'Hyderabadi Biryani';
       keywords = ['rice', 'basmati', 'yogurt', 'curd', 'ghee', 'milk', 'spice', 'onion', 'tomato', 'sauce', 'atta', 'cheese'];
-    } else if (lower.includes('paneer') || lower.includes('curry') || lower.includes('masala')) {
-      recipe = 'Paneer Butter Masala';
+    } else if (lower.includes('butter chicken') || lower.includes('paneer') || lower.includes('curry') || lower.includes('masala')) {
+      recipe = lower.includes('butter chicken') ? 'Butter Chicken Masala' : 'Paneer Butter Masala';
       keywords = ['paneer', 'cheese', 'tomato', 'sauce', 'milk', 'butter', 'yogurt', 'bread', 'atta'];
+    } else if (lower.includes('dal') || lower.includes('tadka') || lower.includes('chole') || lower.includes('roti') || lower.includes('paratha')) {
+      recipe = 'Dal Tadka & Roti';
+      keywords = ['atta', 'rice', 'tomato', 'sauce', 'yogurt', 'milk', 'bread'];
+    } else if (lower.includes('dosa') || lower.includes('idli')) {
+      recipe = 'South Indian Tiffin';
+      keywords = ['rice', 'yogurt', 'milk', 'tomato', 'sauce', 'cheese'];
     } else if (lower.includes('chai') || lower.includes('tea') || lower.includes('coffee')) {
       recipe = 'Masala Chai & Bakery';
       keywords = ['milk', 'tea', 'bread', 'sourdough', 'honey', 'yogurt'];
-    } else if (lower.includes('breakfast') || lower.includes('sandwich') || lower.includes('toast')) {
+    } else if (lower.includes('breakfast') || lower.includes('sandwich') || lower.includes('toast') || lower.includes('oatmeal')) {
       recipe = 'Morning Breakfast';
       keywords = ['egg', 'bread', 'sourdough', 'milk', 'avocado', 'yogurt', 'strawberry'];
-    } else if (lower.includes('salad') || lower.includes('healthy')) {
-      recipe = 'Fresh Garden Salad';
-      keywords = ['avocado', 'strawberry', 'cheese', 'yogurt', 'tomato'];
+    } else if (lower.includes('salad') || lower.includes('healthy') || lower.includes('keto') || lower.includes('protein')) {
+      recipe = lower.includes('protein') ? 'High-Protein Bowl' : 'Fresh Garden Salad';
+      keywords = ['egg', 'yogurt', 'avocado', 'cheese', 'strawberry', 'milk'];
     } else if (lower.includes('smoothie') || lower.includes('berry')) {
       recipe = 'Berry Protein Smoothie';
       keywords = ['strawberry', 'yogurt', 'milk', 'avocado'];
+    } else if (lower.includes('baking') || lower.includes('cake') || lower.includes('party') || lower.includes('snack')) {
+      recipe = lower.includes('party') ? 'Party Snack Kit' : 'Fresh Baking Kit';
+      keywords = ['egg', 'milk', 'strawberry', 'cheese', 'bread', 'yogurt'];
     } else {
       recipe = 'Pasta Dinner';
       keywords = ['pasta', 'marinara', 'sauce', 'cheese', 'parmigiano', 'bread'];
@@ -921,7 +983,7 @@ export function handleLovableAgentFallback(config) {
     const items = picked.slice(0, 4).map((p) => serializeCardItem(p, 1));
     mem.last_suggested_items = items;
     const total = items.reduce((s, i) => s + i.price, 0);
-    reply = `Here are ${items.length} essentials for ${recipe} (${items.slice(0, 3).map((i) => i.name).join(', ')}) at $${total.toFixed(2)} total.`;
+    reply = `Here are ${items.length} essentials for ${recipe} at $${total.toFixed(2)}.`;
     actions = [{ type: 'RECOMMEND_BASKET', items, recipe }];
     tools_used = [{ name: 'recommend_recipe_basket', args: { recipe_name: recipe, budget: 25 } }];
   }

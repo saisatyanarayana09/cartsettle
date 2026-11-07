@@ -73,32 +73,48 @@
 .dark .shopper-theme { background: #0b0f17; color: #f8fafc; }
 .assistant-wordmark { font-family: "Nunito", sans-serif; font-size: 20px; font-weight: 900; }
 .assistant-wordmark span { color: var(--color-accent-gold); }
-.voice-stage { position: relative; display: flex; flex: 1; flex-direction: column; justify-content: space-between; min-height: 0; overflow: hidden; background: #ffffff; isolation: isolate; }
-.dark .voice-stage { background: #070b12; }
+.voice-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 82%, #f0fdf4 0%, #f8fafc 52%, #ffffff 100%);
+  isolation: isolate;
+}
+.dark .voice-stage {
+  background: radial-gradient(ellipse at 50% 82%, #061b17 0%, #070d17 54%, #05080f 100%);
+}
+.assistant-nav-header {
+  border-bottom: none !important;
+  background: transparent !important;
+}
 
 /* ==========================================================================
    Full-Screen Living Aurora & 4-Edge Perimeter Glow (Task + Voice Reactive)
    ========================================================================== */
 .voice-fullscreen-aurora {
   position: absolute;
-  inset: -18%;
+  inset: -16%;
   z-index: 0;
   pointer-events: none;
-  opacity: calc(0.55 + (var(--text-energy, 0.25) * 0.42));
-  filter: blur(42px);
+  opacity: calc(0.62 + (var(--text-energy, 0.25) * 0.36));
+  filter: blur(44px);
   transition: background 650ms cubic-bezier(0.16, 1, 0.3, 1), opacity 380ms ease;
   background:
-    radial-gradient(circle at 50% 82%, rgba(16, 185, 129, 0.26) 0%, rgba(20, 184, 166, 0.12) 38%, transparent 70%),
-    radial-gradient(circle at 18% 20%, rgba(52, 211, 153, 0.14) 0%, transparent 52%),
-    radial-gradient(circle at 84% 26%, rgba(6, 182, 212, 0.12) 0%, transparent 50%);
-  animation: fullscreen-aurora-drift 11s ease-in-out infinite alternate;
+    radial-gradient(circle at 50% 76%, rgba(16, 185, 129, 0.30) 0%, rgba(20, 184, 166, 0.16) 42%, transparent 72%),
+    radial-gradient(circle at 20% 34%, rgba(52, 211, 153, 0.16) 0%, transparent 56%),
+    radial-gradient(circle at 82% 30%, rgba(6, 182, 212, 0.14) 0%, transparent 54%);
+  animation: fullscreen-aurora-drift 10s ease-in-out infinite alternate;
 }
 .dark .voice-fullscreen-aurora {
-  opacity: calc(0.68 + (var(--text-energy, 0.25) * 0.32));
+  opacity: calc(0.76 + (var(--text-energy, 0.25) * 0.24));
   background:
-    radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.38) 0%, rgba(6, 182, 212, 0.18) 42%, transparent 72%),
-    radial-gradient(circle at 15% 18%, rgba(52, 211, 153, 0.20) 0%, transparent 54%),
-    radial-gradient(circle at 86% 24%, rgba(14, 165, 233, 0.16) 0%, transparent 52%);
+    radial-gradient(circle at 50% 74%, rgba(16, 185, 129, 0.44) 0%, rgba(6, 182, 212, 0.22) 45%, transparent 74%),
+    radial-gradient(circle at 18% 32%, rgba(52, 211, 153, 0.22) 0%, transparent 56%),
+    radial-gradient(circle at 84% 28%, rgba(14, 165, 233, 0.18) 0%, transparent 54%);
 }
 
 /* Task & State Palettes for Full-Screen Aurora */
@@ -106,57 +122,57 @@
 .voice-fullscreen-aurora[data-glow="speaking-input"] {
   animation-duration: 4.2s;
   background:
-    radial-gradient(circle at 50% 78%, rgba(16, 185, 129, 0.45) 0%, rgba(6, 182, 212, 0.26) 45%, transparent 74%),
-    radial-gradient(circle at 20% 22%, rgba(45, 212, 191, 0.28) 0%, transparent 55%),
-    radial-gradient(circle at 82% 20%, rgba(56, 189, 248, 0.24) 0%, transparent 55%);
+    radial-gradient(circle at 50% 74%, rgba(16, 185, 129, 0.50) 0%, rgba(6, 182, 212, 0.28) 46%, transparent 75%),
+    radial-gradient(circle at 20% 26%, rgba(45, 212, 191, 0.30) 0%, transparent 56%),
+    radial-gradient(circle at 82% 24%, rgba(56, 189, 248, 0.26) 0%, transparent 56%);
 }
 .voice-fullscreen-aurora[data-glow="thinking"] {
   animation-duration: 2.6s;
   background:
-    radial-gradient(circle at 50% 75%, rgba(6, 182, 212, 0.44) 0%, rgba(99, 102, 241, 0.26) 44%, transparent 74%),
-    radial-gradient(circle at 24% 20%, rgba(16, 185, 129, 0.28) 0%, transparent 55%),
-    radial-gradient(circle at 80% 28%, rgba(139, 92, 246, 0.24) 0%, transparent 56%);
+    radial-gradient(circle at 50% 72%, rgba(6, 182, 212, 0.48) 0%, rgba(99, 102, 241, 0.28) 46%, transparent 75%),
+    radial-gradient(circle at 24% 24%, rgba(16, 185, 129, 0.30) 0%, transparent 56%),
+    radial-gradient(circle at 80% 28%, rgba(139, 92, 246, 0.26) 0%, transparent 56%);
 }
 .voice-fullscreen-aurora[data-glow="discovery"] {
   animation-duration: 6s;
   background:
-    radial-gradient(circle at 50% 78%, rgba(16, 185, 129, 0.38) 0%, rgba(245, 158, 11, 0.20) 44%, transparent 74%),
-    radial-gradient(circle at 20% 18%, rgba(251, 191, 36, 0.22) 0%, transparent 55%),
-    radial-gradient(circle at 82% 24%, rgba(20, 184, 166, 0.22) 0%, transparent 55%);
+    radial-gradient(circle at 50% 72%, rgba(16, 185, 129, 0.42) 0%, rgba(245, 158, 11, 0.22) 46%, transparent 75%),
+    radial-gradient(circle at 20% 24%, rgba(251, 191, 36, 0.24) 0%, transparent 56%),
+    radial-gradient(circle at 82% 26%, rgba(20, 184, 166, 0.24) 0%, transparent 56%);
 }
 .voice-fullscreen-aurora[data-glow="cart-add"] {
   animation-duration: 4.5s;
   background:
-    radial-gradient(circle at 50% 76%, rgba(16, 185, 129, 0.50) 0%, rgba(52, 211, 153, 0.28) 46%, transparent 75%),
-    radial-gradient(circle at 22% 22%, rgba(16, 185, 129, 0.30) 0%, transparent 56%),
-    radial-gradient(circle at 80% 22%, rgba(110, 231, 183, 0.24) 0%, transparent 54%);
+    radial-gradient(circle at 50% 72%, rgba(16, 185, 129, 0.54) 0%, rgba(52, 211, 153, 0.30) 46%, transparent 76%),
+    radial-gradient(circle at 22% 24%, rgba(16, 185, 129, 0.32) 0%, transparent 56%),
+    radial-gradient(circle at 80% 24%, rgba(110, 231, 183, 0.26) 0%, transparent 55%);
 }
 .voice-fullscreen-aurora[data-glow="checkout"] {
-  animation-duration: 5s;
+  animation-duration: 4.8s;
   background:
-    radial-gradient(circle at 50% 76%, rgba(245, 158, 11, 0.36) 0%, rgba(16, 185, 129, 0.26) 46%, transparent 75%),
-    radial-gradient(circle at 22% 18%, rgba(251, 191, 36, 0.28) 0%, transparent 56%),
-    radial-gradient(circle at 82% 24%, rgba(16, 185, 129, 0.24) 0%, transparent 56%);
+    radial-gradient(circle at 50% 72%, rgba(0, 112, 186, 0.44) 0%, rgba(16, 185, 129, 0.26) 46%, transparent 76%),
+    radial-gradient(circle at 22% 24%, rgba(255, 196, 57, 0.26) 0%, transparent 56%),
+    radial-gradient(circle at 82% 26%, rgba(0, 112, 186, 0.28) 0%, transparent 56%);
 }
 .voice-fullscreen-aurora[data-glow="order-track"] {
   animation-duration: 5.5s;
   background:
-    radial-gradient(circle at 50% 78%, rgba(14, 165, 233, 0.40) 0%, rgba(16, 185, 129, 0.24) 45%, transparent 74%),
-    radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.26) 0%, transparent 55%),
-    radial-gradient(circle at 82% 24%, rgba(99, 102, 241, 0.22) 0%, transparent 55%);
+    radial-gradient(circle at 50% 74%, rgba(14, 165, 233, 0.44) 0%, rgba(16, 185, 129, 0.26) 46%, transparent 75%),
+    radial-gradient(circle at 20% 24%, rgba(56, 189, 248, 0.28) 0%, transparent 56%),
+    radial-gradient(circle at 82% 26%, rgba(99, 102, 241, 0.24) 0%, transparent 56%);
 }
 .voice-fullscreen-aurora[data-glow="theme-switch"] {
   animation-duration: 3.8s;
   background:
-    radial-gradient(circle at 50% 76%, rgba(139, 92, 246, 0.40) 0%, rgba(245, 158, 11, 0.24) 46%, transparent 75%),
-    radial-gradient(circle at 22% 20%, rgba(168, 85, 247, 0.28) 0%, transparent 55%),
-    radial-gradient(circle at 80% 22%, rgba(251, 191, 36, 0.24) 0%, transparent 55%);
+    radial-gradient(circle at 50% 72%, rgba(139, 92, 246, 0.44) 0%, rgba(245, 158, 11, 0.26) 46%, transparent 75%),
+    radial-gradient(circle at 22% 24%, rgba(168, 85, 247, 0.30) 0%, transparent 56%),
+    radial-gradient(circle at 80% 24%, rgba(251, 191, 36, 0.26) 0%, transparent 56%);
 }
 .voice-fullscreen-aurora[data-glow="cart-remove"] {
-  animation-duration: 4.8s;
+  animation-duration: 4.5s;
   background:
-    radial-gradient(circle at 50% 78%, rgba(244, 63, 94, 0.34) 0%, rgba(251, 146, 60, 0.20) 45%, transparent 74%),
-    radial-gradient(circle at 22% 20%, rgba(251, 113, 133, 0.22) 0%, transparent 54%);
+    radial-gradient(circle at 50% 74%, rgba(244, 63, 94, 0.36) 0%, rgba(251, 146, 60, 0.22) 45%, transparent 74%),
+    radial-gradient(circle at 22% 24%, rgba(251, 113, 133, 0.24) 0%, transparent 55%);
 }
 
 /* 4-Edge Living Perimeter Border Glow around the full AI Assistant screen */
@@ -166,16 +182,20 @@
   z-index: 0;
   pointer-events: none;
   box-shadow:
-    inset 0 0 36px rgba(16, 185, 129, calc(0.10 + (var(--text-energy, 0.25) * 0.16))),
-    inset 0 0 2px rgba(52, 211, 153, 0.28);
+    inset 0 0 38px rgba(16, 185, 129, calc(0.10 + (var(--text-energy, 0.25) * 0.16))),
+    inset 0 0 2px rgba(52, 211, 153, 0.26);
   transition: box-shadow 500ms ease;
 }
 .dark .voice-fullscreen-edge-glow {
   box-shadow:
-    inset 0 0 48px rgba(16, 185, 129, calc(0.16 + (var(--text-energy, 0.25) * 0.22))),
-    inset 0 0 2px rgba(52, 211, 153, 0.36);
+    inset 0 0 50px rgba(16, 185, 129, calc(0.16 + (var(--text-energy, 0.25) * 0.22))),
+    inset 0 0 2px rgba(52, 211, 153, 0.34);
 }
-.voice-fullscreen-edge-glow[data-glow="checkout"],
+.voice-fullscreen-edge-glow[data-glow="checkout"] {
+  box-shadow:
+    inset 0 0 54px rgba(0, 112, 186, 0.30),
+    inset 0 0 22px rgba(255, 196, 57, 0.20);
+}
 .voice-fullscreen-edge-glow[data-glow="discovery"] {
   box-shadow:
     inset 0 0 52px rgba(245, 158, 11, 0.22),
@@ -205,25 +225,25 @@
   }
 }
 
-/* Top card stage: starts cleanly at the top, never scrolls horizontally */
+/* Unified Single-Screen Stage: Cards float directly above the Orb in the same light field */
 .voice-live-stage {
   flex: 1;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
-  padding: 12px 16px 14px;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+  padding: 10px 16px 6px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: flex-end;
 }
 .voice-live-stage::-webkit-scrollbar {
   width: 4px;
   height: 0px;
 }
 .voice-live-stage::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.2);
   border-radius: 9999px;
 }
 .voice-live-stage, .voice-bottom { position: relative; z-index: 1; }
@@ -275,18 +295,18 @@
   gap: 10px;
   padding: 11px 12px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
   box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.07);
   transition: border-color .2s, box-shadow .2s, transform .2s;
   max-width: 100%;
   box-sizing: border-box;
 }
 .dark .assistant-product {
-  background: rgba(20, 26, 36, 0.88);
-  border-color: rgba(255, 255, 255, 0.09);
-  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 36, 0.78);
+  border-color: rgba(52, 211, 153, 0.16);
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.55);
 }
 .assistant-product + .assistant-product { margin-top: 8px; }
 .assistant-photo {
@@ -357,25 +377,25 @@
 
 .assistant-payment {
   flex-shrink: 0;
-  margin: 10px 16px 6px;
-  padding: 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(16, 185, 129, 0.28);
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.12);
-  max-height: 56dvh;
+  margin: 4px 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 112, 186, 0.32);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 14px 32px -8px rgba(0, 112, 186, 0.16);
+  max-height: 52dvh;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
   z-index: 2;
 }
 .dark .assistant-payment {
-  background: rgba(20, 26, 36, 0.92);
-  border-color: rgba(52, 211, 153, 0.25);
-  box-shadow: 0 20px 44px -8px rgba(0, 0, 0, 0.65);
+  background: rgba(15, 23, 38, 0.88);
+  border-color: rgba(56, 189, 248, 0.28);
+  box-shadow: 0 18px 40px -8px rgba(0, 0, 0, 0.65);
 }
-.voice-bottom { position: relative; flex-shrink: 0; padding-top: 4px; padding-bottom: 22px; }
+.voice-bottom { position: relative; flex-shrink: 0; padding-top: 2px; padding-bottom: 20px; }
 .assistant-cartbar { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px 10px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 9999px; background: var(--secondary); font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color .2s; }
 .assistant-cartbar:hover { background: var(--muted); }
 .assistant-cartbar:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
@@ -407,23 +427,23 @@
 }
 
 /* ==========================================================================
-   Flagship Sculptural 3D Emerald & Glass Ribbon Orb + Kinetic Typography
-   (Zero circular border rings — pure ambient aura + 3D sphere)
+   True Multi-Layer 3D Crystal Sphere with Internal Liquid Plasma & Ribbons
+   (Stationary 3D glass sphere shell + internal flowing plasma & occasional turn)
    ========================================================================== */
 .voice-orb-container {
-  padding: 12px;
+  padding: 10px;
   touch-action: manipulation;
 }
 
 /* Layer 1: Soft Borderless Ambient Emerald & Aqua Plasma Backlight */
 .voice-orb-aura {
-  width: 220px;
-  height: 220px;
+  width: 216px;
+  height: 216px;
   background: radial-gradient(
     circle,
-    rgba(16, 185, 129, 0.36) 0%,
-    rgba(52, 211, 153, 0.16) 44%,
-    rgba(6, 182, 212, 0.05) 66%,
+    rgba(16, 185, 129, 0.38) 0%,
+    rgba(52, 211, 153, 0.18) 44%,
+    rgba(6, 182, 212, 0.06) 66%,
     transparent 78%
   );
   filter: blur(26px);
@@ -443,9 +463,9 @@
 .voice-orb-aura[data-state="working"] {
   background: radial-gradient(
     circle,
-    rgba(16, 185, 129, 0.56) 0%,
-    rgba(52, 211, 153, 0.28) 46%,
-    rgba(20, 184, 166, 0.12) 68%,
+    rgba(16, 185, 129, 0.58) 0%,
+    rgba(52, 211, 153, 0.30) 46%,
+    rgba(20, 184, 166, 0.14) 68%,
     transparent 80%
   );
   animation: orb-aura-active 1.3s ease-in-out infinite alternate;
@@ -463,12 +483,12 @@
   animation: orb-aura-active 1.3s ease-in-out infinite alternate;
 }
 
-/* Layer 2: Sculptural 3D Glass Sphere */
+/* Layer 2: Stationary 3D Crystal Glass Sphere Shell */
 .voice-orb-sphere {
   box-shadow:
     0 18px 40px -8px rgba(6, 95, 70, 0.38),
     0 0 28px 3px rgba(16, 185, 129, 0.34),
-    inset 0 0 16px rgba(255, 255, 255, 0.72);
+    inset 0 0 18px rgba(255, 255, 255, 0.78);
   animation: orb-gentle-float 3.8s ease-in-out infinite alternate;
 }
 .dark .voice-orb-sphere {
@@ -476,14 +496,14 @@
     0 20px 46px -6px rgba(0, 0, 0, 0.82),
     0 0 38px 6px rgba(16, 185, 129, 0.48),
     0 0 68px 10px rgba(52, 211, 153, 0.22),
-    inset 0 0 20px rgba(255, 255, 255, 0.48);
+    inset 0 0 22px rgba(255, 255, 255, 0.52);
 }
 .voice-orb-sphere[data-state="listening"],
 .voice-orb-sphere[data-state="speaking"] {
   box-shadow:
     0 18px 44px -6px rgba(6, 95, 70, 0.48),
     0 0 38px 8px rgba(16, 185, 129, 0.52),
-    inset 0 0 20px rgba(255, 255, 255, 0.82);
+    inset 0 0 22px rgba(255, 255, 255, 0.85);
 }
 .dark .voice-orb-sphere[data-state="listening"],
 .dark .voice-orb-sphere[data-state="speaking"] {
@@ -491,74 +511,154 @@
     0 20px 48px -6px rgba(0, 0, 0, 0.85),
     0 0 46px 10px rgba(52, 211, 153, 0.64),
     0 0 80px 16px rgba(16, 185, 129, 0.34),
-    inset 0 0 22px rgba(255, 255, 255, 0.58);
+    inset 0 0 24px rgba(255, 255, 255, 0.62);
 }
 
-/* Continuous 360° 3D Raytraced Emerald & Glass Ribbon Core Motion */
+/* Internal Layer 1: Deep 3D Spherical Core Base */
+.voice-orb-core-depth {
+  background: radial-gradient(
+    circle at 38% 32%,
+    rgba(236, 253, 245, 0.92) 0%,
+    rgba(110, 231, 183, 0.58) 38%,
+    rgba(5, 150, 105, 0.82) 74%,
+    rgba(6, 78, 59, 0.95) 100%
+  );
+}
+
+/* Internal Layer 2: Primary Morphing Liquid Emerald & Mint Plasma Ribbon inside the Orb */
+.voice-orb-plasma-ribbon-a {
+  width: 136%;
+  height: 136%;
+  left: -18%;
+  top: -18%;
+  border-radius: 42% 58% 68% 32% / 44% 56% 44% 56%;
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.85) 0%,
+    rgba(167, 243, 208, 0.90) 48%,
+    rgba(6, 182, 212, 0.75) 100%
+  );
+  filter: blur(8px);
+  mix-blend-mode: screen;
+  animation: orb-internal-plasma-morph-a 6.5s ease-in-out infinite alternate;
+}
+.voice-orb-plasma-ribbon-a[data-state="listening"],
+.voice-orb-plasma-ribbon-a[data-state="speaking"] {
+  animation-duration: 2.6s;
+}
+.voice-orb-plasma-ribbon-a[data-state="working"] {
+  animation-duration: 1.5s;
+  background: linear-gradient(
+    135deg,
+    rgba(6, 182, 212, 0.90) 0%,
+    rgba(16, 185, 129, 0.92) 50%,
+    rgba(99, 102, 241, 0.80) 100%
+  );
+}
+
+/* Internal Layer 3: Counter-Weaving Aqua & Crystal Liquid Ribbon inside the Orb */
+.voice-orb-plasma-ribbon-b {
+  width: 128%;
+  height: 128%;
+  left: -14%;
+  top: -14%;
+  border-radius: 62% 38% 42% 58% / 56% 44% 56% 44%;
+  background: linear-gradient(
+    225deg,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(52, 211, 153, 0.82) 52%,
+    rgba(20, 184, 166, 0.78) 100%
+  );
+  filter: blur(6px);
+  mix-blend-mode: overlay;
+  animation: orb-internal-plasma-morph-b 5.4s ease-in-out infinite alternate;
+}
+.voice-orb-plasma-ribbon-b[data-state="listening"],
+.voice-orb-plasma-ribbon-b[data-state="speaking"] {
+  animation-duration: 2.2s;
+}
+
+/* Internal Layer 4: Voice-Reactive Central Acoustic Energy Core */
+.voice-orb-acoustic-core {
+  width: 68%;
+  height: 68%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(110, 231, 183, 0.65) 48%,
+    transparent 75%
+  );
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  transform: scale(calc(0.76 + (var(--orb-level, 0) * 0.55)));
+  transition: transform 140ms ease-out;
+}
+
+/* Internal Layer 5: Refracted Glass Ribbon Texture (Organic Breathe + Occasional Turn) */
 .voice-orb-3d-texture {
   transform-origin: 50% 50%;
+  mix-blend-mode: hard-light;
+  opacity: 0.78;
   will-change: transform, filter;
-  animation: orb-3d-continuous-spin 11s linear infinite;
+  animation: orb-internal-breathe-and-occasional-turn 14s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+.voice-orb-sphere[data-spin="true"] .voice-orb-3d-texture {
+  animation: orb-single-sculptural-turn 1.4s cubic-bezier(0.22, 1, 0.36, 1) 1;
 }
 .voice-orb-sphere[data-state="listening"] .voice-orb-3d-texture {
-  animation: orb-3d-continuous-spin 4.8s linear infinite;
+  animation: orb-listening-fluid-wave 4.2s ease-in-out infinite alternate;
   filter: saturate(1.22) brightness(1.07);
 }
 .voice-orb-sphere[data-state="working"] .voice-orb-3d-texture {
-  animation: orb-3d-continuous-spin 1.8s linear infinite;
+  animation: orb-single-sculptural-turn 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   filter: saturate(1.28) brightness(1.1) contrast(1.06);
 }
 .voice-orb-sphere[data-state="speaking"] .voice-orb-3d-texture {
-  animation: orb-3d-speaking-spin 3.4s ease-in-out infinite;
+  animation: orb-speaking-fluid-inflection 4.6s ease-in-out infinite;
   filter: saturate(1.26) brightness(1.09);
 }
 
-/* Counter-Rotating Internal Crystal Light Shimmer */
+/* Internal Layer 6: Counter-Flowing Crystal Light Shimmer */
 .voice-orb-shimmer {
   background: conic-gradient(
     from 180deg at 50% 50%,
     transparent 0deg,
-    rgba(255, 255, 255, 0.38) 60deg,
+    rgba(255, 255, 255, 0.36) 60deg,
     transparent 125deg,
-    rgba(110, 231, 183, 0.42) 220deg,
+    rgba(110, 231, 183, 0.40) 220deg,
     transparent 300deg,
-    rgba(255, 255, 255, 0.25) 340deg,
+    rgba(255, 255, 255, 0.24) 340deg,
     transparent 360deg
   );
   mix-blend-mode: overlay;
-  animation: orb-conic-reverse 7s linear infinite;
-}
-.voice-orb-shimmer[data-state="listening"],
-.voice-orb-shimmer[data-state="speaking"],
-.voice-orb-shimmer[data-state="working"] {
-  animation-duration: 3s;
+  animation: orb-shimmer-wave 6.5s ease-in-out infinite alternate;
 }
 
-/* Stationary Studio Caustic Specular Highlight (stays fixed top-left while ribbons revolve) */
+/* Outer Layer 7: Stationary Studio Caustic Specular Highlight (stays fixed top-left) */
 .voice-orb-caustic {
   background:
-    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.24) 24%, transparent 50%),
-    radial-gradient(circle at 72% 78%, rgba(52, 211, 153, 0.32) 0%, transparent 45%);
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.80) 0%, rgba(255, 255, 255, 0.26) 24%, transparent 50%),
+    radial-gradient(circle at 72% 78%, rgba(52, 211, 153, 0.36) 0%, transparent 45%);
   mix-blend-mode: screen;
 }
 
-/* Stationary Spherical Glass Rim & Inner Refraction */
+/* Outer Layer 8: Stationary Spherical Glass Rim & Inner Refraction */
 .voice-orb-glass-rim {
   box-shadow:
-    inset 0 3px 8px rgba(255, 255, 255, 0.82),
-    inset 0 -8px 18px rgba(6, 78, 59, 0.32),
-    inset 0 0 0 1.5px rgba(167, 243, 208, 0.55);
+    inset 0 3px 8px rgba(255, 255, 255, 0.85),
+    inset 0 -8px 18px rgba(6, 78, 59, 0.34),
+    inset 0 0 0 1.5px rgba(167, 243, 208, 0.58);
 }
 .dark .voice-orb-glass-rim {
   box-shadow:
-    inset 0 3px 9px rgba(255, 255, 255, 0.65),
-    inset 0 -8px 20px rgba(4, 47, 46, 0.52),
-    inset 0 0 0 1.5px rgba(110, 231, 183, 0.52);
+    inset 0 3px 9px rgba(255, 255, 255, 0.68),
+    inset 0 -8px 20px rgba(4, 47, 46, 0.54),
+    inset 0 0 0 1.5px rgba(110, 231, 183, 0.54);
 }
 
 @keyframes orb-gentle-float {
   0% { transform: translateY(0) scale(var(--orb-scale, 1)); }
-  100% { transform: translateY(-6px) scale(var(--orb-scale, 1)); }
+  100% { transform: translateY(-5px) scale(var(--orb-scale, 1)); }
 }
 @keyframes orb-aura-pulse {
   0% { transform: scale(0.92); opacity: 0.78; }
@@ -568,28 +668,70 @@
   0% { transform: scale(0.96); opacity: 0.88; }
   100% { transform: scale(1.18); opacity: 1; }
 }
-@keyframes orb-conic-reverse {
-  0% { transform: rotate(360deg); }
-  100% { transform: rotate(0deg); }
+@keyframes orb-internal-plasma-morph-a {
+  0% {
+    border-radius: 42% 58% 68% 32% / 44% 56% 44% 56%;
+    transform: translate3d(-6%, -4%, 0) rotate(-12deg) scale(1.02);
+  }
+  50% {
+    border-radius: 64% 36% 42% 58% / 58% 42% 58% 42%;
+    transform: translate3d(5%, 6%, 0) rotate(18deg) scale(1.08);
+  }
+  100% {
+    border-radius: 48% 52% 60% 40% / 38% 62% 38% 62%;
+    transform: translate3d(-4%, 5%, 0) rotate(-6deg) scale(1.04);
+  }
 }
-@keyframes orb-3d-continuous-spin {
+@keyframes orb-internal-plasma-morph-b {
+  0% {
+    border-radius: 62% 38% 42% 58% / 56% 44% 56% 44%;
+    transform: translate3d(6%, -5%, 0) rotate(14deg) scale(1.04);
+  }
+  50% {
+    border-radius: 38% 62% 64% 36% / 42% 58% 42% 58%;
+    transform: translate3d(-6%, 5%, 0) rotate(-18deg) scale(1.09);
+  }
+  100% {
+    border-radius: 54% 46% 38% 62% / 60% 40% 60% 40%;
+    transform: translate3d(4%, 4%, 0) rotate(8deg) scale(1.02);
+  }
+}
+/* Idle: 84% calm 3D breathing sway + 16% occasional smooth 360° sculptural turn */
+@keyframes orb-internal-breathe-and-occasional-turn {
   0% { transform: rotate(0deg) scale(1.03); }
-  50% { transform: rotate(180deg) scale(1.07); }
+  28% { transform: rotate(10deg) scale(1.06); }
+  56% { transform: rotate(-8deg) scale(1.03); }
+  78% { transform: rotate(6deg) scale(1.05); }
+  92% { transform: rotate(360deg) scale(1.06); }
   100% { transform: rotate(360deg) scale(1.03); }
 }
-@keyframes orb-3d-speaking-spin {
+@keyframes orb-single-sculptural-turn {
   0% { transform: rotate(0deg) scale(1.03); }
-  25% { transform: rotate(90deg) scale(1.1); }
-  50% { transform: rotate(180deg) scale(1.04); }
-  75% { transform: rotate(270deg) scale(1.11); }
+  50% { transform: rotate(180deg) scale(1.09); }
   100% { transform: rotate(360deg) scale(1.03); }
+}
+@keyframes orb-listening-fluid-wave {
+  0% { transform: rotate(-14deg) scale(1.04); }
+  50% { transform: rotate(16deg) scale(1.09); }
+  100% { transform: rotate(-8deg) scale(1.05); }
+}
+@keyframes orb-speaking-fluid-inflection {
+  0% { transform: rotate(0deg) scale(1.03); }
+  30% { transform: rotate(24deg) scale(1.10); }
+  65% { transform: rotate(-18deg) scale(1.06); }
+  88% { transform: rotate(360deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(1.03); }
+}
+@keyframes orb-shimmer-wave {
+  0% { transform: rotate(-25deg) scale(1.02); }
+  100% { transform: rotate(35deg) scale(1.06); }
 }
 
 /* Soft Floor Contact Reflection Shadow below the 3D Sphere */
 .voice-orb-floor-shadow {
-  margin-top: 10px;
-  width: 128px;
-  height: 22px;
+  margin-top: 8px;
+  width: 120px;
+  height: 20px;
   border-radius: 9999px;
   background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.42) 0%, rgba(15, 23, 42, 0.14) 50%, transparent 78%);
   filter: blur(6px);
@@ -603,42 +745,52 @@
   100% { transform: scaleX(0.88); opacity: 0.72; }
 }
 
-/* Center Floating Headline Typography with Entity Glow */
+/* Compact 1–2 Line Auto-Fading Caption (14.5px, max ~12 words) */
 .kinetic-words-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 4px 7px;
-  padding: 4px 12px;
+  gap: 3px 5px;
+  padding: 2px 12px;
   max-width: 310px;
   margin: 0 auto;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 550ms ease, transform 550ms ease;
+}
+.kinetic-words-container.voice-caption-faded {
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
 }
 .kinetic-word {
   display: inline-block;
-  font-size: 20px;
-  line-height: 1.26;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: #0f172a;
-  animation: kinetic-fade-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  font-size: 14.5px;
+  line-height: 1.38;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #334155;
+  animation: kinetic-fade-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .dark .kinetic-word {
-  color: #ffffff;
+  color: rgba(248, 250, 252, 0.90);
 }
 .kinetic-word-highlight {
+  font-weight: 700;
   color: #059669;
-  text-shadow: 0 0 18px rgba(16, 185, 129, 0.32);
+  text-shadow: 0 0 14px rgba(16, 185, 129, 0.28);
 }
 .dark .kinetic-word-highlight {
+  font-weight: 700;
   color: #34d399;
-  text-shadow: 0 0 22px rgba(52, 211, 153, 0.55);
+  text-shadow: 0 0 18px rgba(52, 211, 153, 0.48);
 }
 @keyframes kinetic-fade-in {
   0% {
     opacity: 0;
-    filter: blur(6px);
-    transform: translateY(8px) scale(0.96);
+    filter: blur(4px);
+    transform: translateY(5px) scale(0.97);
   }
   100% {
     opacity: 1;

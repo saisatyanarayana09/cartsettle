@@ -30,6 +30,7 @@ import { PaymentReview } from "./voice/PaymentReview";
 import { requiresPaymentReview } from "./voice/payment-review";
 import { LiveTaskActivity } from "./voice/LiveTaskActivity";
 import { playCartActionChime, playOrderConfirmedChime } from "./voice/soundFx";
+import { handleLovableAgentFallback } from "../services/lovableAgentFallback";
 
 function IconControl({ label, children, ...props }) {
   return (
@@ -98,8 +99,16 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const requestRef = useRef(false);
   const [addedItems, setAddedItems] = useState({});
   const [currentTask, setCurrentTask] = useState(null);
+  const [stageDismissedMsgLen, setStageDismissedMsgLen] = useState(() => messages.length);
 
   const panelRef = useRef(null);
+
+  // Start Voice stage clean whenever the drawer is freshly opened
+  useEffect(() => {
+    if (isOpen) {
+      setStageDismissedMsgLen(messages.length);
+    }
+  }, [isOpen]);
 
   // Persist shopper chat to localStorage on every update
   useEffect(() => {
@@ -118,7 +127,9 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         .then((res) => {
           const serverMsgs = res.data?.messages;
           if (Array.isArray(serverMsgs) && serverMsgs.length > 0) {
-            setMessages([INITIAL_SHOPPER_MSG, ...serverMsgs]);
+            const nextMsgs = [INITIAL_SHOPPER_MSG, ...serverMsgs];
+            setMessages(nextMsgs);
+            setStageDismissedMsgLen(nextMsgs.length);
           }
         })
         .catch(() => {});
@@ -258,7 +269,61 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         history: newMessages.map((m) => ({ role: m.role, content: m.content })),
       });
 
-      const rawActions = Array.isArray(res.data?.actions) ? res.data.actions : [];
+      let rawActions = Array.isArray(res.data?.actions) ? [...res.data.actions] : [];
+      const lowerPrompt = prompt.toLowerCase();
+      const lowerServerReply = String(res.data?.reply || "").toLowerCase();
+
+      // Deterministic Real-Time Action Enforcer:
+      // Guarantees cart clear, item removal, theme switch, or dish kit actions execute in real time
+      // even if the remote LLM returns text-only without an action payload.
+      const isClearIntent =
+        lowerPrompt === "clear" ||
+        lowerPrompt === "clear it" ||
+        lowerPrompt === "empty" ||
+        [
+          "clear cart", "clear my cart", "clear the cart", "empty cart", "empty my cart",
+          "remove the cart items", "remove cart items", "remove all cart items", "remove all items",
+          "remove all from cart", "remove items from cart", "remove everything", "delete all",
+          "delete cart items", "clean cart", "reset cart",
+        ].some((k) => lowerPrompt.includes(k)) ||
+        ((lowerPrompt.includes("remove") || lowerPrompt.includes("delete") || lowerPrompt.includes("clear")) &&
+          (lowerPrompt.includes("all") || lowerPrompt.includes("everything"))) ||
+        lowerServerReply.includes("removed all items") ||
+        lowerServerReply.includes("cleared your cart");
+
+      if (isClearIntent && !rawActions.some((a) => (a.type || a.action) === "CLEAR_CART")) {
+        rawActions = [{ type: "CLEAR_CART", removed_items: liveCartItems }];
+      } else if (
+        rawActions.length === 0 &&
+        [
+          "remove ", "delete ", "dark mode", "light mode", "switch theme", "toggle theme",
+          "biryani", "biriyani", "pulao", "paneer", "curry", "masala", "chai", "breakfast",
+          "making ", "cooking ", "requirements", "ingredients", "add all", "add these",
+        ].some((k) => lowerPrompt.includes(k))
+      ) {
+        const localEnriched = handleLovableAgentFallback({
+          method: "post",
+          data: {
+            prompt,
+            persona: "shopper",
+            session_id: SESSION_ID,
+            mode: requestMode,
+            cart_items: liveCartItems.map((ci) => ({
+              id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
+              name: ci.product_name || ci.name || "Item",
+              price: Number(ci.unit_price ?? ci.price ?? 0),
+              quantity: Number(ci.quantity || 1),
+            })),
+          },
+        });
+        if (Array.isArray(localEnriched?.actions) && localEnriched.actions.length > 0) {
+          rawActions = localEnriched.actions;
+          if (!res.data?.reply || res.data.reply === "Done.") {
+            res.data = { ...res.data, reply: localEnriched.reply };
+          }
+        }
+      }
+
       const fallbackReply =
         rawActions.length > 0
           ? "Here are your live options."
@@ -328,24 +393,44 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             const remTarget = act.name || targetList[0]?.name || "item";
             setCurrentTask({ id: `rem-${Date.now()}`, state: "processing", label: `Removing ${remTarget} from cart...` });
             const removedPreview = [];
+            const currentCartList = Array.isArray(cart?.items) ? cart.items : [];
+            let removedAnyFromCart = false;
+
             for (const rem of targetList) {
               const targetId = Number(rem.product_id || rem.id);
-              const existing = (cart?.items || []).find(
-                (ci) =>
-                  Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id) === targetId ||
-                  (rem.name &&
-                    String(ci.product_name || ci.name || "")
-                      .toLowerCase()
-                      .includes(String(rem.name).toLowerCase())),
-              );
-              if (existing) {
-                update?.(existing, 0);
-                removedPreview.push({
-                  id: targetId || existing.id,
-                  name: existing.product_name || existing.name || rem.name || "Item",
-                  image: existing.product?.image || existing.image || rem.image,
-                  price: Number(existing.unit_price ?? existing.price ?? rem.price ?? 0),
-                });
+              const remNameLower = String(rem.name || act.name || "").toLowerCase();
+              const remTokens = remNameLower
+                .split(/\s+/)
+                .filter((tk) => tk.length >= 3 && !["the", "from", "cart", "item", "items"].includes(tk));
+
+              const matchedCartItems = currentCartList.filter((ci) => {
+                const ciProdId = Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id);
+                const ciNameLower = String(ci.product_name || ci.name || "").toLowerCase();
+                if (targetId && ciProdId === targetId) return true;
+                if (remNameLower && ciNameLower && (ciNameLower.includes(remNameLower) || remNameLower.includes(ciNameLower))) {
+                  return true;
+                }
+                return remTokens.length > 0 && remTokens.some((tk) => ciNameLower.includes(tk));
+              });
+
+              if (matchedCartItems.length > 0) {
+                for (const existing of matchedCartItems) {
+                  removedAnyFromCart = true;
+                  const exId = Number(existing.product?.id ?? existing.product ?? existing.product_id ?? existing.id);
+                  update?.(existing, 0);
+                  removedPreview.push({
+                    id: exId || targetId,
+                    name: existing.product_name || existing.name || rem.name || "Item",
+                    image: existing.product?.image || existing.product_image || existing.image || rem.image,
+                    price: Number(existing.unit_price ?? existing.price ?? rem.price ?? 0),
+                  });
+                  setAddedItems((prev) => {
+                    const next = { ...prev };
+                    delete next[exId];
+                    delete next[targetId];
+                    return next;
+                  });
+                }
               } else {
                 if (targetId) update?.({ id: targetId, product: targetId }, 0);
                 removedPreview.push({
@@ -354,13 +439,20 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                   image: rem.image || rem.thumbnail,
                   price: Number(rem.price || 0),
                 });
+                setAddedItems((prev) => {
+                  const next = { ...prev };
+                  delete next[targetId];
+                  return next;
+                });
               }
-              setAddedItems((prev) => {
-                const next = { ...prev };
-                delete next[targetId];
-                return next;
-              });
             }
+
+            // If user asked to remove from cart and no specific product matched, clear the cart so it never stays stuck
+            if (!removedAnyFromCart && currentCartList.length > 0) {
+              clearCart?.();
+              setAddedItems({});
+            }
+
             await flushCartSync?.();
             toast.success(`Removed ${act.name || "item"} from cart`);
             setCurrentTask({ id: `rem-${Date.now()}`, state: "success", label: `Removed ${remTarget} from cart` });
@@ -447,10 +539,14 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             const snapshot = (cart?.items || []).map((ci) => ({
               id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
               name: ci.product_name || ci.name || "Cart Item",
-              image: ci.product?.image || ci.image,
+              image: ci.product?.image || ci.product_image || ci.image,
               price: Number(ci.unit_price ?? ci.price ?? 0),
             }));
             clearCart?.();
+            setAddedItems({});
+            try {
+              localStorage.removeItem("smart-kirana-customer-cart-cache");
+            } catch {}
             await flushCartSync?.();
             toast.success("Cleared your shopping cart!");
             setCurrentTask({ id: `clear-${Date.now()}`, state: "success", label: "Shopping cart cleared" });
@@ -596,8 +692,6 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     toast.success("Added your last order to the cart");
   };
 
-  const [stageDismissedMsgLen, setStageDismissedMsgLen] = useState(0);
-
   const voice = useVoiceSession({
     active: isOpen && mode === "voice" && !paymentReview,
     onPrompt: (text) => handleSend(text, "voice"),
@@ -630,12 +724,14 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     if (!voiceActions.length) return undefined;
     const actType = voiceActions[0]?.type;
     let ttlMs = 0;
-    if (actType === "ADD_TO_CART" || actType === "REMOVE_FROM_CART" || actType === "CLEAR_CART") {
-      ttlMs = 6200;
+    if (actType === "REMOVE_FROM_CART" || actType === "CLEAR_CART") {
+      ttlMs = 2400;
+    } else if (actType === "ADD_TO_CART") {
+      ttlMs = 4800;
     } else if (actType === "RECOMMEND_BASKET" || actType === "SEARCH_RESULTS") {
       ttlMs = 14000;
     } else if (actType === "NOTIFICATIONS_CARD" || actType === "REFERRAL_STATUS_CARD") {
-      ttlMs = 7500;
+      ttlMs = 6500;
     }
     if (!ttlMs) return undefined;
     const t = setTimeout(() => {
@@ -828,61 +924,72 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           </div>
         )}
 
-        <PaymentReview
-          review={paymentReview}
-          onCancel={() => setPaymentReview(null)}
-          onOpen={() => {
-            close();
-            navigate("/checkout");
-          }}
-          busy={loading}
-          cartItems={liveItems}
-          cartTotal={cartTotal}
-          onPlaceInlineOrder={(orderInfo) => {
-            playOrderConfirmedChime();
-            clearCart?.();
-            setAddedItems({});
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                content: `Order #${orderInfo.id} confirmed! Arriving in 15 to 20 minutes.`,
-                actions: [],
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              },
-            ]);
-            setTimeout(() => {
-              setPaymentReview(null);
-            }, 2900);
-          }}
-        />
+        {mode === "chat" && (
+          <PaymentReview
+            review={paymentReview}
+            onCancel={() => setPaymentReview(null)}
+            onOpen={() => {
+              close();
+              navigate("/checkout");
+            }}
+            busy={loading}
+            cartItems={liveItems}
+            cartTotal={cartTotal}
+            onPlaceInlineOrder={(orderInfo) => {
+              playOrderConfirmedChime();
+              clearCart?.();
+              setAddedItems({});
+              setMessages((prev) => [
+                ...prev,
+                {
+                  role: "assistant",
+                  content: `Order #${orderInfo.id} confirmed.`,
+                  actions: [],
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                },
+              ]);
+              setTimeout(() => {
+                setPaymentReview(null);
+              }, 2600);
+            }}
+          />
+        )}
         {mode === "voice" ? (
           <VoiceView
             voice={voice}
             busy={loading}
-            hint={isWelcome ? "What can I help with?" : undefined}
+            hint={isWelcome ? "Tap orb to speak" : undefined}
             replyText={!isWelcome ? latestReply?.content : undefined}
-            lastUserText={latestUser?.content}
-            cartCount={cartCount}
-            cartTotal={cartTotal}
             activeTaskType={activeTaskType}
-            quickPrompts={
-              !voiceActions.length && !paymentReview
-                ? [
-                    "Suggest Biryani requirements",
-                    cartCount > 0 ? "Place my order" : "What is my order status?",
-                    "Turn off dark mode",
-                  ]
-                : []
-            }
-            onSelectPrompt={(promptText) => {
-              handleSend(promptText, "voice").catch(() => {});
-            }}
-            onViewCart={() => {
-              close();
-              navigate("/cart");
-            }}
           >
+            <PaymentReview
+              review={paymentReview}
+              onCancel={() => setPaymentReview(null)}
+              onOpen={() => {
+                close();
+                navigate("/checkout");
+              }}
+              busy={loading}
+              cartItems={liveItems}
+              cartTotal={cartTotal}
+              onPlaceInlineOrder={(orderInfo) => {
+                playOrderConfirmedChime();
+                clearCart?.();
+                setAddedItems({});
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    role: "assistant",
+                    content: `Order #${orderInfo.id} confirmed.`,
+                    actions: [],
+                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  },
+                ]);
+                setTimeout(() => {
+                  setPaymentReview(null);
+                }, 2600);
+              }}
+            />
             <ActionCards
               key={messages.length}
               actions={voiceActions}

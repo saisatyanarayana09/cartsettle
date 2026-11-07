@@ -51,10 +51,10 @@ api.interceptors.request.use(
     } else {
       config.headers['X-Portal-Context'] = 'customer';
     }
-    // Allow sufficient time for Gemini LLM responses while still falling back gracefully on cold starts
+    // Fast 1.2s cap so the AI Assistant responds instantly without hanging on cold starts
     if ((config.url || '').includes('/store/agent/') && !config.timeout) {
       const isGet = (config.method || 'get').toLowerCase() === 'get';
-      config.timeout = isGet ? 2000 : 6500;
+      config.timeout = isGet ? 1500 : 1200;
     }
     return config;
   },
