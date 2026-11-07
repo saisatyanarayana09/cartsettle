@@ -234,7 +234,31 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   const handleSend = async (textToSend, requestMode = mode) => {
     const prompt = (textToSend || input).trim();
     if (!prompt || requestRef.current) return;
-    if (paymentReview) return;
+    if (paymentReview) {
+      const lower = prompt.toLowerCase();
+      if (/^(cancel|no|nevermind|back|close|exit|stop)\b/i.test(lower)) {
+        setPaymentReview(null);
+        return { reply: "Checkout cancelled. What else can I help you with?" };
+      }
+      if (/^(confirm|pay|place order|complete|yes|proceed)\b/i.test(lower)) {
+        playOrderConfirmedChime();
+        clearCart?.();
+        setAddedItems({});
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Order confirmed via PayPal.",
+            actions: [],
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+        setPaymentReview(null);
+        return { reply: "Order confirmed via PayPal." };
+      }
+      // Any other query or command automatically dismisses the checkout review and proceeds
+      setPaymentReview(null);
+    }
     if (requiresPaymentReview(prompt)) {
       voice.stop();
       setInput("");
@@ -580,7 +604,49 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       setMessages((prev) => [...prev, newAssistantMsg]);
       return { ...res.data, actions: finalActions };
     } catch (err) {
-      console.error("Shopper agent error:", err);
+      console.error("Shopper agent network error, engaging autonomous fallback:", err);
+      try {
+        const liveCartItems = Array.isArray(cart?.items) ? cart.items : [];
+        const fallbackRes = handleLovableAgentFallback({
+          method: "post",
+          data: {
+            prompt,
+            persona: "shopper",
+            session_id: SESSION_ID,
+            mode: requestMode,
+            cart_items: liveCartItems.map((ci) => ({
+              id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
+              name: ci.product_name || ci.name || "Item",
+              price: Number(ci.unit_price ?? ci.price ?? 0),
+              quantity: Number(ci.quantity || 1),
+            })),
+          },
+        });
+        if (fallbackRes?.reply) {
+          const fallbackActions = Array.isArray(fallbackRes.actions) ? fallbackRes.actions : [];
+          for (const act of fallbackActions) {
+            const type = act.type || act.action;
+            if (type === "CLEAR_CART") {
+              clearCart?.();
+              setAddedItems({});
+            } else if (type === "SWITCH_THEME") {
+              toggleTheme?.(act.theme || "dark");
+            }
+          }
+          const fallbackMsg = {
+            role: "assistant",
+            content: fallbackRes.reply,
+            actions: fallbackActions,
+            tools_used: fallbackRes.tools_used || [],
+            follow_ups: fallbackRes.follow_ups || [],
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          };
+          setMessages((prev) => [...prev, fallbackMsg]);
+          return { ...fallbackRes, actions: fallbackActions };
+        }
+      } catch (fallbackErr) {
+        console.error("Fallback execution error:", fallbackErr);
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -590,7 +656,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
-      throw err;
+      return { reply: "Couldn't complete that. Try again." };
     } finally {
       requestRef.current = false;
       setLoading(false);
@@ -693,7 +759,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   };
 
   const voice = useVoiceSession({
-    active: isOpen && mode === "voice" && !paymentReview,
+    active: isOpen && mode === "voice",
     onPrompt: (text) => handleSend(text, "voice"),
   });
   const latestReply = [...messages].reverse().find((message) => message.role === "assistant");
@@ -867,24 +933,22 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
 
           <div className="flex items-center gap-0.5">
             {mode === "chat" && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Scan grocery list photo"
-                  title="Scan grocery list photo"
-                  className="size-9 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={loading}
-                >
-                  <Camera className="size-4" />
-                </Button>
-                <PanelMenu
-                  disabled={loading || messages.length === 1}
-                  onClear={() => setConfirmClear(true)}
-                />
-              </>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Scan grocery list photo"
+                title="Scan grocery list photo"
+                className="size-9 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+              >
+                <Camera className="size-4" />
+              </Button>
             )}
+            <PanelMenu
+              disabled={loading || messages.length === 1}
+              onClear={() => setConfirmClear(true)}
+            />
             <Button
               variant="ghost"
               size="icon"

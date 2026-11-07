@@ -57,7 +57,9 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
   const handleSend = async (text = input, requestMode = mode) => {
     const prompt = text.trim();
     if (!prompt || busy.current) return;
-    if (paymentReview) return;
+    if (paymentReview) {
+      setPaymentReview(null);
+    }
     if (requiresPaymentReview(prompt)) {
       voice.stop();
       setInput("");
@@ -128,7 +130,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
     }
   };
   const voice = useVoiceSession({
-    active: isOpen && mode === "voice" && !paymentReview,
+    active: isOpen && mode === "voice",
     onPrompt: (text) => handleSend(text, "voice"),
   });
   const close = () => {

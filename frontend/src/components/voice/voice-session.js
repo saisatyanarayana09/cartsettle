@@ -205,11 +205,9 @@ export function createVoiceSession({
       };
 
       speech.onstart = () => {
-        if (silenceMs > 500) {
-          clearTimeout(speechWatchdog);
-          const maxDuration = Math.min(5500, Math.max(2200, String(reply).length * 65));
-          speechWatchdog = setTimeout(finishSpeech, maxDuration);
-        }
+        clearTimeout(speechWatchdog);
+        const maxDuration = Math.min(5500, Math.max(2200, String(reply).length * 65));
+        speechWatchdog = setTimeout(finishSpeech, maxDuration);
       };
       speech.onend = finishSpeech;
       speech.onerror = finishSpeech;
@@ -221,17 +219,14 @@ export function createVoiceSession({
       browser.speechSynthesis.speak(speech);
 
       // Fast start watchdog: if browser TTS fails to start within 1.2s, immediately reopen mic
-      if (silenceMs > 500) {
-        speechWatchdog = setTimeout(finishSpeech, 1200);
-      }
+      clearTimeout(speechWatchdog);
+      speechWatchdog = setTimeout(finishSpeech, 1200);
     } catch {
       if (active && turn === generation) {
         emit("error", "Try again.");
-        if (silenceMs > 500) {
-          timer = setTimeout(() => {
-            if (active && turn === generation) listen();
-          }, 900);
-        }
+        timer = setTimeout(() => {
+          if (active && turn === generation) listen();
+        }, 900);
       }
     }
   };
