@@ -199,3 +199,110 @@ it("renders data breakdown preview card with metrics summary and chips", () => {
   expect(screen.getByText("50")).toBeInTheDocument();
 });
 
+it("renders wallet card with balance, pending cashback and navigation buttons", () => {
+  const onNavigate = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "WALLET_CARD",
+          wallet: {
+            balance: 450.0,
+            pending_cashback: 25.0,
+            usage_policy: "100% usable on store groceries",
+          },
+        },
+      ]}
+      onNavigate={onNavigate}
+    />,
+  );
+  expect(screen.getByText("Store Wallet")).toBeInTheDocument();
+  expect(screen.getByText("$450.00")).toBeInTheDocument();
+  expect(screen.getByText("+$25.00")).toBeInTheDocument();
+  expect(screen.getByText("100% usable on store groceries")).toBeInTheDocument();
+
+  const addFundsBtn = screen.getByRole("button", { name: "Add Funds" });
+  fireEvent.click(addFundsBtn);
+  expect(onNavigate).toHaveBeenCalledWith("/profile/wallet");
+});
+
+it("renders rich itemized order card with line items and reorder action", () => {
+  const onReorder = vi.fn();
+  const onNavigate = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "ORDER_CARD",
+          order: {
+            id: "ORD202600009",
+            status: "ACCEPTED",
+            total_amount: 59.2,
+            order_type: "DELIVERY",
+            items: [
+              { id: 1, name: "Organic Honey", quantity: 2, price: 15.0, total: 30.0 },
+              { id: 2, name: "Greek Yogurt", quantity: 1, price: 5.2, total: 5.2 },
+            ],
+          },
+        },
+      ]}
+      persona="shopper"
+      onReorder={onReorder}
+      onNavigate={onNavigate}
+    />,
+  );
+  expect(screen.getByText("Order #ORD202600009")).toBeInTheDocument();
+  expect(screen.getByText("ACCEPTED")).toBeInTheDocument();
+  expect(screen.getByText("Doorstep Delivery")).toBeInTheDocument();
+  expect(screen.getByText("Organic Honey")).toBeInTheDocument();
+  expect(screen.getByText("Greek Yogurt")).toBeInTheDocument();
+  expect(screen.getByText("$59.20")).toBeInTheDocument();
+
+  const reorderBtn = screen.getByRole("button", { name: /Reorder/i });
+  fireEvent.click(reorderBtn);
+  expect(onReorder).toHaveBeenCalledWith([
+    { id: 1, name: "Organic Honey", quantity: 2, price: 15.0, total: 30.0 },
+    { id: 2, name: "Greek Yogurt", quantity: 1, price: 5.2, total: 5.2 },
+  ]);
+});
+
+it("renders personalized referral card when person name is specified", () => {
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "REFERRAL_STATUS_CARD",
+          referral: {
+            name: "Priya's Referral Status",
+            code: "PRIYA2026",
+            friends_invited: 3,
+            rewards_earned: 15.0,
+          },
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText("Priya's Referral Status")).toBeInTheDocument();
+  expect(screen.getByText("PRIYA2026")).toBeInTheDocument();
+  expect(screen.getByText("$15.00")).toBeInTheDocument();
+});
+
+it("allows manual dismissal of auto-dismissing cards via X button", () => {
+  const onDismiss = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "WALLET_CARD",
+          wallet: { balance: 100 },
+        },
+      ]}
+      onDismiss={onDismiss}
+    />,
+  );
+  const dismissBtn = screen.getByRole("button", { name: "Dismiss preview" });
+  expect(dismissBtn).toBeInTheDocument();
+  fireEvent.click(dismissBtn);
+});
+
+

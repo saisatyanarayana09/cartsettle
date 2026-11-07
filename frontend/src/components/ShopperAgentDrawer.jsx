@@ -851,6 +851,10 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     "GROCERY_CHECKLIST",
     "NOTIFICATIONS_CARD",
     "REFERRAL_STATUS_CARD",
+    "WALLET_CARD",
+    "ORDER_CARD",
+    "CALCULATION_RESULT",
+    "DATA_ANALYSIS",
   ];
 
   // Self-cleaning stage: only display actions from the latest turn, and hide immediately during checkout or after auto-dismiss
@@ -872,8 +876,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
       ttlMs = 4800;
     } else if (actType === "RECOMMEND_BASKET" || actType === "SEARCH_RESULTS") {
       ttlMs = 14000;
-    } else if (actType === "NOTIFICATIONS_CARD" || actType === "REFERRAL_STATUS_CARD") {
-      ttlMs = 6500;
+    } else if (actType === "NOTIFICATIONS_CARD" || actType === "REFERRAL_STATUS_CARD" || actType === "WALLET_CARD" || actType === "ORDER_CARD" || actType === "CALCULATION_RESULT" || actType === "DATA_ANALYSIS") {
+      ttlMs = 8000;
     }
     if (!ttlMs) return undefined;
     const t = setTimeout(() => {

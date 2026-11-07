@@ -516,22 +516,26 @@ class AgentChatView(views.APIView):
 
     def get(self, request):
         from services.agent_service import agent_service
-        session_id = request.query_params.get('session_id', 'kirana_copilot')
         persona = self._resolve_persona(request)
+        default_sid = 'owner_copilot_session' if persona == 'owner' else 'shopper_session'
+        session_id = request.query_params.get('session_id') or default_sid
         mem = agent_service.get_session_memory(session_id=session_id, persona=persona)
         return response.Response(mem, status=status.HTTP_200_OK)
 
     def delete(self, request):
         from services.agent_service import agent_service
-        session_id = request.query_params.get('session_id') or request.data.get('session_id') or 'kirana_copilot'
         persona = self._resolve_persona(request)
+        default_sid = 'owner_copilot_session' if persona == 'owner' else 'shopper_session'
+        session_id = request.query_params.get('session_id') or request.data.get('session_id') or default_sid
         agent_service.clear_session_memory(session_id=session_id, persona=persona)
         return response.Response({'status': 'cleared'}, status=status.HTTP_200_OK)
 
     def post(self, request):
         prompt = (request.data.get('prompt') or request.data.get('message') or '').strip()
         image = request.data.get('image') or request.data.get('image_base64')
-        session_id = request.data.get('session_id', 'kirana_copilot')
+        persona = self._resolve_persona(request)
+        default_sid = 'owner_copilot_session' if persona == 'owner' else 'shopper_session'
+        session_id = request.data.get('session_id') or request.query_params.get('session_id') or default_sid
         history = request.data.get('history', [])
         mode = str(request.data.get('mode') or request.query_params.get('mode') or 'chat').strip().lower()
 
@@ -540,7 +544,6 @@ class AgentChatView(views.APIView):
         if not prompt and image:
             prompt = 'Analyze this grocery item or shopping list photo and recommend available store items.'
 
-        persona = self._resolve_persona(request)
         cart_items = request.data.get('cart_items', [])
         from services.agent_service import agent_service
         result = agent_service.chat(

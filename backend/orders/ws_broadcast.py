@@ -157,7 +157,8 @@ def broadcast_agent_thought(session_id: str, thought_data: dict):
             "timestamp": timezone.now().isoformat()
         }
         _send_group(f"agent_{session_id}", payload)
-        _send_group("store_owner", payload)
+        if "owner" in str(session_id).lower() or (isinstance(thought_data, dict) and thought_data.get("persona") == "owner"):
+            _send_group("store_owner", payload)
     except Exception as e:
         logger.debug("broadcast_agent_thought WS error: %s", e)
 

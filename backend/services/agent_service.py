@@ -2434,29 +2434,61 @@ class AgentService:
                 }
             ]
             return {
-                "reply": "You have 1 unread notification: Order #202601 is on the way.",
+                "reply": "3 notifications (1 unread).",
                 "tools_used": [{"name": "read_notifications", "args": {"count": len(notifs)}}],
                 "actions": [{"type": "NOTIFICATIONS_CARD", "notifications": notifs}],
                 "tool_result": {"notifications": notifs}
             }
 
-        # --- 0F. REFERRAL REWARDS HUB ---
+        # --- 0F. REFERRAL REWARDS HUB (Self or Person X) ---
         if any(k in lower for k in [
             "referral status", "my referral", "referral code", "referral earnings",
-            "referral rewards", "referral balance", "invite friend", "share referral"
+            "referral rewards", "referral balance", "invite friend", "share referral", "referral of", "referral for"
         ]):
+            name_match = re.search(r"\b(?:of|for|about|person)\s+([A-Za-z]+)\b", prompt, flags=re.IGNORECASE)
+            person_name = name_match.group(1).title() if name_match else ("Store Referral Program" if persona == "owner" else "Your Referral Hub")
+            is_named = bool(name_match)
+            code = f"{person_name.upper()[:6]}2026" if is_named else "CARTREF2026"
+            friends = 3 if is_named else 4
+            rewards = 15.0 if is_named else 25.0
             ref_data = {
-                "code": "CARTREF2026",
-                "friends_invited": 4,
-                "rewards_earned": 25.0,
+                "name": person_name,
+                "code": code,
+                "friends_invited": friends,
+                "rewards_earned": rewards,
                 "reward_per_invite": 5.0,
-                "link": "https://cartsettle.shop/ref/CARTREF2026"
+                "link": f"https://cartsettle.shop/ref/{code}"
             }
             return {
-                "reply": f"Your referral code is {ref_data['code']}. You have earned ${ref_data['rewards_earned']:.2f} by inviting {ref_data['friends_invited']} friends.",
-                "tools_used": [{"name": "get_referral_status", "args": {"code": ref_data["code"]}}],
+                "reply": f"Referral status for {person_name}: {friends} friends invited, ${rewards:.2f} earned.",
+                "tools_used": [{"name": "get_referral_status", "args": {"name": person_name}}],
                 "actions": [{"type": "REFERRAL_STATUS_CARD", "referral": ref_data}],
                 "tool_result": ref_data
+            }
+
+        # --- 0G. STORE WALLET BALANCE HUB ---
+        if any(k in lower for k in [
+            "wallet amount", "wallet balance", "my wallet", "how much in my wallet", "current wallet", "check wallet"
+        ]):
+            bal = 450.00
+            try:
+                from accounts.models import CustomerProfile
+                prof = CustomerProfile.objects.first()
+                if prof and hasattr(prof, "wallet_balance"):
+                    bal = float(prof.wallet_balance)
+            except Exception:
+                pass
+            wallet_data = {
+                "balance": bal,
+                "pending_cashback": 65.00,
+                "currency": "USD",
+                "usage_policy": "100% usable on store groceries"
+            }
+            return {
+                "reply": f"Wallet balance: ${bal:.2f}.",
+                "tools_used": [{"name": "get_wallet_balance", "args": {}}],
+                "actions": [{"type": "WALLET_CARD", "wallet": wallet_data}],
+                "tool_result": wallet_data
             }
 
         # --- 0. STRICT SETTINGS GUARDRAIL (Block all Settings access/modifications) ---
@@ -2853,8 +2885,18 @@ class AgentService:
                 auth_amt = float(latest.authorized_amount or latest.total_amount or 0)
                 cap_amt = float(latest.captured_amount or latest.total_amount or 0)
                 rel_amt = float(latest.released_amount or 0)
+                items_list = [
+                    {
+                        "id": item.id,
+                        "name": item.product_name_snapshot or (item.product.name if item.product else "Item"),
+                        "quantity": item.quantity,
+                        "price": float(item.price_snapshot or 0),
+                        "total": float(item.subtotal or 0)
+                    }
+                    for item in latest.items.all()[:6]
+                ]
 
-                reply = f"Most recent order is #{latest.id} ({latest.status} • ${float(latest.total_amount):.2f} • {total_orders} total orders, {pending_count} pending)."
+                reply = f"Order #{latest.id} details."
                 actions = [{
                     "type": "ORDER_CARD",
                     "order": {
@@ -2865,14 +2907,20 @@ class AgentService:
                         "authorized": auth_amt,
                         "captured": cap_amt,
                         "released": rel_amt,
-                        "can_settle": latest.status in ("NEW", "ACCEPTED", "PREPARING"),
+                        "can_settle": latest.status in ("NEW", "ACCEPTED", "PREPARING", "READY"),
+                        "payment_method": latest.payment_method or "PAYPAL",
+                        "order_type": latest.order_type or "PICKUP",
+                        "delivery_address": latest.delivery_address or "In-Store Pickup",
+                        "items": items_list,
+                        "items_count": len(items_list),
+                        "created_at": latest.created_at.strftime("%b %d, %I:%M %p") if latest.created_at else "Recent",
                         "recent_list": [
                             {
                                 "id": str(o.id),
                                 "customer": o.customer.get_full_name() or o.customer.username,
                                 "status": o.status,
                                 "total": float(o.total_amount),
-                                "can_settle": o.status in ("NEW", "ACCEPTED", "PREPARING")
+                                "can_settle": o.status in ("NEW", "ACCEPTED", "PREPARING", "READY")
                             }
                             for o in recent_orders[:4]
                         ]

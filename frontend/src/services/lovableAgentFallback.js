@@ -21,10 +21,83 @@ const DEMO_PRODUCTS = [
 ];
 
 const DEMO_ORDERS = [
-  { id: 'ORD202600005', status: 'READY', customer: 'Alex Rivera', total_amount: 46.80, authorized_amount: 54.00, captured_amount: 46.80, released_amount: 7.20, items_count: 4 },
-  { id: 'ORD202600004', status: 'PREPARING', customer: 'Priya Sharma', total_amount: 32.50, authorized_amount: 37.38, captured_amount: 0, released_amount: 0, items_count: 3, can_settle: true },
-  { id: 'ORD202600003', status: 'ACCEPTED', customer: 'Marcus Vance', total_amount: 28.90, authorized_amount: 33.24, captured_amount: 0, released_amount: 0, items_count: 3, can_settle: true },
-  { id: 'ORD202600002', status: 'NEW', customer: 'Elena Rostova', total_amount: 50.00, authorized_amount: 57.50, captured_amount: 0, released_amount: 0, items_count: 5, can_settle: true },
+  {
+    id: 'ORD202600005',
+    status: 'READY',
+    customer: 'Alex Rivera',
+    total_amount: 46.80,
+    authorized_amount: 54.00,
+    captured_amount: 46.80,
+    released_amount: 7.20,
+    items_count: 3,
+    payment_method: 'PAYPAL',
+    order_type: 'DELIVERY',
+    delivery_address: '142 Market Street, Suite 4',
+    created_at: 'Today, 2:30 PM',
+    can_settle: true,
+    items: [
+      { id: 101, name: 'Aashirvaad Shudh Chakki Atta 5kg', quantity: 1, price: 290.00, total: 290.00 },
+      { id: 102, name: 'Tata Salt 1kg', quantity: 2, price: 28.00, total: 56.00 },
+      { id: 103, name: 'Fortune Sunlite Sunflower Oil 1L', quantity: 1, price: 165.00, total: 165.00 },
+    ],
+  },
+  {
+    id: 'ORD202600004',
+    status: 'PREPARING',
+    customer: 'Priya Sharma',
+    total_amount: 32.50,
+    authorized_amount: 37.38,
+    captured_amount: 0,
+    released_amount: 0,
+    items_count: 2,
+    payment_method: 'WALLET',
+    order_type: 'PICKUP',
+    delivery_address: 'In-Store Pickup',
+    created_at: 'Today, 1:15 PM',
+    can_settle: true,
+    items: [
+      { id: 104, name: 'Amul Butter 500g', quantity: 1, price: 275.00, total: 275.00 },
+      { id: 105, name: 'Maggi 2-Minute Noodles 280g', quantity: 2, price: 55.00, total: 110.00 },
+    ],
+  },
+  {
+    id: 'ORD202600003',
+    status: 'ACCEPTED',
+    customer: 'Marcus Vance',
+    total_amount: 28.90,
+    authorized_amount: 33.24,
+    captured_amount: 0,
+    released_amount: 0,
+    items_count: 2,
+    payment_method: 'COD',
+    order_type: 'DELIVERY',
+    delivery_address: '88 Oak Avenue, Doorstep',
+    created_at: 'Yesterday',
+    can_settle: true,
+    items: [
+      { id: 106, name: 'India Gate Basmati Rice 5kg', quantity: 1, price: 420.00, total: 420.00 },
+      { id: 107, name: 'Everest Turmeric Powder 200g', quantity: 1, price: 62.00, total: 62.00 },
+    ],
+  },
+  {
+    id: 'ORD202600002',
+    status: 'NEW',
+    customer: 'Elena Rostova',
+    total_amount: 50.00,
+    authorized_amount: 57.50,
+    captured_amount: 0,
+    released_amount: 0,
+    items_count: 3,
+    payment_method: 'PAYPAL',
+    order_type: 'DELIVERY',
+    delivery_address: '22 Elm St, Flat 3B',
+    created_at: 'Yesterday',
+    can_settle: true,
+    items: [
+      { id: 108, name: 'Tata Tea Gold 500g', quantity: 1, price: 310.00, total: 310.00 },
+      { id: 109, name: 'Madhur Pure & Hygienic Sugar 1kg', quantity: 2, price: 52.00, total: 104.00 },
+    ],
+  },
 ];
 
 const STOP_WORDS = new Set([
@@ -379,10 +452,22 @@ export function handleLovableAgentFallback(config) {
     body = {};
   }
 
+  let urlParams = {};
+  if (config.url && config.url.includes('?')) {
+    try {
+      const qs = config.url.split('?')[1];
+      urlParams = Object.fromEntries(new URLSearchParams(qs).entries());
+    } catch {}
+  }
+
   const params = config.params || {};
-  const sessionId = body.session_id || params.session_id || 'default_session';
-  const persona = String(body.persona || body.role || params.persona || params.role || 'owner').toLowerCase();
-  const mode = String(body.mode || params.mode || 'chat').toLowerCase();
+  const isOwnerRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/owner');
+  const portalHeader = config.headers?.['X-Portal-Context'];
+  const defaultPersona = (portalHeader === 'owner' || isOwnerRoute) ? 'owner' : 'shopper';
+
+  const sessionId = body.session_id || params.session_id || urlParams.session_id || (defaultPersona === 'owner' ? 'owner_copilot_session' : 'shopper_session');
+  const persona = String(body.persona || body.role || params.persona || params.role || urlParams.persona || urlParams.role || defaultPersona).toLowerCase();
+  const mode = String(body.mode || params.mode || urlParams.mode || 'chat').toLowerCase();
   const key = `${persona}:${sessionId}`;
 
   if (!SESSION_STORE[key]) {
@@ -585,17 +670,84 @@ export function handleLovableAgentFallback(config) {
     actions = [{ type: 'REFRESH_DATA' }];
     tools_used = [{ name: 'send_customer_broadcast', args: {} }];
   }
-  // 2. Recent order / Order ID
+  // 2. Recent order / Order details / Order ID
   else if (
-    (lower.includes('recent order') || lower.includes('latest order') || lower.includes('last order') || lower.includes('order number')) &&
-    !['reorder', 'repeat', 'cancel', 'place'].some((w) => lower.includes(w))
+    (lower.includes('recent order') || lower.includes('latest order') || lower.includes('last order') || lower.includes('order details') || lower.includes('order status') || lower.includes('order number') || /ord\d+/i.test(lower)) &&
+    !['reorder', 'repeat', 'cancel', 'place', 'settle'].some((w) => lower.includes(w))
   ) {
-    const top = DEMO_ORDERS[0];
+    const ordMatch = lower.match(/\b(ord\d+\w*)\b/i);
+    const targetId = ordMatch ? ordMatch[1].toUpperCase() : (mem.last_order_id || 'ORD202600005');
+    const top = DEMO_ORDERS.find((o) => o.id === targetId) || DEMO_ORDERS[0];
     mem.last_order_id = top.id;
-    reply = `Order #${top.id} is ${top.status} for $${top.total_amount.toFixed(2)}.`;
+    reply = `Order #${top.id} details.`;
     actions = [{ type: 'ORDER_CARD', order: top }];
-    tools_used = [{ name: 'get_latest_order', args: {} }];
+    tools_used = [{ name: 'get_latest_order', args: { order_id: top.id } }];
     follow_ups = [`Settle order ${top.id}`, 'Check pending orders', 'Check low stock'];
+  }
+  // 2b. Wallet balance / amount
+  else if (
+    lower.includes('wallet') &&
+    (lower.includes('balance') || lower.includes('amount') || lower.includes('money') || lower.includes('check') || lower.includes('how much') || lower.includes('my wallet') || lower.includes('current'))
+  ) {
+    const bal = 450.00;
+    const cashbacks = 65.00;
+    reply = `Wallet balance: $${bal.toFixed(2)}.`;
+    actions = [{
+      type: 'WALLET_CARD',
+      wallet: {
+        balance: bal,
+        pending_cashback: cashbacks,
+        currency: 'USD',
+        usage_policy: '100% usable on store groceries',
+      },
+    }];
+    tools_used = [{ name: 'get_wallet_balance', args: {} }];
+    follow_ups = ['Add funds to wallet', 'Apply wallet to cart', 'View wallet ledger'];
+  }
+  // 2c. Referral status & rewards (self or named person)
+  else if (
+    lower.includes('referral') ||
+    lower.includes('refer and earn') ||
+    lower.includes('invite code')
+  ) {
+    const nameMatch = prompt.match(/\b(?:of|for|about|person)\s+([A-Za-z]+)\b/i);
+    const personName = nameMatch ? nameMatch[1].trim() : (persona === 'owner' ? 'Store Referral Program' : 'Your Referral Hub');
+    const isNamed = Boolean(nameMatch);
+    const code = isNamed ? `${personName.toUpperCase().slice(0, 6)}2026` : 'CARTREF2026';
+    const friends = isNamed ? 3 : 5;
+    const rewards = isNamed ? 15.00 : 25.00;
+
+    reply = `Referral status for ${personName}: ${friends} friends invited, $${rewards.toFixed(2)} earned.`;
+    actions = [{
+      type: 'REFERRAL_STATUS_CARD',
+      referral: {
+        name: personName,
+        code,
+        friends_invited: friends,
+        rewards_earned: rewards,
+        reward_per_invite: 5.00,
+        link: `https://cartsettle.shop/ref/${code}`,
+      },
+    }];
+    tools_used = [{ name: 'get_referral_status', args: { name: personName } }];
+    follow_ups = ['Share referral code', 'View referral ledger', 'Check rewards earned'];
+  }
+  // 2d. Notifications / Alerts
+  else if (
+    lower.includes('notification') ||
+    lower.includes('notifications') ||
+    lower.includes('alerts') ||
+    lower.includes('my alerts')
+  ) {
+    const notifs = [
+      { id: 1, title: 'Order #ORD202600005 Dispatched', message: 'Delivery partner is en route with your fresh groceries.', time: '5m ago', unread: true },
+      { id: 2, title: 'Flash 15% Off Promo', message: 'Use code SAVE15 on fresh produce and organic dairy.', time: '1h ago', unread: false },
+      { id: 3, title: 'Cashback Credited', message: '$5.00 wallet cashback credited for your recent order.', time: 'Yesterday', unread: false },
+    ];
+    reply = '3 notifications (1 unread).';
+    actions = [{ type: 'NOTIFICATIONS_CARD', notifications: notifs }];
+    tools_used = [{ name: 'read_notifications', args: { count: notifs.length } }];
+    follow_ups = ['Mark all as read', 'View order tracking', 'Check promo offers'];
   }
   // 3. Pending orders
   else if (

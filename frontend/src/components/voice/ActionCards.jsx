@@ -19,6 +19,7 @@ import {
   BarChart3,
   Copy,
   Receipt,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { optimizeImage } from "../../utils/image";
@@ -250,6 +251,246 @@ function RestockRow({ item, onSend, onReviewPayment, busy }) {
             Restock
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Auto-dismissing wrapper with hover pause, countdown bar, and manual close */
+function AutoDismissCardWrapper({
+  children,
+  action,
+  duration = 7500,
+  onDismiss,
+  closable = true,
+}) {
+  const [dismissed, setDismissed] = useState(false);
+  const [exiting, setExiting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    if (isPaused) return;
+    const exitTimer = setTimeout(() => setExiting(true), Math.max(duration - 350, 500));
+    const removeTimer = setTimeout(() => {
+      setDismissed(true);
+      onDismiss?.(action);
+    }, duration);
+    return () => {
+      clearTimeout(exitTimer);
+      clearTimeout(removeTimer);
+    };
+  }, [action, onDismiss, isPaused, duration]);
+
+  if (dismissed) return null;
+
+  return (
+    <div
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => setIsPaused(false)}
+      className={`relative transition-all duration-300 ${
+        exiting ? "assistant-card-dissolve" : "assistant-card-materialize"
+      }`}
+    >
+      <div className="assistant-auto-dismiss-bar mb-2.5 rounded-full" />
+      {closable && (
+        <button
+          type="button"
+          onClick={() => {
+            setExiting(true);
+            setTimeout(() => {
+              setDismissed(true);
+              onDismiss?.(action);
+            }, 200);
+          }}
+          className="absolute top-2 right-2.5 z-10 size-6 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10 transition-colors cursor-pointer"
+          aria-label="Dismiss preview"
+        >
+          <X className="size-3.5" />
+        </button>
+      )}
+      {children}
+    </div>
+  );
+}
+
+/** In-Assistant Store Wallet Live Preview Card */
+function WalletCard({ action, currency = "USD", onNavigate }) {
+  const wallet = action.wallet || action;
+  const balance = Number(wallet.balance || 0);
+  const cashback = Number(wallet.pending_cashback || 0);
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
+      <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+        <div>
+          <h3 className="text-sm font-bold text-foreground">Store Wallet</h3>
+          <p className="text-[11px] text-muted-foreground">{wallet.usage_policy || "100% usable on store groceries"}</p>
+        </div>
+        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+          Instant
+        </span>
+      </div>
+
+      <div className="flex items-baseline justify-between rounded-xl bg-secondary/50 p-3">
+        <div>
+          <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Available Balance</p>
+          <p className="text-2xl font-extrabold text-foreground font-mono tabular-nums">
+            {money(balance, currency)}
+          </p>
+        </div>
+        {cashback > 0 && (
+          <div className="text-right">
+            <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Pending Rewards</p>
+            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+              +{money(cashback, currency)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2 pt-0.5">
+        <Button
+          size="sm"
+          className="cursor-pointer font-bold shadow-xs active:scale-[0.98] transition-transform"
+          onClick={() => onNavigate?.("/profile/wallet")}
+        >
+          Add Funds
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="cursor-pointer active:scale-[0.98] transition-transform"
+          onClick={() => onNavigate?.("/profile/wallet")}
+        >
+          View Ledger <ArrowUpRight className="size-3.5 ml-1" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** In-Assistant Rich Order Details Live Preview Card */
+function OrderCard({
+  action,
+  currency = "USD",
+  persona,
+  onNavigate,
+  onReorder,
+  onReviewPayment,
+  busy,
+}) {
+  const order = action.order || action;
+  const reorderItems = Array.isArray(order.items) ? order.items : [];
+  const itemsList = Array.isArray(order.items) ? order.items : [];
+  const status = String(order.status || "ACCEPTED").toUpperCase();
+  const total = Number(order.total_amount ?? order.total ?? order.authorized_amount ?? order.authorized ?? 0);
+
+  const isCompleted = ["ACCEPTED", "DELIVERED", "READY"].includes(status);
+  const isPending = ["NEW", "PREPARING", "OUT_FOR_DELIVERY"].includes(status);
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
+      <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
+        <div className="flex items-center gap-2">
+          <span
+            className={`size-2 rounded-full ${
+              isCompleted
+                ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
+                : isPending
+                ? "bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]"
+                : "bg-slate-400"
+            }`}
+          />
+          <h3 className="text-sm font-bold text-foreground">Order #{order.id}</h3>
+        </div>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] font-bold border ${
+            isCompleted
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+              : isPending
+              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+              : "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20"
+          }`}
+        >
+          {status}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{order.created_at || "Recent Order"}</span>
+        <span>{order.order_type === "DELIVERY" ? "Doorstep Delivery" : "In-Store Pickup"}</span>
+      </div>
+
+      {itemsList.length > 0 && (
+        <div className="rounded-xl bg-secondary/40 p-2.5 space-y-1.5 text-xs">
+          {itemsList.slice(0, 3).map((it, idx) => (
+            <div key={it.id || idx} className="flex justify-between items-center text-foreground">
+              <span className="truncate pr-2">
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400 mr-1.5">{it.quantity}x</span>
+                {it.name}
+              </span>
+              <span className="font-mono tabular-nums text-muted-foreground shrink-0">
+                {money(it.total || (it.price * it.quantity), currency)}
+              </span>
+            </div>
+          ))}
+          {itemsList.length > 3 && (
+            <p className="text-[10px] text-muted-foreground pt-0.5">
+              +{itemsList.length - 3} more items
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between pt-1">
+        <span className="text-xs text-muted-foreground font-medium">Total Amount</span>
+        <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
+          {money(total, currency)}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-2 pt-1 border-t border-border/50">
+        <Button
+          variant="outline"
+          size="sm"
+          className="cursor-pointer active:scale-[0.98] transition-transform"
+          onClick={() =>
+            onNavigate?.(persona === "shopper" ? "/profile/orders" : `/owner/orders/${order.id}`)
+          }
+        >
+          Open <ArrowUpRight className="size-3.5 ml-1" />
+        </Button>
+        {persona === "shopper" && reorderItems.length > 0 && onReorder && (
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() => onReorder(reorderItems)}
+            className="cursor-pointer active:scale-[0.98] transition-transform"
+          >
+            <Plus className="size-3.5 mr-1" />
+            Reorder
+          </Button>
+        )}
+        {order.can_settle && (
+          <Button
+            size="sm"
+            disabled={busy}
+            className="cursor-pointer font-bold active:scale-[0.98] transition-transform"
+            onClick={() =>
+              onReviewPayment?.({
+                prompt: `Settle order ${order.id}`,
+                amount: Number(order.total_amount ?? order.total ?? order.authorized_amount ?? 0),
+                recipient: order.recipient || order.payee || order.customer_name || order.customer || "Order Settlement",
+                currency,
+              })
+            }
+          >
+            <Check className="size-3.5 mr-1" />
+            Settle
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -567,7 +808,7 @@ function ReferralStatusCard({ action }) {
     <div className="space-y-3 rounded-2xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
       <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
         <div>
-          <h3 className="text-sm font-bold text-foreground">Referral Rewards</h3>
+          <h3 className="text-sm font-bold text-foreground">{ref.name || "Referral Rewards"}</h3>
           <p className="text-xs text-muted-foreground">Share CartSettle & earn $5 per friend</p>
         </div>
         <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
@@ -770,20 +1011,44 @@ function ActionContent({
     return <GroceryChecklistCard action={action} currency={currency} onAdd={onAdd} busy={busy} />;
   }
 
+  if (type === "WALLET_CARD") {
+    return (
+      <AutoDismissCardWrapper action={action} onDismiss={onDismiss} duration={8500}>
+        <WalletCard action={action} currency={currency} onNavigate={onNavigate} />
+      </AutoDismissCardWrapper>
+    );
+  }
+
   if (type === "NOTIFICATIONS_CARD") {
-    return <NotificationsCard action={action} />;
+    return (
+      <AutoDismissCardWrapper action={action} onDismiss={onDismiss} duration={8000}>
+        <NotificationsCard action={action} />
+      </AutoDismissCardWrapper>
+    );
   }
 
   if (type === "REFERRAL_STATUS_CARD") {
-    return <ReferralStatusCard action={action} />;
+    return (
+      <AutoDismissCardWrapper action={action} onDismiss={onDismiss} duration={8500}>
+        <ReferralStatusCard action={action} />
+      </AutoDismissCardWrapper>
+    );
   }
 
   if (type === "CALCULATION_RESULT") {
-    return <CalculationResultCard action={action} />;
+    return (
+      <AutoDismissCardWrapper action={action} onDismiss={onDismiss} duration={7500}>
+        <CalculationResultCard action={action} />
+      </AutoDismissCardWrapper>
+    );
   }
 
   if (type === "DATA_ANALYSIS") {
-    return <DataAnalysisCard action={action} />;
+    return (
+      <AutoDismissCardWrapper action={action} onDismiss={onDismiss} duration={8500}>
+        <DataAnalysisCard action={action} />
+      </AutoDismissCardWrapper>
+    );
   }
 
   if (type === "PROPOSED_LANGUAGE") {
@@ -951,57 +1216,18 @@ function ActionContent({
   }
 
   if (type === "ORDER_CARD") {
-    const order = action.order || action;
-    const reorderItems = Array.isArray(order.items) ? order.items : [];
     return (
-      <div className="space-y-3">
-        <div className="flex justify-between gap-2 text-sm">
-          <h3 className="font-semibold text-foreground">Order #{order.id}</h3>
-          <span className="text-muted-foreground">{order.status}</span>
-        </div>
-        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-          {money(
-            order.total_amount ?? order.total ?? order.authorized_amount ?? order.authorized,
-            currency,
-          )}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="cursor-pointer"
-            onClick={() =>
-              onNavigate(persona === "shopper" ? "/profile/orders" : `/owner/orders/${order.id}`)
-            }
-          >
-            Open <ArrowUpRight className="size-3.5 ml-1" />
-          </Button>
-          {persona === "shopper" && reorderItems.length > 0 && onReorder && (
-            <Button size="sm" disabled={busy} onClick={() => onReorder(reorderItems)} className="cursor-pointer">
-              <Plus className="size-3.5 mr-1" />
-              Reorder
-            </Button>
-          )}
-          {order.can_settle && (
-            <Button
-              size="sm"
-              disabled={busy}
-              className="cursor-pointer font-bold"
-              onClick={() =>
-                onReviewPayment?.({
-                  prompt: `Settle order ${order.id}`,
-                  amount: Number(order.total_amount ?? order.total ?? order.authorized_amount ?? 0),
-                  recipient: order.recipient || order.payee || order.customer_name || order.customer || "Order Settlement",
-                  currency,
-                })
-              }
-            >
-              <Check className="size-3.5 mr-1" />
-              Settle
-            </Button>
-          )}
-        </div>
-      </div>
+      <AutoDismissCardWrapper action={action} onDismiss={onDismiss} duration={9000}>
+        <OrderCard
+          action={action}
+          currency={currency}
+          persona={persona}
+          onNavigate={onNavigate}
+          onReorder={onReorder}
+          onReviewPayment={onReviewPayment}
+          busy={busy}
+        />
+      </AutoDismissCardWrapper>
     );
   }
 
@@ -1181,6 +1407,7 @@ const visibleTypes = new Set([
   "GROCERY_CHECKLIST",
   "NOTIFICATIONS_CARD",
   "REFERRAL_STATUS_CARD",
+  "WALLET_CARD",
   "CALCULATION_RESULT",
   "DATA_ANALYSIS",
   "PROPOSED_LANGUAGE",
