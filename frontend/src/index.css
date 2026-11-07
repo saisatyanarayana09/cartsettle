@@ -89,14 +89,102 @@
 .assistant-action { padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--background); box-shadow: var(--assistant-shadow); }
 /* Frosted glass cards floating above the bottom glow in voice mode. */
 .voice-stage .assistant-action { border-radius: 14px; background: color-mix(in oklab, var(--background) 76%, transparent); backdrop-filter: blur(14px); border-color: color-mix(in oklab, var(--foreground) 12%, transparent); }
-.assistant-product { display: grid; grid-template-columns: 56px minmax(0,1fr); gap: 12px; padding: 12px 0; }
-.assistant-product + .assistant-product { border-top: 1px solid var(--border); }
-.assistant-photo { width: 56px; height: 64px; border-radius: 6px; background: var(--muted); overflow: hidden; display: grid; place-items: center; color: var(--muted-foreground); }
-.assistant-photo img { width: 100%; height: 100%; object-fit: contain; }
-.assistant-product-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.assistant-stepper { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; }
-.assistant-stepper button { width: 36px; height: 36px; }
-.assistant-stepper output { min-width: 24px; text-align: center; font-size: 13px; }
+.assistant-product { display: grid; grid-template-columns: 64px minmax(0,1fr); gap: 14px; padding: 14px; border-radius: 18px; background: color-mix(in oklab, var(--card) 85%, transparent); backdrop-filter: blur(16px); border: 1px solid color-mix(in oklab, var(--border) 60%, transparent); box-shadow: 0 4px 20px -4px rgba(0,0,0,0.06); transition: border-color .2s, box-shadow .2s; }
+.dark .assistant-product { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.1); box-shadow: 0 8px 24px -4px rgba(0,0,0,0.35); }
+.assistant-product + .assistant-product { margin-top: 10px; }
+.assistant-photo { width: 64px; height: 64px; border-radius: 12px; background: #ffffff; overflow: hidden; display: grid; place-items: center; color: var(--muted-foreground); border: 1px solid rgba(0, 0, 0, 0.06); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04); flex-shrink: 0; }
+.dark .assistant-photo { background: #ffffff; border-color: rgba(255, 255, 255, 0.15); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+.assistant-photo img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+.assistant-product-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.assistant-stepper { display: inline-flex; align-items: center; background: color-mix(in oklab, var(--foreground) 5%, transparent); border: 1px solid color-mix(in oklab, var(--border) 70%, transparent); border-radius: 8px; padding: 2px 4px; gap: 4px; }
+.dark .assistant-stepper { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.12); }
+.assistant-stepper button { width: 28px; height: 28px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
+.assistant-stepper output { min-width: 20px; text-align: center; font-size: 13px; font-weight: 700; color: var(--foreground); }
+
+/* Exact Luminous +1 Added Badge */
+.exact-added-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9999px;
+  background: #10b981;
+  color: #ffffff;
+  border: 1px solid rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.55), 0 2px 4px rgba(0, 0, 0, 0.1);
+  letter-spacing: -0.01em;
+}
+.dark .exact-added-badge {
+  background: #10b981;
+  color: #042f2e;
+  border-color: rgba(110, 231, 183, 0.7);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.65), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Exact CartSettle AI Header Badge */
+.cartsettle-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  border-radius: 8px;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+.dark .cartsettle-ai-badge {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.5);
+}
+
+/* Exact Floating Speech-Bubble Cart Pill */
+.exact-cart-bubble {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--background) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  margin-bottom: 8px;
+}
+.exact-cart-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: color-mix(in oklab, var(--background) 92%, transparent) transparent transparent transparent;
+}
+.dark .exact-cart-bubble {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #f3f4f6;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+}
+.dark .exact-cart-bubble::after {
+  border-color: rgba(255, 255, 255, 0.1) transparent transparent transparent;
+}
+.exact-cart-bubble:hover {
+  transform: translateY(-1px);
+}
 .assistant-payment { flex-shrink: 0; padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--secondary); max-height: 50dvh; overflow-y: auto; }
 .voice-bottom { position: relative; flex-shrink: 0; padding-top: 18px; padding-bottom: 26px; }
 .assistant-cartbar { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px 10px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 9999px; background: var(--secondary); font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color .2s; }
@@ -188,10 +276,10 @@
     inset 0 0 20px rgba(255, 255, 255, 0.25);
 }
 
-/* Base Radial Iridescent Nebula */
+/* Base Radial Iridescent Nebula with Cyan & Emerald Bands */
 .voice-orb-nebula {
-  background: radial-gradient(circle at 35% 30%, #34d399 0%, #059669 35%, #047857 60%, #064e3b 85%, #022c22 100%);
-  filter: contrast(1.15) brightness(calc(1 + var(--orb-level, 0) * 0.35));
+  background: radial-gradient(circle at 36% 32%, #a5f3fc 0%, #38bdf8 16%, #10b981 38%, #0891b2 62%, #044e54 82%, #022026 100%);
+  filter: contrast(1.22) brightness(calc(1.08 + var(--orb-level, 0) * 0.35));
   transition: filter 0.15s ease-out;
 }
 .voice-orb-sphere[data-state="working"] .voice-orb-nebula {
@@ -201,7 +289,19 @@
   background: radial-gradient(circle at 35% 30%, #fde047 0%, #f59e0b 35%, #ea580c 65%, #9a3412 100%);
 }
 .voice-orb-sphere[data-state="idle"] .voice-orb-nebula {
-  background: radial-gradient(circle at 35% 30%, #10b981 0%, #065f46 45%, #064e3b 75%, #022c22 100%);
+  background: radial-gradient(circle at 36% 32%, #67e8f9 0%, #22d3ee 18%, #10b981 40%, #0891b2 65%, #044e54 85%, #022026 100%);
+}
+
+/* Liquid Crystal Ribbons Inside Glass Sphere */
+.voice-orb-ribbon {
+  background: linear-gradient(135deg, transparent 18%, rgba(103, 232, 249, 0.65) 36%, rgba(16, 185, 129, 0.75) 50%, rgba(6, 182, 212, 0.45) 64%, transparent 80%);
+  mix-blend-mode: screen;
+  filter: blur(1.5px);
+  animation: orb-ribbon-swirl 8s ease-in-out infinite alternate;
+}
+@keyframes orb-ribbon-swirl {
+  0% { transform: rotate(-8deg) scale(0.96); opacity: 0.85; }
+  100% { transform: rotate(14deg) scale(1.04); opacity: 1; }
 }
 
 /* Rotating Inner Nebula Swirl for Working State */

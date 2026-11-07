@@ -31,9 +31,10 @@ function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, ca
     (row) => Number(row.product?.id ?? row.product ?? row.product_id ?? row.id) === Number(item.id),
   );
   const liveQuantity = Number(live?.quantity || 0);
-  const selected = added && live ? liveQuantity : quantity;
+  const isAdded = Boolean(added || (live && liveQuantity > 0));
+  const selected = isAdded && live ? liveQuantity : quantity;
   const change = (next) => {
-    if (added && live && onUpdate) onUpdate(live, Math.max(0, next));
+    if (isAdded && live && onUpdate) onUpdate(live, Math.max(0, next));
     else setQuantity(Math.max(1, next));
   };
 
@@ -48,21 +49,16 @@ function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, ca
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <Package className="size-5" />
+          <Package className="size-6 text-muted-foreground" />
         )}
       </div>
-      <div className="min-w-0">
-        <div className="flex items-center justify-between gap-1">
-          <p className="text-sm font-semibold break-words">{item.name}</p>
-          {added && (
-            <span className="shrink-0 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-              +1 Added
-            </span>
-          )}
+      <div className="min-w-0 flex-1 flex flex-col justify-between">
+        <div>
+          <p className="text-sm font-semibold text-foreground tracking-tight line-clamp-1">{item.name}</p>
+          <p className="mt-0.5 text-base font-bold text-foreground">
+            {money(price, currency)}
+          </p>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {item.unit || item.pack_size || "1 unit"} · {money(price, currency)}
-        </p>
         <div className="assistant-product-controls">
           <div className="assistant-stepper">
             <Button
@@ -71,8 +67,9 @@ function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, ca
               aria-label={`Decrease ${item.name} quantity`}
               disabled={disabled || (!live && selected <= 1)}
               onClick={() => change(selected - 1)}
+              className="text-muted-foreground hover:text-foreground"
             >
-              <Minus />
+              <Minus className="size-3.5" />
             </Button>
             <output aria-label={`${item.name} quantity`}>{selected}</output>
             <Button
@@ -81,22 +78,24 @@ function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, ca
               aria-label={`Increase ${item.name} quantity`}
               disabled={disabled}
               onClick={() => change(selected + 1)}
+              className="text-muted-foreground hover:text-foreground"
             >
-              <Plus />
+              <Plus className="size-3.5" />
             </Button>
           </div>
-          {added && (!cartItems || live) ? (
-            <span role="status" className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-              <Check className="size-3" /> In cart
+          {isAdded ? (
+            <span role="status" className="exact-added-badge">
+              +1 Added
             </span>
           ) : (
             <Button
               size="sm"
               disabled={disabled}
               aria-label={`Add ${quantity} ${item.name} to cart`}
+              className="rounded-full bg-primary text-primary-foreground font-semibold text-xs px-3.5 py-1 shadow-sm hover:opacity-90"
               onClick={() => onAdd?.({ ...item, quantity })}
             >
-              <Plus /> Add
+              <Plus className="size-3 mr-1" /> Add
             </Button>
           )}
         </div>
@@ -209,23 +208,15 @@ function AutoDismissThemeCard({ action, onToggleTheme, onDismiss }) {
   if (dismissed) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border/80 bg-background/95 p-3.5 shadow-sm backdrop-blur-md">
-      <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-500">
-          {isDark ? <Moon className="size-5" /> : <Sun className="size-5" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-foreground">
-            {isDark ? "Dark mode activated" : "Light mode activated"}
-          </h3>
-          <p role="status" className="text-xs text-muted-foreground">
-            Auto-dismissing in 2.5s
-          </p>
-        </div>
+    <div className="flex flex-col items-center justify-center my-1 select-none">
+      <div className="rounded-full bg-black/5 dark:bg-white/10 px-3.5 py-1 text-xs text-muted-foreground border border-black/5 dark:border-white/10 shadow-sm flex items-center gap-2">
+        <span className="font-medium text-foreground">
+          {isDark ? "Switched to Dark Mode" : "Switched to Light Mode"}
+        </span>
         <Button
           variant="ghost"
           size="sm"
-          className="text-xs"
+          className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
           onClick={() => {
             setDismissed(true);
             onToggleTheme?.(isDark ? "light" : "dark");
@@ -234,7 +225,7 @@ function AutoDismissThemeCard({ action, onToggleTheme, onDismiss }) {
           Undo
         </Button>
       </div>
-      <div className="assistant-auto-dismiss-bar mt-2 rounded-full" />
+      <div className="assistant-auto-dismiss-bar mt-1.5 w-16 rounded-full" />
     </div>
   );
 }

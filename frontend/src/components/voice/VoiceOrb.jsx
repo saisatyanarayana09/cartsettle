@@ -90,6 +90,9 @@ export function VoiceOrb({
         {/* Layer 1: Base Radial Iridescent Nebula */}
         <div className="voice-orb-nebula absolute inset-0 rounded-full" />
 
+        {/* Layer 1b: Liquid Crystal Swirling Ribbons */}
+        <div className="voice-orb-ribbon absolute inset-0 rounded-full pointer-events-none" />
+
         {/* Layer 2: Rotating Core Dynamics (working / speaking) */}
         {isWorking && (
           <div className="voice-orb-swirl absolute inset-0 rounded-full animate-spin" style={{ animationDuration: "5s" }} />

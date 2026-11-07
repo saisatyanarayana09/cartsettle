@@ -117,33 +117,33 @@ export function VoiceView({
         <div className="assistant-live-cards">{children}</div>
       </div>
 
-      {/* Bottom Area: Docked Cart Pill + Kinetic Spoken Words + 3D Luminous Orb */}
+      {/* Bottom Area: Kinetic Spoken Words + Docked Speech-Bubble Cart Pill + 3D Luminous Orb */}
       <div className="voice-bottom flex flex-col items-center justify-end z-10 px-4 pb-4">
-        {/* Docked Cart Summary Pill above the orb */}
+        {/* Kinetic Floating Words */}
+        <div className="mb-2 w-full text-center">
+          <KineticWords text={displayText} />
+        </div>
+
+        {/* State Label */}
+        <p className="voice-state text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-2">
+          {STATUS_TEXT[status] || "Ready"}
+        </p>
+
+        {/* Docked Cart Summary Pill with downward pointer stem above the orb */}
         {cartCount > 0 && (
           <button
             type="button"
-            className="assistant-cartpill mb-2"
+            className="exact-cart-bubble cursor-pointer"
             onClick={(event) => {
               event.stopPropagation();
               onViewCart?.();
             }}
             aria-label={`View cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}, total ${cartTotal.toFixed(2)}`}
           >
-            <ShoppingBag className="size-3.5 text-emerald-500" />
+            <ShoppingBag className="size-3.5 text-emerald-500 shrink-0" />
             <span>{cartCount} {cartCount === 1 ? "item" : "items"} · ${cartTotal.toFixed(2)}</span>
           </button>
         )}
-
-        {/* State Label */}
-        <p className="voice-state text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-1">
-          {STATUS_TEXT[status] || "Ready"}
-        </p>
-
-        {/* Kinetic Floating Words */}
-        <div className="mb-2 w-full text-center">
-          <KineticWords text={displayText} />
-        </div>
 
         {/* 3D Luminous Spherical Orb */}
         <VoiceOrb

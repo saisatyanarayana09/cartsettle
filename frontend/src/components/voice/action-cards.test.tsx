@@ -156,7 +156,7 @@ it("renders auto-dismiss theme switch card and handles undo", () => {
       onToggleTheme={onToggleTheme}
     />,
   );
-  expect(screen.getByText("Light mode activated")).toBeInTheDocument();
+  expect(screen.getByText("Switched to Light Mode")).toBeInTheDocument();
   const undoBtn = screen.getByRole("button", { name: "Undo" });
   fireEvent.click(undoBtn);
   expect(onToggleTheme).toHaveBeenCalledWith("dark");

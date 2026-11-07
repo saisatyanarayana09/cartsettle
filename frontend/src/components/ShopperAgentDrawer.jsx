@@ -687,13 +687,13 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         onPointerDownCapture={voice.interrupt}
         className="shopper-panel shopper-theme bg-background text-foreground flex flex-col overflow-hidden outline-none"
       >
-        <header className="assistant-nav-header flex shrink-0 items-center justify-between border-b border-border px-4 py-3 bg-background/95 backdrop-blur-md z-10 select-none">
+        <header className="assistant-nav-header flex shrink-0 items-center justify-between border-b border-border/40 px-4 py-3 bg-background/95 backdrop-blur-md z-10 select-none">
           <Button
             variant="ghost"
             size="icon"
             aria-label={mode === "voice" ? "Type instead" : "Talk instead"}
             title={mode === "voice" ? "Type instead" : "Talk instead"}
-            className="size-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+            className="size-9 rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/[0.08] shadow-sm text-foreground hover:bg-black/10 dark:hover:bg-white/15 cursor-pointer"
             onClick={() => {
               voice.stop();
               const nextMode = mode === "voice" ? "chat" : "voice";
@@ -709,22 +709,22 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             {mode === "voice" ? <Keyboard className="size-4" /> : <Mic className="size-4" />}
           </Button>
 
-          <div id="shopper-title" className="flex items-center gap-1.5 select-none">
-            <span className="text-sm font-bold tracking-tight text-foreground">
-              Cart<span className="text-emerald-500 font-extrabold">Settle</span>
+          <div id="shopper-title" className="flex items-center gap-2 select-none">
+            <span className="text-base font-bold tracking-tight text-foreground">
+              CartSettle
             </span>
-            <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <span className="cartsettle-ai-badge">
               AI
             </span>
           </div>
 
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               aria-label="Scan grocery list photo"
               title="Scan grocery list photo"
-              className="size-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+              className="size-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
             >
@@ -739,7 +739,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               size="icon"
               aria-label="Close concierge"
               title="Close"
-              className="size-9 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer"
+              className="size-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
               onClick={close}
             >
               <X className="size-4" />
