@@ -532,11 +532,18 @@ class AgentTools:
             qty = max(1, int(args.get("quantity", 1)))
             try:
                 p = Product.objects.select_related("category").get(id=prod_id, is_active=True)
+                stock_avail = p.stock_quantity if p.stock_quantity is not None else 99
+                if stock_avail > 0 and qty > stock_avail:
+                    actual_qty = stock_avail
+                    msg = f"Only {stock_avail} in stock. Added {actual_qty} {p.name}."
+                else:
+                    actual_qty = min(qty, 999)
+                    msg = f"Added {actual_qty} {p.name}."
                 return {
                     "status": "success",
                     "action": "ADD_TO_CART",
-                    "item": _serialize_card_product(p, quantity=qty),
-                    "message": f"Added {qty} {p.name}."
+                    "item": _serialize_card_product(p, quantity=actual_qty),
+                    "message": msg
                 }
             except Product.DoesNotExist:
                 return {"status": "error", "message": f"Product #{prod_id} is unavailable."}
@@ -1665,7 +1672,12 @@ class AgentService:
             "available", "left", "about", "tell", "give", "some", "any", "all", "more",
             "most", "least", "cheapest", "expensive", "highest", "lowest", "total",
             "under", "over", "above", "below", "dollar", "dollars", "percent",
-            "it", "that", "them", "those", "this", "these", "there", "here"
+            "it", "that", "them", "those", "this", "these", "there", "here",
+            "ready", "checkout", "pay", "paying", "payment", "cook", "cooking",
+            "make", "making", "prepare", "preparing", "tonight", "today", "tomorrow",
+            "hello", "hi", "hey", "help", "recipe", "ingredients", "requirements",
+            "status", "pending", "settle", "settlement", "settlements", "pack", "packing",
+            "overview", "summary", "analytics", "sales", "revenue", "deliv", "deliver", "delivery"
         }
         modifier_words = {
             "organic", "fresh", "farm", "whole", "california", "imported", "creamy",
@@ -1732,7 +1744,9 @@ class AgentService:
                                 tok_core = True
                     elif len(qt) >= 4 and len(pw) >= 4:
                         ratio = difflib.SequenceMatcher(None, qt_stem, pw_stem).ratio()
-                        if ratio >= 0.78:
+                        is_short = max(len(qt_stem), len(pw_stem)) <= 5
+                        valid_match = (ratio >= 0.88) if (is_short and qt_stem[0] != pw_stem[0]) else (ratio >= 0.80)
+                        if valid_match:
                             if pw in modifier_words:
                                 if 2 > best_tok:
                                     best_tok = 2
@@ -1783,7 +1797,7 @@ class AgentService:
                 flags=re.IGNORECASE,
             )
             m = re.search(r"\b(\d+)\b", cleaned)
-            return max(1, min(int(m.group(1)), 99)) if m else 1
+            return max(1, min(int(m.group(1)), 999)) if m else 1
 
         for clause in clauses:
             prod = self._match_product_from_text(clause)
@@ -1806,6 +1820,37 @@ class AgentService:
     def _check_fast_path(self, prompt: str, persona: str, session_id: str, cart_items: list = None) -> dict:
         """Sub-50ms instant execution for all shop operations while strictly blocking Settings."""
         lower = prompt.lower().strip()
+
+        # --- 00. GREETINGS & CAPABILITIES (Clean, direct, zero AI buzzwords or emojis) ---
+        greeting_words = {"hello", "hi", "hey", "good morning", "good afternoon", "good evening", "howdy", "greetings"}
+        stripped_punct = re.sub(r"[!?,.]+", "", lower).strip()
+        is_pure_greeting = stripped_punct in greeting_words
+        if is_pure_greeting:
+            if persona == "owner":
+                reply = "Store assistant ready. How can I assist with operations?"
+            else:
+                reply = "How can I help with your shopping today?"
+            return {
+                "reply": reply,
+                "tools_used": [{"name": "live_store_memory", "args": {"greeting": True}}],
+                "actions": [],
+                "tool_result": {"status": "ready", "persona": persona}
+            }
+
+        if any(k in lower for k in [
+            "what can you do", "who are you", "what are your capabilities", "how can you help",
+            "what do you do", "help me", "your capabilities"
+        ]) and not any(k in lower for k in ["cart", "order", "price", "stock", "product", "discount"]):
+            if persona == "owner":
+                reply = "I help monitor live sales, track inventory, manage orders, and process supplier restock payouts."
+            else:
+                reply = "I help search products, add items to cart, recommend recipe bundles, check deals, and checkout."
+            return {
+                "reply": reply,
+                "tools_used": [{"name": "live_store_memory", "args": {"capabilities": True}}],
+                "actions": [],
+                "tool_result": {"status": "ready", "persona": persona}
+            }
 
         # --- 0A. LIVE THEME SWITCH ("switch to dark mode", "turn off dark mode", "switch to light mode", "dark mode", "light mode") ---
         if any(k in lower for k in [
@@ -1979,6 +2024,21 @@ class AgentService:
             }
 
         # --- A. AUTONOMOUS PORTAL NAVIGATION (All Shop Pages EXCEPT Settings) ---
+        is_checkout_intent = (
+            lower in ["checkout", "go to checkout", "open checkout", "pay", "pay now", "proceed to checkout", "proceed to payment", "ready to checkout", "ready to pay"]
+            or (any(k in lower for k in ["checkout", "pay"]) and any(k in lower for k in ["ready", "proceed", "want to", "take me", "go to", "navigate"]))
+        ) and not any(k in lower for k in ["how to", "how do", "can i", "payout", "supplier", "cash on delivery", "cod", "wallet", "cancel", "status"])
+
+        if is_checkout_intent:
+            route = "/owner/orders" if persona == "owner" else "/checkout"
+            label = "Owner Orders" if persona == "owner" else "PayPal Checkout"
+            return {
+                "reply": f"Navigating to {label}.",
+                "tools_used": [{"name": "navigate_portal", "args": {"path": route}}],
+                "actions": [{"type": "NAVIGATE", "path": route}],
+                "tool_result": {"navigated_to": route}
+            }
+
         if any(lower.startswith(prefix) for prefix in ["open ", "go to ", "navigate to ", "take me to ", "visit "]) or lower in ["checkout", "go to checkout", "view cart", "open cart"]:
             ord_nav = re.search(r"\b(ord\d+\w*)\b", lower)
             if ord_nav:
@@ -2025,6 +2085,24 @@ class AgentService:
                         "actions": [{"type": "NAVIGATE", "path": route_path}],
                         "tool_result": {"navigated_to": route_path}
                     }
+
+        # --- B0. OWNER PENDING SETTLEMENTS INQUIRY ---
+        is_pending_inquiry = (
+            persona == "owner"
+            and any(w in lower for w in ["show", "list", "view", "what", "which", "any", "display", "check", "see", "summarize", "audit"])
+            and any(w in lower for w in ["pending", "settlement", "to pack", "orders"])
+        )
+        if is_pending_inquiry:
+            res = AgentTools.execute_tool("get_pending_packing_orders", {}, session_id)
+            orders = res.get("orders", [])
+            if not orders:
+                reply = "No pending settlements or orders to pack."
+                actions = []
+            else:
+                first_o = orders[0]
+                reply = f"{len(orders)} orders awaiting packing settlement, starting with #{first_o['id']} (${first_o['authorized_amount']:.2f})."
+                actions = [{"type": "PENDING_ORDERS", "orders": orders[:6]}]
+            return {"reply": reply, "tools_used": [{"name": "get_pending_packing_orders", "args": {}}], "actions": actions, "tool_result": res}
 
         # --- B. AUTO-SETTLE ORDER ("Settle order ORD...", "Settle pending order", "Settle all pending orders") ---
         if any(w in lower for w in ["settle", "capture", "pack order", "pack and settle", "pack all", "accept all pending"]):
@@ -2855,9 +2933,11 @@ class AgentService:
             # 1. Autonomous Multi-Item & Single-Item Add to Cart ("Add 2 milk and 1 bread to my cart", "Buy Bread")
             is_cost_question = any(lower.startswith(q) for q in ["how much", "what is the", "what's the", "cost of", "price of", "do you", "suggest"])
             is_recipe_query = any(k in lower for k in [
-                "making ", "cooking ", "suggest ", "requirements", "recipe", "ingredients",
+                "making ", "cooking ", "cook ", "suggest ", "requirements", "recipe", "ingredients",
                 "biryani", "biriyani", "pulao", "dosa", "idli", "sambar", "upma", "poha",
-                "paratha", "omelette", "maggi", "noodles", "soup", "halwa", "kheer", "cake"
+                "paratha", "omelette", "maggi", "noodles", "soup", "halwa", "kheer", "cake",
+                "pasta", "dinner", "breakfast", "lunch", "what do i need", "what i need", "what should i buy",
+                "bundle", "kit", "meal"
             ])
             if not is_cost_question and not is_recipe_query and any(w in lower for w in ["add ", "put ", "buy ", "get me ", "i want ", "i'll take ", "order "]):
                 items_with_qty = self._extract_items_with_quantities(prompt)
@@ -2872,13 +2952,18 @@ class AgentService:
                     grand_total = 0.0
                     last_res = {}
                     for prod, qty in items_with_qty:
-                        res = AgentTools.execute_tool("add_to_shopper_cart", {"product_id": prod.id, "quantity": qty}, session_id)
+                        stock_avail = prod.stock_quantity if (prod.stock_quantity is not None) else 99
+                        actual_qty = min(qty, stock_avail) if stock_avail > 0 else qty
+                        res = AgentTools.execute_tool("add_to_shopper_cart", {"product_id": prod.id, "quantity": actual_qty}, session_id)
                         last_res = res
-                        tools_used.append({"name": "add_to_shopper_cart", "args": {"product_id": prod.id, "quantity": qty}})
+                        tools_used.append({"name": "add_to_shopper_cart", "args": {"product_id": prod.id, "quantity": actual_qty}})
                         actions.extend(self._extract_frontend_actions("add_to_shopper_cart", res))
-                        line_price = float(prod.offer_price or prod.regular_price) * qty
+                        line_price = float(prod.offer_price or prod.regular_price) * actual_qty
                         grand_total += line_price
-                        added_parts.append(f"{qty} {prod.name}")
+                        if stock_avail > 0 and qty > stock_avail:
+                            added_parts.append(f"{actual_qty} {prod.name} (only {stock_avail} in stock)")
+                        else:
+                            added_parts.append(f"{actual_qty} {prod.name}")
                     if len(added_parts) == 1:
                         reply = f"Added {added_parts[0]} for ${grand_total:.2f}."
                     else:

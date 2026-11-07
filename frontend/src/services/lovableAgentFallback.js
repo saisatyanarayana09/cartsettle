@@ -39,6 +39,11 @@ const STOP_WORDS = new Set([
   'most', 'least', 'cheapest', 'expensive', 'highest', 'lowest', 'total',
   'under', 'over', 'above', 'below', 'dollar', 'dollars', 'percent',
   'it', 'that', 'them', 'those', 'this', 'these', 'there', 'here',
+  'ready', 'checkout', 'pay', 'paying', 'payment', 'cook', 'cooking',
+  'make', 'making', 'prepare', 'preparing', 'tonight', 'today', 'tomorrow',
+  'hello', 'hi', 'hey', 'help', 'recipe', 'ingredients', 'requirements',
+  'status', 'pending', 'settle', 'settlement', 'settlements', 'pack', 'packing',
+  'overview', 'summary', 'analytics', 'sales', 'revenue', 'deliv', 'deliver', 'delivery',
 ]);
 
 const MODIFIER_WORDS = new Set([
@@ -409,8 +414,8 @@ export function handleLovableAgentFallback(config) {
     } else if (lower.includes('dashboard') || lower.includes('analytics')) {
       reply = 'Opening Dashboard.';
       actions = [{ type: 'NAVIGATE', path: '/owner', label: 'Dashboard' }];
-    } else if (lower.includes('checkout')) {
-      reply = 'Opening Checkout.';
+    } else if (lower.includes('checkout') || (['pay now', 'ready to checkout', 'proceed to checkout', 'proceed to payment'].some((k) => lower.includes(k)) && !lower.includes('how to'))) {
+      reply = 'Navigating to PayPal Checkout.';
       actions = [{ type: 'NAVIGATE', path: '/checkout', label: 'Checkout' }];
     } else if (lower.includes('cart')) {
       reply = 'Opening Cart.';
@@ -1050,7 +1055,12 @@ export function handleLovableAgentFallback(config) {
   else {
     const catalog = getLiveCatalog();
     if (/^(hi|hello|hey|good morning|good evening|namaste)\b/i.test(lower)) {
-      reply = 'Hello! Tell me what dish you are cooking today or what groceries you need.';
+      reply = persona === 'owner' ? 'Store assistant ready. How can I assist with operations?' : 'How can I help with your shopping today?';
+      actions = [];
+    } else if (['what can you do', 'who are you', 'capabilities', 'help me', 'how can you help'].some((k) => lower.includes(k))) {
+      reply = persona === 'owner'
+        ? 'I help monitor live sales, track inventory, manage orders, and process supplier restock payouts.'
+        : 'I help search products, add items to cart, recommend recipe bundles, check deals, and checkout.';
       actions = [];
     } else if (lower.includes('delivery') || lower.includes('fast') || lower.includes('time') || lower.includes('long')) {
       reply = 'Express grocery delivery arrives in 15 to 25 minutes right to your door.';
