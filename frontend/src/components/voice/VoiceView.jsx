@@ -1,5 +1,5 @@
 import React from "react";
-import { Keyboard, Mic, MoreHorizontal, ShoppingBag, Trash2 } from "lucide-react";
+import { Keyboard, Mic, MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMicLevel } from "./useMicLevel";
 import { VoiceOrb } from "./VoiceOrb";
@@ -45,12 +45,12 @@ export function PanelMenu({ onClear, disabled }) {
 }
 
 const STATUS_TEXT = {
-  listening: "Listening",
-  working: "Thinking",
+  listening: "Listening...",
+  working: "Processing...",
   speaking: "Speaking",
 };
 
-/** Kinetic Floating Words: Displays spoken words with blur-to-clear transitions */
+/** Kinetic Floating Words: Displays spoken/reply words with smooth motion transitions */
 function KineticWords({ text }) {
   if (!text) return null;
   const words = text.split(/\s+/).filter(Boolean);
@@ -58,9 +58,9 @@ function KineticWords({ text }) {
     <div role="status" aria-live="polite" className="kinetic-words-container">
       {words.map((word, idx) => (
         <span
-          key={`${word}-${idx}`}
+          key={`${idx}-${word}`}
           className="kinetic-word"
-          style={{ animationDelay: `${Math.min(idx * 35, 450)}ms` }}
+          style={{ animationDelay: `${Math.min(idx * 30, 360)}ms` }}
         >
           {word}
         </span>
@@ -73,9 +73,8 @@ export function VoiceView({
   voice,
   children,
   busy,
-  hint = "What can I help with?",
+  hint = "How can I help you?",
   replyText,
-  lastUserText,
   cartCount = 0,
   cartTotal = 0,
   onViewCart,
@@ -93,6 +92,9 @@ export function VoiceView({
         : "Start microphone";
 
   const displayText = voice.transcript || replyText || hint;
+  const formattedTotal = Number.isInteger(Number(cartTotal))
+    ? Number(cartTotal).toString()
+    : Number(cartTotal || 0).toFixed(2);
 
   const handleToggle = () => {
     if (busy && voice.status !== "speaking") return;
@@ -108,44 +110,37 @@ export function VoiceView({
 
   return (
     <div className="voice-stage" style={{ "--voice-level": micLevel.toFixed(3) }}>
-      {/* Background ambient glow band */}
-      <div className="voice-glow" data-state={status} aria-hidden="true" />
-
-      {/* Upward Dynamic Live Stage directly above the orb */}
+      {/* Top Compact Live Card Stage (Never clips or overflows) */}
       <div className="voice-live-stage">
-        {lastUserText && <p className="assistant-request">{lastUserText}</p>}
         <div className="assistant-live-cards">{children}</div>
       </div>
 
-      {/* Bottom Area: Kinetic Spoken Words + Docked Speech-Bubble Cart Pill + 3D Luminous Orb */}
-      <div className="voice-bottom flex flex-col items-center justify-end z-10 px-4 pb-4">
-        {/* Kinetic Floating Words */}
-        <div className="mb-2 w-full text-center">
+      {/* Center-Bottom Floating Kinetic Typography & Sculptural 3D Orb */}
+      <div className="voice-bottom flex flex-col items-center justify-end z-10 px-6 pb-8">
+        {/* Floating Headline Typography */}
+        <div className="mb-6 w-full text-center flex flex-col items-center">
           <KineticWords text={displayText} />
+
+          {cartCount > 0 ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onViewCart?.();
+              }}
+              aria-label={`View cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}, total ${Number(cartTotal || 0).toFixed(2)}`}
+              className="mt-2 text-[13px] font-medium text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+            >
+              ₹{formattedTotal} total in cart
+            </button>
+          ) : STATUS_TEXT[status] ? (
+            <p className="mt-2 text-xs font-medium text-slate-400 dark:text-slate-500">
+              {STATUS_TEXT[status]}
+            </p>
+          ) : null}
         </div>
 
-        {/* State Label */}
-        <p className="voice-state text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-2">
-          {STATUS_TEXT[status] || "Ready"}
-        </p>
-
-        {/* Docked Cart Summary Pill with downward pointer stem above the orb */}
-        {cartCount > 0 && (
-          <button
-            type="button"
-            className="exact-cart-bubble cursor-pointer"
-            onClick={(event) => {
-              event.stopPropagation();
-              onViewCart?.();
-            }}
-            aria-label={`View cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}, total ${cartTotal.toFixed(2)}`}
-          >
-            <ShoppingBag className="size-3.5 text-emerald-500 shrink-0" />
-            <span>{cartCount} {cartCount === 1 ? "item" : "items"} · ${cartTotal.toFixed(2)}</span>
-          </button>
-        )}
-
-        {/* 3D Luminous Spherical Orb */}
+        {/* Sculptural 3D Emerald & Glass Ribbon Orb */}
         <VoiceOrb
           status={status}
           micLevel={micLevel}
@@ -156,8 +151,8 @@ export function VoiceView({
         />
 
         {voice.status === "unavailable" && (
-          <p className="mt-2 text-xs text-muted-foreground text-center">
-            Voice is unavailable. Use the keyboard.
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500 text-center">
+            Voice is unavailable. Use the keyboard icon above.
           </p>
         )}
       </div>

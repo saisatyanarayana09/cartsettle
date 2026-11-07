@@ -610,15 +610,20 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
   ];
   const recentCartActions = [...messages].reverse().find((message) =>
     message.actions?.some((action) => ACTION_TYPES_VOICE.includes(action.type)))?.actions || [];
-  const voiceActions = latestReply?.actions?.some((action) => ACTION_TYPES_VOICE.includes(action.type))
-    ? latestReply.actions : [...(latestReply?.actions || []), ...recentCartActions];
+  const voiceActions = (
+    latestReply?.actions?.some((action) => ACTION_TYPES_VOICE.includes(action.type))
+      ? latestReply.actions.filter((action) => ACTION_TYPES_VOICE.includes(action.type))
+      : recentCartActions.filter((action) => ACTION_TYPES_VOICE.includes(action.type))
+  ).slice(0, 1);
   const latestUser = [...messages].reverse().find((message) => message.role === "user");
 
   useEffect(() => {
     if (!isOpen) return;
     const previous = document.activeElement;
     const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (typeof window === "undefined" || window.innerWidth < 1024) {
+      document.body.style.overflow = "hidden";
+    }
     panelRef.current?.focus();
     const onKey = (event) => {
       if (event.key === "Escape") {
@@ -687,13 +692,13 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         onPointerDownCapture={voice.interrupt}
         className="shopper-panel shopper-theme bg-background text-foreground flex flex-col overflow-hidden outline-none"
       >
-        <header className="assistant-nav-header flex shrink-0 items-center justify-between border-b border-border/40 px-4 py-3 bg-background/95 backdrop-blur-md z-10 select-none">
+        <header className="assistant-nav-header flex shrink-0 items-center justify-between px-5 py-3.5 bg-white dark:bg-[#0b0f17] z-10 select-none">
           <Button
             variant="ghost"
             size="icon"
             aria-label={mode === "voice" ? "Type instead" : "Talk instead"}
             title={mode === "voice" ? "Type instead" : "Talk instead"}
-            className="size-9 rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/[0.08] shadow-sm text-foreground hover:bg-black/10 dark:hover:bg-white/15 cursor-pointer"
+            className="size-9 rounded-lg text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
             onClick={() => {
               voice.stop();
               const nextMode = mode === "voice" ? "chat" : "voice";
@@ -706,43 +711,44 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               }
             }}
           >
-            {mode === "voice" ? <Keyboard className="size-4" /> : <Mic className="size-4" />}
+            {mode === "voice" ? <Keyboard className="size-5 stroke-[1.75]" /> : <Mic className="size-5 stroke-[1.75]" />}
           </Button>
 
-          <div id="shopper-title" className="flex items-center gap-2 select-none">
-            <span className="text-base font-bold tracking-tight text-foreground">
-              CartSettle
-            </span>
-            <span className="cartsettle-ai-badge">
-              AI
+          <div id="shopper-title" className="flex items-center select-none">
+            <span className="text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">
+              CartSettle AI
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Scan grocery list photo"
-              title="Scan grocery list photo"
-              className="size-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading}
-            >
-              <Camera className="size-4" />
-            </Button>
-            <PanelMenu
-              disabled={loading || messages.length === 1}
-              onClear={() => setConfirmClear(true)}
-            />
+          <div className="flex items-center gap-0.5">
+            {mode === "chat" && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Scan grocery list photo"
+                  title="Scan grocery list photo"
+                  className="size-9 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                >
+                  <Camera className="size-4" />
+                </Button>
+                <PanelMenu
+                  disabled={loading || messages.length === 1}
+                  onClear={() => setConfirmClear(true)}
+                />
+              </>
+            )}
             <Button
               variant="ghost"
               size="icon"
               aria-label="Close concierge"
               title="Close"
-              className="size-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+              className="size-9 rounded-lg text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
               onClick={close}
             >
-              <X className="size-4" />
+              <X className="size-5 stroke-[1.75]" />
             </Button>
           </div>
         </header>
@@ -755,7 +761,9 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
           onChange={handlePhotoUpload}
         />
 
-        <LiveTaskActivity task={currentTask} onDismiss={() => setCurrentTask(null)} />
+        {mode === "chat" && (
+          <LiveTaskActivity task={currentTask} onDismiss={() => setCurrentTask(null)} />
+        )}
 
         {confirmClear && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted px-4 py-2.5 text-sm">
@@ -791,7 +799,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               key={messages.length}
               actions={voiceActions}
               persona="shopper"
-              currency="USD"
+              currency="INR"
               onAdd={handleAddToCart}
               cartItems={cart?.items}
               onUpdate={(item, quantity) => update?.(item, quantity)}
@@ -842,7 +850,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
                         <ActionCards
                           actions={actions}
                           persona="shopper"
-                          currency="USD"
+                          currency="INR"
                           onAdd={handleAddToCart}
               cartItems={cart?.items}
               onUpdate={(item, quantity) => update?.(item, quantity)}

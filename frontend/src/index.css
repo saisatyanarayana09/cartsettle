@@ -68,125 +68,110 @@
   --assistant-highlight: color-mix(in oklab, var(--color-accent-gold) 62%, var(--background));
   --assistant-shadow: 0 8px 28px color-mix(in oklab, var(--foreground) 6%, transparent);
 }
-.assistant-backdrop { position: fixed; inset: 0; z-index: 99; background: var(--assistant-veil); backdrop-filter: blur(3px); }
-.shopper-theme { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; transition: background-color .4s, color .4s; }
+.assistant-backdrop { position: fixed; inset: 0; z-index: 99; background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(2px); }
+.shopper-theme { font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; letter-spacing: -0.01em; background: #ffffff; color: #0f172a; transition: background-color .3s, color .3s; }
+.dark .shopper-theme { background: #0b0f17; color: #f8fafc; }
 .assistant-wordmark { font-family: "Nunito", sans-serif; font-size: 20px; font-weight: 900; }
 .assistant-wordmark span { color: var(--color-accent-gold); }
-.voice-stage { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
-.voice-live-stage { flex: 1; min-height: 0; overflow-y: auto; padding: 28px 24px 12px; display: flex; flex-direction: column; justify-content: flex-end; }
-/* Colorful glow band hugging the bottom edge of the voice stage; it is the AI indicator — drifting like aurora light, brightening with live voice level, and shifting warm while the assistant speaks. */
-.voice-glow { position: absolute; left: 0; right: 0; bottom: 0; height: 46%; pointer-events: none; overflow: hidden; z-index: 0; }
-.voice-glow::before { content: ""; position: absolute; left: -14%; right: -14%; bottom: -34%; height: 80%; background: linear-gradient(90deg, #2563eb 0%, #7c3aed 30%, #db2777 55%, #f59e0b 78%, #ea580c 100%); filter: blur(52px) brightness(calc(1 + var(--voice-level, 0) * .5)); opacity: calc(.38 + var(--voice-level, 0) * .3); transition: opacity .6s ease, filter .12s ease-out; animation: glow-drift 14s ease-in-out infinite alternate; }
-.voice-glow::after { content: ""; position: absolute; left: -14%; right: -14%; bottom: -34%; height: 80%; background: linear-gradient(90deg, #db2777 0%, #f59e0b 35%, #ea580c 60%, #f59e0b 82%, #db2777 100%); filter: blur(52px); opacity: 0; transition: opacity .6s ease; animation: glow-drift 11s ease-in-out infinite alternate-reverse; }
-.dark .voice-glow::before { opacity: calc(.62 + var(--voice-level, 0) * .3); }
-.voice-glow[data-state="speaking"]::before { opacity: .12; }
-.voice-glow[data-state="speaking"]::after { opacity: calc(.5 + var(--voice-level, 0) * .25); }
-.dark .voice-glow[data-state="speaking"]::after { opacity: calc(.68 + var(--voice-level, 0) * .25); }
-@keyframes glow-drift { 0% { transform: translateX(-5%) rotate(-2deg) scale(1); } 100% { transform: translateX(5%) rotate(2deg) scale(1.08); } }
+.voice-stage { position: relative; display: flex; flex: 1; flex-direction: column; justify-content: space-between; min-height: 0; overflow: hidden; background: #ffffff; }
+.dark .voice-stage { background: #0b0f17; }
+/* Top card stage: starts cleanly at the top so cards never clip off-screen */
+.voice-live-stage { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 20px 16px; display: flex; flex-direction: column; justify-content: flex-start; }
 .voice-live-stage, .voice-bottom { position: relative; z-index: 1; }
-.assistant-request { margin: 0 0 24px; font-size: 22px; line-height: 1.4; font-weight: 500; overflow-wrap: anywhere; }
-.assistant-live-cards { display: grid; gap: 12px; }
-.assistant-action { padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--background); box-shadow: var(--assistant-shadow); }
-/* Frosted glass cards floating above the bottom glow in voice mode. */
-.voice-stage .assistant-action { border-radius: 14px; background: color-mix(in oklab, var(--background) 76%, transparent); backdrop-filter: blur(14px); border-color: color-mix(in oklab, var(--foreground) 12%, transparent); }
-.assistant-product { display: grid; grid-template-columns: 64px minmax(0,1fr); gap: 14px; padding: 14px; border-radius: 18px; background: color-mix(in oklab, var(--card) 85%, transparent); backdrop-filter: blur(16px); border: 1px solid color-mix(in oklab, var(--border) 60%, transparent); box-shadow: 0 4px 20px -4px rgba(0,0,0,0.06); transition: border-color .2s, box-shadow .2s; }
-.dark .assistant-product { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.1); box-shadow: 0 8px 24px -4px rgba(0,0,0,0.35); }
+.assistant-request { margin: 0 0 16px; font-size: 18px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+.assistant-live-cards { display: grid; gap: 10px; }
+.assistant-action { padding: 14px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff; box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.05); }
+.dark .assistant-action { background: #141a24; border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.45); }
+/* In voice mode, cards render directly on the minimalist canvas without a double wrapper border */
+.voice-stage .assistant-action { padding: 0; border: none; background: transparent; box-shadow: none; backdrop-filter: none; }
+
+/* Flagship Mini Home-Screen Product Card */
+.assistant-product {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.07);
+  transition: border-color .2s, box-shadow .2s;
+}
+.dark .assistant-product {
+  background: #141a24;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.5);
+}
 .assistant-product + .assistant-product { margin-top: 10px; }
-.assistant-photo { width: 64px; height: 64px; border-radius: 12px; background: #ffffff; overflow: hidden; display: grid; place-items: center; color: var(--muted-foreground); border: 1px solid rgba(0, 0, 0, 0.06); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04); flex-shrink: 0; }
-.dark .assistant-photo { background: #ffffff; border-color: rgba(255, 255, 255, 0.15); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+.assistant-photo {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  flex-shrink: 0;
+}
+.dark .assistant-photo {
+  background: #1e293b;
+}
 .assistant-photo img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
-.assistant-product-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.assistant-stepper { display: inline-flex; align-items: center; background: color-mix(in oklab, var(--foreground) 5%, transparent); border: 1px solid color-mix(in oklab, var(--border) 70%, transparent); border-radius: 8px; padding: 2px 4px; gap: 4px; }
-.dark .assistant-stepper { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.12); }
-.assistant-stepper button { width: 28px; height: 28px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
-.assistant-stepper output { min-width: 20px; text-align: center; font-size: 13px; font-weight: 700; color: var(--foreground); }
-
-/* Exact Luminous +1 Added Badge */
-.exact-added-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: 9999px;
-  background: #10b981;
-  color: #ffffff;
-  border: 1px solid rgba(52, 211, 153, 0.6);
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.55), 0 2px 4px rgba(0, 0, 0, 0.1);
-  letter-spacing: -0.01em;
-}
-.dark .exact-added-badge {
-  background: #10b981;
-  color: #042f2e;
-  border-color: rgba(110, 231, 183, 0.7);
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.65), 0 2px 6px rgba(0, 0, 0, 0.3);
-}
-
-/* Exact CartSettle AI Header Badge */
-.cartsettle-ai-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 8px;
-  font-size: 11px;
+.assistant-discount-tag {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 2;
+  background: #ffffff;
+  color: #dc2626;
+  font-size: 7.5px;
   font-weight: 800;
   line-height: 1.1;
-  border-radius: 8px;
-  color: #059669;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.45);
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+  padding: 1.5px 3.5px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  letter-spacing: -0.02em;
 }
-.dark .cartsettle-ai-badge {
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(52, 211, 153, 0.6);
-  box-shadow: 0 0 16px rgba(52, 211, 153, 0.5);
+.assistant-product-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-
-/* Exact Floating Speech-Bubble Cart Pill */
-.exact-cart-bubble {
-  position: relative;
+.assistant-stepper {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 6px 14px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   border-radius: 9999px;
-  background: color-mix(in oklab, var(--background) 92%, transparent);
-  backdrop-filter: blur(12px);
-  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--foreground);
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s ease, background-color 0.2s ease;
-  margin-bottom: 8px;
+  height: 34px;
+  padding: 0 4px;
+  gap: 2px;
 }
-.exact-cart-bubble::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 5px;
-  border-style: solid;
-  border-color: color-mix(in oklab, var(--background) 92%, transparent) transparent transparent transparent;
+.dark .assistant-stepper {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
 }
-.dark .exact-cart-bubble {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.14);
-  color: #f3f4f6;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+/* Active Emerald Pill Stepper matching Prototype */
+.assistant-stepper.is-added {
+  background: #065f46;
+  border-color: #065f46;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(6, 95, 70, 0.25);
 }
-.dark .exact-cart-bubble::after {
-  border-color: rgba(255, 255, 255, 0.1) transparent transparent transparent;
+.dark .assistant-stepper.is-added {
+  background: #059669;
+  border-color: #10b981;
+  color: #ffffff;
 }
-.exact-cart-bubble:hover {
-  transform: translateY(-1px);
-}
+.assistant-stepper button { width: 26px; height: 26px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; }
+.assistant-stepper output { min-width: 20px; text-align: center; font-size: 13px; font-weight: 700; color: inherit; }
+
 .assistant-payment { flex-shrink: 0; padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--secondary); max-height: 50dvh; overflow-y: auto; }
-.voice-bottom { position: relative; flex-shrink: 0; padding-top: 18px; padding-bottom: 26px; }
+.voice-bottom { position: relative; flex-shrink: 0; padding-top: 8px; padding-bottom: 28px; }
 .assistant-cartbar { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px 10px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 9999px; background: var(--secondary); font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color .2s; }
 .assistant-cartbar:hover { background: var(--muted); }
 .assistant-cartbar:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
@@ -194,18 +179,10 @@
 .assistant-cartbar-total { color: var(--primary); font-weight: 700; }
 .voice-state { text-align: center; font-size: 12px; color: var(--muted-foreground); margin-bottom: 8px; }
 .voice-transcript { min-height: 44px; margin: 0 24px; text-align: center; font-size: 16px; line-height: 1.45; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-/* The bottom glow area is the tap-to-talk control. */
 .voice-tapzone { cursor: pointer; }
 .voice-tapzone:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
 .voice-tapzone[aria-disabled="true"] { cursor: default; }
 
-/* Compact cart pill docked just above the orb. */
-.assistant-cartpill { display: flex; align-items: center; gap: 6px; margin: 2px auto 4px; padding: 7px 14px; border: 1px solid var(--border); border-radius: 9999px; background: color-mix(in oklab, var(--background) 82%, transparent); backdrop-filter: blur(8px); font-size: 12px; font-weight: 600; color: var(--foreground); cursor: pointer; transition: background-color .2s; }
-.assistant-cartpill:hover { background: var(--secondary); }
-.assistant-cartpill:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-/* The glow itself is the voice meter — no bars. */
-@media (prefers-reduced-motion: reduce) { .voice-glow::before, .voice-glow::after { animation: none; transition: none; } }
-@media (max-height: 650px) { .voice-live-stage { padding-top: 16px; } .voice-glow { height: 40%; } }
 @keyframes slide-up {
   0% { transform: translateY(100%); opacity: 0; }
   12% { transform: translateY(0); opacity: 1; }
@@ -217,144 +194,120 @@
 }
 
 .nav-ai-button {
-  background: radial-gradient(circle at 32% 28%, color-mix(in oklab, var(--primary-foreground) 45%, transparent), transparent 45%), var(--primary);
-  color: var(--primary-foreground);
-  box-shadow: 0 10px 24px -8px color-mix(in oklab, var(--primary) 70%, transparent), 0 0 0 4px var(--background);
+  background: #065f46;
+  color: #ffffff;
+  box-shadow: 0 6px 18px -6px rgba(6, 95, 70, 0.55);
 }
 @media (prefers-reduced-motion: reduce) {
   .voice-orb *, .voice-orb, .voice-orb-container * { animation: none !important; }
 }
 
 /* ==========================================================================
-   3D Luminous Reactive Orb & Kinetic Typography
+   Flagship Sculptural 3D Emerald & Glass Ribbon Orb + Kinetic Typography
    ========================================================================== */
 .voice-orb-container {
-  padding: 8px;
+  padding: 6px;
   touch-action: manipulation;
 }
 
-/* Ambient Radial Aura Glow */
+/* Subtle Ambient Backlight (primarily visible in Dark Mode or active speech) */
 .voice-orb-aura {
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.42) 0%, rgba(6, 182, 212, 0.28) 45%, rgba(59, 130, 246, 0) 72%);
-  filter: blur(28px);
+  width: 156px;
+  height: 156px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.14) 0%, rgba(52, 211, 153, 0.05) 50%, transparent 72%);
+  filter: blur(22px);
 }
-.voice-orb-aura[data-state="working"] {
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.52) 0%, rgba(99, 102, 241, 0.32) 45%, transparent 72%);
+.dark .voice-orb-aura {
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.36) 0%, rgba(6, 95, 70, 0.18) 52%, transparent 74%);
 }
+.voice-orb-aura[data-state="listening"],
 .voice-orb-aura[data-state="speaking"] {
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.52) 0%, rgba(234, 88, 12, 0.35) 45%, transparent 72%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.32) 0%, rgba(52, 211, 153, 0.14) 52%, transparent 75%);
 }
-.voice-orb-aura[data-state="idle"] {
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(6, 182, 212, 0.12) 45%, transparent 72%);
-}
-
-/* Sonic Waveform Rings */
-.voice-orb-ring.ring-1 {
-  border: 1.5px solid rgba(16, 185, 129, 0.45);
-}
-.voice-orb-ring.ring-2 {
-  border: 1px solid rgba(6, 182, 212, 0.25);
+.dark .voice-orb-aura[data-state="listening"],
+.dark .voice-orb-aura[data-state="speaking"] {
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.48) 0%, rgba(16, 185, 129, 0.24) 52%, transparent 75%);
 }
 
-/* 3D Spherical Core */
+/* Sculptural 3D Glass Sphere */
 .voice-orb-sphere {
-  box-shadow: 
-    0 16px 36px -8px rgba(0, 0, 0, 0.55),
-    0 0 24px 2px rgba(16, 185, 129, calc(0.35 + var(--orb-level, 0) * 0.45)),
-    inset 0 0 20px rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 14px 32px -10px rgba(6, 78, 59, 0.28),
+    inset 0 0 14px rgba(255, 255, 255, 0.55);
+  animation: orb-gentle-float 5s ease-in-out infinite alternate;
 }
-.voice-orb-sphere[data-state="working"] {
-  box-shadow: 
-    0 16px 36px -8px rgba(0, 0, 0, 0.55),
-    0 0 28px 4px rgba(139, 92, 246, 0.55),
-    inset 0 0 20px rgba(255, 255, 255, 0.25);
-}
-.voice-orb-sphere[data-state="speaking"] {
-  box-shadow: 
-    0 16px 36px -8px rgba(0, 0, 0, 0.55),
-    0 0 28px 4px rgba(245, 158, 11, 0.55),
-    inset 0 0 20px rgba(255, 255, 255, 0.25);
+.dark .voice-orb-sphere {
+  box-shadow:
+    0 18px 40px -8px rgba(0, 0, 0, 0.75),
+    0 0 28px 2px rgba(16, 185, 129, 0.25),
+    inset 0 0 16px rgba(255, 255, 255, 0.35);
 }
 
-/* Base Radial Iridescent Nebula with Cyan & Emerald Bands */
-.voice-orb-nebula {
-  background: radial-gradient(circle at 36% 32%, #a5f3fc 0%, #38bdf8 16%, #10b981 38%, #0891b2 62%, #044e54 82%, #022026 100%);
-  filter: contrast(1.22) brightness(calc(1.08 + var(--orb-level, 0) * 0.35));
-  transition: filter 0.15s ease-out;
+/* Fluid internal motion of the 3D ribbons */
+.voice-orb-ribbons-group {
+  transform-origin: 100px 100px;
+  animation: orb-ribbon-breathe 6s ease-in-out infinite alternate;
 }
-.voice-orb-sphere[data-state="working"] .voice-orb-nebula {
-  background: radial-gradient(circle at 35% 30%, #a78bfa 0%, #7c3aed 35%, #5b21b6 65%, #2e1065 100%);
-}
-.voice-orb-sphere[data-state="speaking"] .voice-orb-nebula {
-  background: radial-gradient(circle at 35% 30%, #fde047 0%, #f59e0b 35%, #ea580c 65%, #9a3412 100%);
-}
-.voice-orb-sphere[data-state="idle"] .voice-orb-nebula {
-  background: radial-gradient(circle at 36% 32%, #67e8f9 0%, #22d3ee 18%, #10b981 40%, #0891b2 65%, #044e54 85%, #022026 100%);
+.voice-orb-sphere[data-state="listening"] .voice-orb-ribbons-group,
+.voice-orb-sphere[data-state="working"] .voice-orb-ribbons-group,
+.voice-orb-sphere[data-state="speaking"] .voice-orb-ribbons-group {
+  animation: orb-ribbon-active 2.6s ease-in-out infinite alternate;
 }
 
-/* Liquid Crystal Ribbons Inside Glass Sphere */
-.voice-orb-ribbon {
-  background: linear-gradient(135deg, transparent 18%, rgba(103, 232, 249, 0.65) 36%, rgba(16, 185, 129, 0.75) 50%, rgba(6, 182, 212, 0.45) 64%, transparent 80%);
-  mix-blend-mode: screen;
-  filter: blur(1.5px);
-  animation: orb-ribbon-swirl 8s ease-in-out infinite alternate;
+@keyframes orb-gentle-float {
+  0% { transform: translateY(0) scale(var(--orb-scale, 1)); }
+  100% { transform: translateY(-4px) scale(var(--orb-scale, 1)); }
 }
-@keyframes orb-ribbon-swirl {
-  0% { transform: rotate(-8deg) scale(0.96); opacity: 0.85; }
-  100% { transform: rotate(14deg) scale(1.04); opacity: 1; }
+@keyframes orb-ribbon-breathe {
+  0% { transform: rotate(-2deg) scale(1); }
+  100% { transform: rotate(4deg) scale(1.03); }
 }
-
-/* Rotating Inner Nebula Swirl for Working State */
-.voice-orb-swirl {
-  background: conic-gradient(from 0deg, transparent 0%, rgba(255, 255, 255, 0.35) 25%, transparent 50%, rgba(139, 92, 246, 0.6) 75%, transparent 100%);
-  mix-blend-mode: overlay;
+@keyframes orb-ribbon-active {
+  0% { transform: rotate(-6deg) scale(1.02); }
+  100% { transform: rotate(8deg) scale(1.07); }
 }
 
-/* Inner Glass Shadow */
-.voice-orb-inner-shadow {
-  box-shadow: inset 0 -12px 18px rgba(0, 0, 0, 0.6), inset 0 4px 8px rgba(255, 255, 255, 0.3);
-}
-
-/* Top-Left Primary Specular Glass Highlight */
-.voice-orb-specular {
-  width: 32px;
+/* Soft Floor Contact Reflection Shadow below the 3D Sphere */
+.voice-orb-floor-shadow {
+  margin-top: 8px;
+  width: 104px;
   height: 18px;
-  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.3) 50%, transparent 80%);
-  transform: rotate(-25deg);
-  filter: blur(0.8px);
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.28) 0%, rgba(15, 23, 42, 0.1) 45%, transparent 76%);
+  filter: blur(5px);
+}
+.dark .voice-orb-floor-shadow {
+  background: radial-gradient(ellipse at center, rgba(52, 211, 153, 0.32) 0%, rgba(0, 0, 0, 0.45) 55%, transparent 80%);
 }
 
-/* Secondary Rim Specular Glow */
-.voice-orb-rim {
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6);
-}
-
-/* Kinetic Floating Words */
+/* Center Floating Headline Typography */
 .kinetic-words-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 5px 8px;
-  padding: 10px 20px;
-  min-height: 48px;
-  max-width: 90%;
+  gap: 4px 7px;
+  padding: 4px 12px;
+  max-width: 280px;
   margin: 0 auto;
 }
 .kinetic-word {
   display: inline-block;
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: var(--foreground);
-  animation: kinetic-fade-in 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  font-size: 22px;
+  line-height: 1.24;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #0f172a;
+  animation: kinetic-fade-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.dark .kinetic-word {
+  color: #ffffff;
 }
 @keyframes kinetic-fade-in {
   0% {
     opacity: 0;
-    filter: blur(8px);
-    transform: translateY(10px) scale(0.95);
+    filter: blur(6px);
+    transform: translateY(8px) scale(0.96);
   }
   100% {
     opacity: 1;

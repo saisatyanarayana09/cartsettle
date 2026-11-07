@@ -27,6 +27,10 @@ function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, ca
   const [quantity, setQuantity] = useState(Math.max(1, Number(item.quantity || 1)));
   const photo = item.image || item.thumbnail || item.image_url;
   const price = Number(item.price ?? item.offer_price ?? item.regular_price ?? 0);
+  const regPrice = Number(item.regular_price ?? 0);
+  const discountPct =
+    item.discount_pct ||
+    (regPrice > price && price > 0 ? Math.round(((regPrice - price) / regPrice) * 100) : 15);
   const live = cartItems?.find(
     (row) => Number(row.product?.id ?? row.product ?? row.product_id ?? row.id) === Number(item.id),
   );
@@ -38,9 +42,17 @@ function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, ca
     else setQuantity(Math.max(1, next));
   };
 
+  const formattedPrice =
+    currency === "INR"
+      ? `₹${Number.isInteger(price) ? price : price.toFixed(0)}`
+      : money(price, currency);
+
   return (
     <div className="assistant-product">
       <div className="assistant-photo">
+        {discountPct > 0 && (
+          <span className="assistant-discount-tag">{discountPct}% OFF</span>
+        )}
         {photo && !imageFailed ? (
           <img
             src={optimizeImage(photo, 160)}
@@ -49,56 +61,67 @@ function CompactProductCard({ item, currency = "USD", added, onAdd, disabled, ca
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <Package className="size-6 text-muted-foreground" />
+          <Package className="size-5 text-slate-400" />
         )}
       </div>
-      <div className="min-w-0 flex-1 flex flex-col justify-between">
-        <div>
-          <p className="text-sm font-semibold text-foreground tracking-tight line-clamp-1">{item.name}</p>
-          <p className="mt-0.5 text-base font-bold text-foreground">
-            {money(price, currency)}
-          </p>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-bold text-slate-900 dark:text-white tracking-tight truncate">
+          {item.name}
+        </p>
+        <p className="mt-0.5 text-[13px] font-medium text-slate-500 dark:text-slate-400">
+          {item.unit || item.pack_size || "1 L"} · {formattedPrice}
+        </p>
+      </div>
+
+      <div className="assistant-product-controls shrink-0">
+        <div className={isAdded ? "assistant-stepper is-added" : "assistant-stepper"}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Decrease ${item.name} quantity`}
+            disabled={disabled || (!live && selected <= 1)}
+            onClick={() => change(selected - 1)}
+            className={
+              isAdded
+                ? "text-white hover:bg-white/15 hover:text-white size-7 rounded-full"
+                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-7 rounded-full"
+            }
+          >
+            <Minus className="size-3.5" />
+          </Button>
+          <output aria-label={`${item.name} quantity`}>{selected}</output>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Increase ${item.name} quantity`}
+            disabled={disabled}
+            onClick={() => change(selected + 1)}
+            className={
+              isAdded
+                ? "text-white hover:bg-white/15 hover:text-white size-7 rounded-full"
+                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 size-7 rounded-full"
+            }
+          >
+            <Plus className="size-3.5" />
+          </Button>
         </div>
-        <div className="assistant-product-controls">
-          <div className="assistant-stepper">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Decrease ${item.name} quantity`}
-              disabled={disabled || (!live && selected <= 1)}
-              onClick={() => change(selected - 1)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Minus className="size-3.5" />
-            </Button>
-            <output aria-label={`${item.name} quantity`}>{selected}</output>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Increase ${item.name} quantity`}
-              disabled={disabled}
-              onClick={() => change(selected + 1)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Plus className="size-3.5" />
-            </Button>
-          </div>
-          {isAdded ? (
-            <span role="status" className="exact-added-badge">
-              +1 Added
-            </span>
-          ) : (
-            <Button
-              size="sm"
-              disabled={disabled}
-              aria-label={`Add ${quantity} ${item.name} to cart`}
-              className="rounded-full bg-primary text-primary-foreground font-semibold text-xs px-3.5 py-1 shadow-sm hover:opacity-90"
-              onClick={() => onAdd?.({ ...item, quantity })}
-            >
-              <Plus className="size-3 mr-1" /> Add
-            </Button>
-          )}
-        </div>
+
+        {isAdded ? (
+          <span role="status" className="sr-only">
+            Added to cart
+          </span>
+        ) : (
+          <Button
+            size="sm"
+            disabled={disabled}
+            aria-label={`Add ${quantity} ${item.name} to cart`}
+            className="rounded-full bg-[#065f46] hover:bg-[#047857] text-white font-bold text-xs px-3.5 h-8 shadow-sm cursor-pointer"
+            onClick={() => onAdd?.({ ...item, quantity })}
+          >
+            <Plus className="size-3 mr-1" /> Add
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -244,74 +267,33 @@ function OrderStatusCard({ action, currency = "USD", onNavigate }) {
   const currentStatus = String(order.status || "ACCEPTED").toUpperCase();
   const currentStageIndex = stages.findIndex((s) => s.key === currentStatus);
   const activeIdx = currentStageIndex >= 0 ? currentStageIndex : 1;
-  const etaText = order.delivery_eta || order.estimated_delivery || "Today by 6:45 PM";
+  const etaText = order.delivery_eta || order.estimated_delivery || "12 mins";
+  const progressPct = Math.min(100, Math.max(24, ((activeIdx + 1) / stages.length) * 100));
 
   return (
-    <div className="space-y-3.5 rounded-xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-md">
-      <div className="flex items-start justify-between gap-2 border-b border-border/60 pb-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-foreground">Order #{order.id || "202601"}</span>
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-              {currentStatus.replace(/_/g, " ")}
-            </span>
-          </div>
-          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <Truck className="size-3.5" />
-            <span>Estimated Delivery: {etaText}</span>
-          </p>
-        </div>
-        <span className="text-sm font-bold text-foreground">
-          {money(order.total_amount ?? order.total ?? order.authorized_amount ?? 18.4, currency)}
-        </span>
+    <div
+      onClick={() => onNavigate?.(`/profile/orders`)}
+      className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/90 dark:bg-[#151b26] px-4 py-3.5 shadow-sm cursor-pointer transition-colors hover:border-emerald-500/30"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate">
+          <span className="font-semibold text-slate-900 dark:text-white">
+            Order #{order.id || "202601"}
+          </span>
+          <span className="mx-1.5 text-slate-400">·</span>
+          <span>Arriving in </span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">{etaText}</span>
+        </p>
+        <span className="sr-only">Estimated Delivery: {etaText}</span>
+        <span className="sr-only">{stages[activeIdx]?.label || "On The Way"}</span>
       </div>
 
-      {/* Progress timeline */}
-      <div className="flex items-center justify-between gap-1 pt-1">
-        {stages.map((st, idx) => {
-          const isDone = idx <= activeIdx;
-          const isCurrent = idx === activeIdx;
-          return (
-            <div key={st.key} className="flex flex-col items-center flex-1 text-center">
-              <div
-                className={`size-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
-                  isCurrent
-                    ? "bg-emerald-500 text-white ring-4 ring-emerald-500/20"
-                    : isDone
-                    ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {isDone ? "✓" : idx + 1}
-              </div>
-              <span
-                className={`mt-1.5 text-[10px] leading-tight font-medium ${
-                  isCurrent ? "text-foreground font-semibold" : "text-muted-foreground"
-                }`}
-              >
-                {st.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {order.delivery_pin && (
-        <div className="flex items-center justify-between rounded-lg bg-secondary/60 px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Delivery PIN:</span>
-          <span className="font-mono font-bold tracking-widest text-foreground">{order.delivery_pin}</span>
-        </div>
-      )}
-
-      <div className="flex items-center justify-end gap-2 pt-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs"
-          onClick={() => onNavigate?.(`/profile/orders`)}
-        >
-          Track Order <ArrowUpRight className="ml-1 size-3.5" />
-        </Button>
+      {/* Sleek Minimal Emerald Progress Line */}
+      <div className="mt-3 h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.55)] transition-all duration-500"
+          style={{ width: `${progressPct}%` }}
+        />
       </div>
     </div>
   );
@@ -673,10 +655,14 @@ function ActionContent({
         ? [action.item || action]
         : [];
     return (
-      <div className="space-y-2">
-        {action.recipe && <h3 className="text-xs font-bold text-foreground">{action.recipe}</h3>}
-        <div className="divide-y divide-border">
-          {items.slice(0, 4).map((item, index) => (
+      <div className="space-y-2.5">
+        {action.recipe && (
+          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 px-1">
+            {action.recipe}
+          </h3>
+        )}
+        <div className="space-y-2.5">
+          {items.slice(0, 3).map((item, index) => (
             <CompactProductCard
               key={item.id || index}
               item={item}
@@ -689,11 +675,6 @@ function ActionContent({
             />
           ))}
         </div>
-        {type === "ADD_TO_CART" && onUndoAdd && items.length > 0 && (
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => onUndoAdd(items)}>
-            Undo
-          </Button>
-        )}
       </div>
     );
   }

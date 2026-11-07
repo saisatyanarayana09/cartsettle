@@ -103,8 +103,7 @@ export function createVoiceSession({
         if (silenceMs > 500) {
           const lastRes = resultsArr[resultsArr.length - 1];
           const isFinal = Boolean(lastRes?.isFinal);
-          const wordCount = text.split(/\s+/).length;
-          waitTime = isFinal && wordCount >= 2 ? 850 : silenceMs;
+          waitTime = isFinal ? 700 : silenceMs;
         }
         timer = setTimeout(() => submit(text), waitTime);
       }
@@ -131,8 +130,12 @@ export function createVoiceSession({
     };
     recognition.onend = () => {
       if (!active || turn !== generation) return;
-      // Preserve the silence timer if the browser ends a recognition segment.
-      if (!transcript) timer = setTimeout(listen, 150);
+      if (transcript && transcript.trim()) {
+        clearTimeout(timer);
+        timer = setTimeout(() => submit(transcript.trim()), 250);
+      } else {
+        timer = setTimeout(listen, 150);
+      }
     };
     try {
       recognition.start();
