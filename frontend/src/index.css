@@ -438,26 +438,26 @@
   display: block;
 }
 
-/* Layer 1: Soft Borderless Ambient Emerald & Aqua Plasma Backlight */
+/* Layer 1: Soft Borderless Ambient Emerald & Aqua Plasma Backlight (Steady, Zero Pulse) */
 .voice-orb-aura {
   width: 216px;
   height: 216px;
   background: radial-gradient(
     circle,
-    rgba(16, 185, 129, 0.38) 0%,
-    rgba(52, 211, 153, 0.18) 44%,
+    rgba(16, 185, 129, 0.36) 0%,
+    rgba(52, 211, 153, 0.16) 44%,
     rgba(6, 182, 212, 0.06) 66%,
     transparent 78%
   );
   filter: blur(26px);
-  animation: orb-aura-pulse 3.2s ease-in-out infinite alternate;
+  transition: background 700ms ease, opacity 700ms ease;
 }
 .dark .voice-orb-aura {
   background: radial-gradient(
     circle,
-    rgba(52, 211, 153, 0.54) 0%,
-    rgba(16, 185, 129, 0.28) 45%,
-    rgba(6, 182, 212, 0.12) 66%,
+    rgba(52, 211, 153, 0.48) 0%,
+    rgba(16, 185, 129, 0.24) 45%,
+    rgba(6, 182, 212, 0.10) 66%,
     transparent 80%
   );
 }
@@ -466,40 +466,38 @@
 .voice-orb-aura[data-state="working"] {
   background: radial-gradient(
     circle,
-    rgba(16, 185, 129, 0.58) 0%,
-    rgba(52, 211, 153, 0.30) 46%,
-    rgba(20, 184, 166, 0.14) 68%,
+    rgba(16, 185, 129, 0.50) 0%,
+    rgba(52, 211, 153, 0.26) 46%,
+    rgba(20, 184, 166, 0.12) 68%,
     transparent 80%
   );
-  animation: orb-aura-active 1.3s ease-in-out infinite alternate;
 }
 .dark .voice-orb-aura[data-state="listening"],
 .dark .voice-orb-aura[data-state="speaking"],
 .dark .voice-orb-aura[data-state="working"] {
   background: radial-gradient(
     circle,
-    rgba(52, 211, 153, 0.72) 0%,
-    rgba(16, 185, 129, 0.40) 48%,
-    rgba(45, 212, 191, 0.18) 68%,
+    rgba(52, 211, 153, 0.60) 0%,
+    rgba(16, 185, 129, 0.34) 48%,
+    rgba(45, 212, 191, 0.15) 68%,
     transparent 82%
   );
-  animation: orb-aura-active 1.3s ease-in-out infinite alternate;
 }
 .voice-orb-aura[data-glow="checkout"] {
   background: radial-gradient(
     circle,
-    rgba(0, 112, 186, 0.56) 0%,
-    rgba(255, 196, 57, 0.34) 48%,
-    rgba(56, 189, 248, 0.16) 68%,
+    rgba(0, 112, 186, 0.52) 0%,
+    rgba(255, 196, 57, 0.30) 48%,
+    rgba(56, 189, 248, 0.14) 68%,
     transparent 82%
   );
 }
 .voice-orb-aura[data-glow="discovery"] {
   background: radial-gradient(
     circle,
-    rgba(245, 158, 11, 0.48) 0%,
-    rgba(16, 185, 129, 0.36) 48%,
-    rgba(52, 211, 153, 0.16) 68%,
+    rgba(245, 158, 11, 0.46) 0%,
+    rgba(16, 185, 129, 0.32) 48%,
+    rgba(52, 211, 153, 0.14) 68%,
     transparent 82%
   );
 }
@@ -507,29 +505,29 @@
 .voice-orb-aura[data-glow="order-track"] {
   background: radial-gradient(
     circle,
-    rgba(14, 165, 233, 0.54) 0%,
-    rgba(99, 102, 241, 0.36) 48%,
-    rgba(139, 92, 246, 0.16) 68%,
+    rgba(14, 165, 233, 0.50) 0%,
+    rgba(99, 102, 241, 0.32) 48%,
+    rgba(139, 92, 246, 0.14) 68%,
     transparent 82%
   );
 }
 .voice-orb-aura[data-glow="theme-switch"] {
   background: radial-gradient(
     circle,
-    rgba(139, 92, 246, 0.56) 0%,
-    rgba(236, 72, 153, 0.34) 48%,
-    rgba(245, 158, 11, 0.16) 68%,
+    rgba(139, 92, 246, 0.52) 0%,
+    rgba(236, 72, 153, 0.30) 48%,
+    rgba(245, 158, 11, 0.14) 68%,
     transparent 82%
   );
 }
 
-/* Layer 2: Stationary 3D Crystal Glass Sphere Shell */
+/* Layer 2: Stationary 3D Crystal Glass Sphere Shell (Zero Bobbing/Pulsing) */
 .voice-orb-sphere {
   box-shadow:
     0 18px 40px -8px rgba(6, 95, 70, 0.38),
     0 0 28px 3px rgba(16, 185, 129, 0.34),
     inset 0 0 18px rgba(255, 255, 255, 0.78);
-  animation: orb-gentle-float 3.8s ease-in-out infinite alternate;
+  transition: box-shadow 600ms ease;
 }
 .dark .voice-orb-sphere {
   box-shadow:
@@ -541,17 +539,17 @@
 .voice-orb-sphere[data-state="listening"],
 .voice-orb-sphere[data-state="speaking"] {
   box-shadow:
-    0 18px 44px -6px rgba(6, 95, 70, 0.48),
-    0 0 38px 8px rgba(16, 185, 129, 0.52),
-    inset 0 0 22px rgba(255, 255, 255, 0.85);
+    0 18px 44px -6px rgba(6, 95, 70, 0.44),
+    0 0 34px 6px rgba(16, 185, 129, 0.44),
+    inset 0 0 22px rgba(255, 255, 255, 0.82);
 }
 .dark .voice-orb-sphere[data-state="listening"],
 .dark .voice-orb-sphere[data-state="speaking"] {
   box-shadow:
     0 20px 48px -6px rgba(0, 0, 0, 0.85),
-    0 0 46px 10px rgba(52, 211, 153, 0.64),
-    0 0 80px 16px rgba(16, 185, 129, 0.34),
-    inset 0 0 24px rgba(255, 255, 255, 0.62);
+    0 0 42px 8px rgba(52, 211, 153, 0.56),
+    0 0 72px 14px rgba(16, 185, 129, 0.28),
+    inset 0 0 24px rgba(255, 255, 255, 0.60);
 }
 
 /* Internal Layer 1: Deep 3D Spherical Core Base */
@@ -565,73 +563,54 @@
   );
 }
 
-/* Internal Layer 2: Primary Morphing Liquid Emerald & Mint Plasma Ribbon inside the Orb */
+/* Internal Layer 2: Primary Smooth Liquid Plasma Ribbon inside the Orb */
 .voice-orb-plasma-ribbon-a {
   width: 136%;
   height: 136%;
   left: -18%;
   top: -18%;
-  border-radius: 42% 58% 68% 32% / 44% 56% 44% 56%;
+  border-radius: 46% 54% 62% 38% / 44% 56% 44% 56%;
   background: linear-gradient(
     135deg,
-    rgba(16, 185, 129, 0.85) 0%,
-    rgba(167, 243, 208, 0.90) 48%,
-    rgba(6, 182, 212, 0.75) 100%
+    rgba(16, 185, 129, 0.82) 0%,
+    rgba(167, 243, 208, 0.88) 48%,
+    rgba(6, 182, 212, 0.72) 100%
   );
   filter: blur(8px);
   mix-blend-mode: screen;
-  animation: orb-internal-plasma-morph-a 6.5s ease-in-out infinite alternate;
-}
-.voice-orb-plasma-ribbon-a[data-state="listening"],
-.voice-orb-plasma-ribbon-a[data-state="speaking"] {
-  animation-duration: 2.6s;
-}
-.voice-orb-plasma-ribbon-a[data-state="working"] {
-  animation-duration: 1.5s;
-  background: linear-gradient(
-    135deg,
-    rgba(6, 182, 212, 0.90) 0%,
-    rgba(16, 185, 129, 0.92) 50%,
-    rgba(99, 102, 241, 0.80) 100%
-  );
+  animation: orb-internal-plasma-morph-a 11s ease-in-out infinite alternate;
 }
 
-/* Internal Layer 3: Counter-Weaving Aqua & Crystal Liquid Ribbon inside the Orb */
+/* Internal Layer 3: Counter-Weaving Smooth Aqua & Crystal Liquid Ribbon inside the Orb */
 .voice-orb-plasma-ribbon-b {
   width: 128%;
   height: 128%;
   left: -14%;
   top: -14%;
-  border-radius: 62% 38% 42% 58% / 56% 44% 56% 44%;
+  border-radius: 58% 42% 44% 56% / 54% 46% 54% 46%;
   background: linear-gradient(
     225deg,
-    rgba(255, 255, 255, 0.88) 0%,
-    rgba(52, 211, 153, 0.82) 52%,
-    rgba(20, 184, 166, 0.78) 100%
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(52, 211, 153, 0.78) 52%,
+    rgba(20, 184, 166, 0.74) 100%
   );
   filter: blur(6px);
   mix-blend-mode: overlay;
-  animation: orb-internal-plasma-morph-b 5.4s ease-in-out infinite alternate;
-}
-.voice-orb-plasma-ribbon-b[data-state="listening"],
-.voice-orb-plasma-ribbon-b[data-state="speaking"] {
-  animation-duration: 2.2s;
+  animation: orb-internal-plasma-morph-b 13s ease-in-out infinite alternate;
 }
 
-/* Internal Layer 4: Voice-Reactive Central Acoustic Energy Core */
+/* Internal Layer 4: Steady Central Acoustic Core (Zero Pulsing) */
 .voice-orb-acoustic-core {
   width: 68%;
   height: 68%;
   background: radial-gradient(
     circle,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(110, 231, 183, 0.65) 48%,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(110, 231, 183, 0.58) 48%,
     transparent 75%
   );
   filter: blur(6px);
   mix-blend-mode: screen;
-  transform: scale(calc(0.76 + (var(--orb-level, 0) * 0.55)));
-  transition: transform 140ms ease-out;
 }
 
 /* Internal Layer 5: Refracted Glass Ribbon Texture (Organic Breathe + Occasional Turn) */
@@ -773,16 +752,11 @@
   width: 120px;
   height: 20px;
   border-radius: 9999px;
-  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.42) 0%, rgba(15, 23, 42, 0.14) 50%, transparent 78%);
+  background: radial-gradient(ellipse at center, rgba(16, 185, 129, 0.38) 0%, rgba(15, 23, 42, 0.14) 50%, transparent 78%);
   filter: blur(6px);
-  animation: orb-shadow-breathe 3.8s ease-in-out infinite alternate;
 }
 .dark .voice-orb-floor-shadow {
-  background: radial-gradient(ellipse at center, rgba(52, 211, 153, 0.52) 0%, rgba(0, 0, 0, 0.55) 58%, transparent 82%);
-}
-@keyframes orb-shadow-breathe {
-  0% { transform: scaleX(1); opacity: 0.95; }
-  100% { transform: scaleX(0.88); opacity: 0.72; }
+  background: radial-gradient(ellipse at center, rgba(52, 211, 153, 0.46) 0%, rgba(0, 0, 0, 0.55) 58%, transparent 82%);
 }
 
 /* Compact 1–2 Line Auto-Fading Caption (14.5px, max ~12 words) */
