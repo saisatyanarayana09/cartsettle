@@ -48,6 +48,7 @@ export function createVoiceSession({
   let generation = 0;
   let recognition;
   let timer;
+  let speechWatchdog;
   let transcript = "";
   let status = "idle";
   const effectiveLang = lang || browser.navigator?.language || "en-US";
@@ -62,18 +63,25 @@ export function createVoiceSession({
     transcript = text;
     onChange({ status, transcript });
   };
+
   const cancel = () => {
     generation += 1;
     clearTimeout(timer);
+    clearTimeout(speechWatchdog);
     if (recognition) {
       recognition.onend = null;
       recognition.onresult = null;
       recognition.onerror = null;
-      recognition.abort();
+      try {
+        recognition.abort();
+      } catch {}
       recognition = undefined;
     }
-    browser.speechSynthesis?.cancel();
+    try {
+      browser.speechSynthesis?.cancel();
+    } catch {}
   };
+
   const listen = () => {
     if (!active) return;
     cancel();
@@ -89,6 +97,7 @@ export function createVoiceSession({
     recognition.maxAlternatives = 3;
     recognition.lang = effectiveLang;
     emit("listening", "");
+
     recognition.onresult = (event) => {
       if (!active || turn !== generation) return;
       const resultsArr = Array.from(event.results || []);
@@ -103,11 +112,12 @@ export function createVoiceSession({
         if (silenceMs > 500) {
           const lastRes = resultsArr[resultsArr.length - 1];
           const isFinal = Boolean(lastRes?.isFinal);
-          waitTime = isFinal ? 700 : silenceMs;
+          waitTime = isFinal ? 650 : silenceMs;
         }
         timer = setTimeout(() => submit(text), waitTime);
       }
     };
+
     recognition.onerror = (event) => {
       if (turn !== generation) return;
       const errCode = event?.error || "";
@@ -116,34 +126,37 @@ export function createVoiceSession({
           submit(transcript.trim());
         } else if (active) {
           cancel();
-          timer = setTimeout(listen, 150);
+          timer = setTimeout(listen, 180);
         }
         return;
       }
       cancel();
       emit(
         "error",
-        errCode === "not-allowed"
+        errCode === "not-allowed" || errCode === "service-not-allowed"
           ? "Microphone access is off."
-          : "Couldn’t hear you. Try again.",
+          : "Tap the orb to speak.",
       );
     };
+
     recognition.onend = () => {
       if (!active || turn !== generation) return;
       if (transcript && transcript.trim()) {
         clearTimeout(timer);
-        timer = setTimeout(() => submit(transcript.trim()), 250);
+        timer = setTimeout(() => submit(transcript.trim()), 200);
       } else {
-        timer = setTimeout(listen, 150);
+        timer = setTimeout(listen, 180);
       }
     };
+
     try {
       recognition.start();
     } catch {
       cancel();
-      emit("error", "Microphone unavailable. Try again.");
+      emit("paused", "");
     }
   };
+
   const submit = async (text) => {
     cancel(); // Pause the microphone before sending or speaking.
     const turn = generation;
@@ -153,7 +166,7 @@ export function createVoiceSession({
       if (!active || turn !== generation) return;
       const reply = data?.voice_reply || data?.reply;
       if (!reply || !browser.speechSynthesis || !browser.SpeechSynthesisUtterance) {
-        emit("paused", text);
+        emit("paused", "");
         return;
       }
       const speech = new browser.SpeechSynthesisUtterance(reply);
@@ -163,20 +176,36 @@ export function createVoiceSession({
         speech.voice = bestVoice;
         speech.lang = bestVoice.lang || effectiveLang;
       }
-      speech.rate = 0.96;
+      speech.rate = 0.98;
       speech.pitch = 1.0;
-      speech.onend = () => {
+
+      const finishSpeech = () => {
+        clearTimeout(speechWatchdog);
         if (active && turn === generation) listen();
       };
+
+      speech.onend = finishSpeech;
       speech.onerror = () => {
-        if (active && turn === generation) emit("paused", text);
+        clearTimeout(speechWatchdog);
+        if (active && turn === generation) listen();
       };
-      emit("speaking", text);
+
+      emit("speaking", "");
+      try {
+        browser.speechSynthesis.resume?.();
+      } catch {}
       browser.speechSynthesis.speak(speech);
+
+      // Watchdog for browsers where speechSynthesis.onend silently stalls
+      if (silenceMs > 500) {
+        const watchdogMs = Math.min(12000, Math.max(3000, String(reply).length * 75));
+        speechWatchdog = setTimeout(finishSpeech, watchdogMs);
+      }
     } catch {
       if (active && turn === generation) emit("error", "Try again.");
     }
   };
+
   return {
     setActive(value) {
       active = value;
@@ -187,7 +216,7 @@ export function createVoiceSession({
     interrupt() {
       if (status === "speaking") {
         cancel();
-        emit("paused");
+        emit("paused", "");
       }
     },
     toggle() {
@@ -195,10 +224,14 @@ export function createVoiceSession({
         submit(transcript.trim());
         return;
       }
-      if (status === "listening" || status === "speaking" || status === "working") {
+      if (status === "speaking" || status === "working") {
         cancel();
-        emit("paused");
-      } else listen();
+        listen();
+        return;
+      }
+      // Always start or refresh microphone listening on direct user orb tap
+      active = true;
+      listen();
     },
     stop() {
       active = false;

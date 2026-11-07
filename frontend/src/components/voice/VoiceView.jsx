@@ -48,6 +48,8 @@ const STATUS_TEXT = {
   listening: "Listening...",
   working: "Processing...",
   speaking: "Speaking",
+  paused: "Tap orb to speak",
+  idle: "Tap orb to speak",
 };
 
 /** Kinetic Floating Words: Displays spoken/reply words with smooth motion transitions */
@@ -91,7 +93,11 @@ export function VoiceView({
         ? "Stop speaking"
         : "Start microphone";
 
-  const displayText = voice.transcript || replyText || hint;
+  const showLiveTranscript =
+    hasTranscript && (status === "listening" || status === "working");
+  const displayText = showLiveTranscript
+    ? voice.transcript
+    : replyText || voice.transcript || hint;
   const formattedTotal = Number.isInteger(Number(cartTotal))
     ? Number(cartTotal).toString()
     : Number(cartTotal || 0).toFixed(2);
