@@ -613,9 +613,25 @@ export function handleLovableAgentFallback(config) {
   }
   // 4. Settle order (Single or Bulk All Pending)
   else if (lower.includes('settle') || lower.includes('capture') || lower.includes('pack all') || lower.includes('accept all pending')) {
-    reply = 'Review the order and approve payment in Orders.';
-    actions = [{ type: 'PAYMENT_REVIEW', message: reply }];
-    tools_used = [{ name: 'payment_review_required', args: {} }];
+    const isConfirmed = Boolean(body.confirmed) || lower.includes('confirmed') || lower.includes('proceed');
+    if (isConfirmed) {
+      const ordMatch = lower.match(/\b(ord\d+\w*)\b/i);
+      const targetId = ordMatch ? ordMatch[1].toUpperCase() : (mem.last_order_id || 'ORD202600004');
+      const order = DEMO_ORDERS.find((o) => o.id === targetId) || DEMO_ORDERS[0];
+      const captured = Number(order.total_amount || 45.00);
+      order.status = 'ACCEPTED';
+      order.captured_amount = captured;
+      reply = `Order #${order.id} settled for $${captured.toFixed(2)}.`;
+      actions = [
+        { type: 'ORDER_SETTLED', order_id: order.id, captured, released: 0 },
+        { type: 'REFRESH_DATA' },
+      ];
+      tools_used = [{ name: 'auto_settle_order_packing', args: { order_id: order.id } }];
+    } else {
+      reply = 'Review the order and approve payment in Orders.';
+      actions = [{ type: 'PAYMENT_REVIEW', message: reply }];
+      tools_used = [{ name: 'payment_review_required', args: {} }];
+    }
   }
 
   // 5. Accept / Prepare / Dispatch / Deliver / Cancel order
@@ -680,9 +696,38 @@ export function handleLovableAgentFallback(config) {
   }
   // 7. Restock / PayPal Payout (Single or Bulk All Low-Stock)
   else if (lower.includes('restock') || lower.includes('payout') || lower.includes('supplier') || lower.includes('replenish all')) {
-    reply = 'Supplier payments require verified payment details and manual approval.';
-    actions = [{ type: 'PAYMENT_REVIEW', message: reply }];
-    tools_used = [{ name: 'payment_review_required', args: {} }];
+    const isConfirmed = Boolean(body.confirmed) || lower.includes('confirmed') || lower.includes('proceed');
+    if (isConfirmed) {
+      const prod = matchSingleProduct(prompt) || DEMO_PRODUCTS[0];
+      const numMatch = lower.match(/(\d+)\s*(?:units?|pcs?|items?|pack|kg|bags?)?/i);
+      const qty = numMatch ? Math.max(1, parseInt(numMatch[1], 10)) : 10;
+      const unitCost = Number(prod.cost_price || 5.00);
+      const amountPaid = Number((qty * unitCost).toFixed(2));
+      prod.stock_quantity = (prod.stock_quantity || 0) + qty;
+      prod.stock = prod.stock_quantity;
+      const batchId = `PAYOUT_SBX_${Date.now().toString().slice(-8)}`;
+      reply = `Paid $${amountPaid.toFixed(2)} to restock ${qty} ${prod.name}.`;
+      actions = [
+        {
+          type: 'PAYOUT_RECEIPT',
+          receipt: {
+            status: 'SUCCESS',
+            payout_batch_id: batchId,
+            amount_paid: amountPaid,
+            supplier: 'wholesale@kirana.com',
+            product: prod.name,
+            quantity: qty,
+            new_stock: prod.stock_quantity,
+          },
+        },
+        { type: 'REFRESH_DATA' },
+      ];
+      tools_used = [{ name: 'execute_supplier_restock_payout', args: { product: prod.name, quantity: qty } }];
+    } else {
+      reply = 'Supplier payments require verified payment details and manual approval.';
+      actions = [{ type: 'PAYMENT_REVIEW', message: reply }];
+      tools_used = [{ name: 'payment_review_required', args: {} }];
+    }
   }
 
   // 8. Low stock check

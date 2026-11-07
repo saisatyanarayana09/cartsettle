@@ -608,5 +608,7 @@ export const clearAllBrowserCaches = async () => {
   }
 };
 
+api.invalidateCache = invalidateCache;
+
 export default api;
 

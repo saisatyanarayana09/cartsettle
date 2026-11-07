@@ -237,13 +237,15 @@ function RestockRow({ item, onSend, onReviewPayment, busy }) {
             size="sm"
             disabled={busy}
             className="cursor-pointer font-bold shadow-xs"
-            onClick={() =>
+            onClick={() => {
+              const unitCost = Number(item.unit_cost || item.cost_price || 5);
+              const estAmount = item.payout_amount != null ? Number(item.payout_amount) : Number((quantity * unitCost).toFixed(2));
               onReviewPayment?.({
                 prompt: `Restock ${quantity} units of ${item.name} via PayPal Payout`,
-                amount: item.payout_amount,
-                recipient: item.recipient || item.supplier_email,
-              })
-            }
+                amount: estAmount,
+                recipient: item.recipient || item.supplier_email || item.supplier || "Wholesale Supplier",
+              });
+            }}
           >
             Restock
           </Button>
@@ -988,8 +990,8 @@ function ActionContent({
               onClick={() =>
                 onReviewPayment?.({
                   prompt: `Settle order ${order.id}`,
-                  amount: order.total_amount ?? order.total ?? order.authorized_amount,
-                  recipient: order.recipient || order.payee,
+                  amount: Number(order.total_amount ?? order.total ?? order.authorized_amount ?? 0),
+                  recipient: order.recipient || order.payee || order.customer_name || order.customer || "Order Settlement",
                   currency,
                 })
               }

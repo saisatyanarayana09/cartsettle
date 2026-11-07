@@ -179,18 +179,20 @@ export function PaymentReview({
                   ? "bg-[#0070ba] hover:bg-[#005ea6] text-white"
                   : "bg-emerald-600 hover:bg-emerald-500 text-white"
               }`}
-              onClick={() => {
-                const orderId = `20${Math.floor(40 + Math.random() * 59)}`;
-                setPlacedOrder({
-                  id: orderId,
-                  payMethod,
-                  total: effectiveTotal.toFixed(2),
-                });
-                onPlaceInlineOrder?.({
-                  id: orderId,
-                  payMethod,
-                  total: effectiveTotal,
-                });
+              onClick={async () => {
+                if (typeof onPlaceInlineOrder === "function") {
+                  const res = await onPlaceInlineOrder({
+                    payMethod,
+                    total: effectiveTotal,
+                  });
+                  if (res && res.id) {
+                    setPlacedOrder({
+                      id: res.id,
+                      payMethod: res.payment_method || payMethod,
+                      total: Number(res.total_amount || effectiveTotal).toFixed(2),
+                    });
+                  }
+                }
               }}
             >
               {payMethod === "PAYPAL" ? "Pay with PayPal" : "Place Order"}

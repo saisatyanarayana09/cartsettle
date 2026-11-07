@@ -231,6 +231,91 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
     reader.readAsDataURL(file);
   };
 
+  const handlePlaceInlineOrder = async (orderInfo) => {
+    const payMethod = orderInfo?.payMethod || "PAYPAL";
+    try {
+      setLoading(true);
+      if (flushCartSync) {
+        await flushCartSync().catch(() => {});
+      }
+
+      const payload = {
+        order_type: "PICKUP",
+        delivery_address: "In-Store Pickup",
+        delivery_pincode: "000000",
+        pickup_time: "As soon as possible",
+        payment_method: payMethod === "WALLET" ? "WALLET" : payMethod === "COD" ? "COD" : "PAYPAL",
+        use_wallet: payMethod === "WALLET",
+      };
+
+      const res = await api.post("/orders/", payload);
+      const realOrder = res.data;
+      if (!realOrder || !realOrder.id) {
+        throw new Error("Invalid order response from server");
+      }
+
+      playOrderConfirmedChime();
+      clearCart?.();
+      setAddedItems({});
+      api?.invalidateCache?.();
+
+      const orderTotal = Number(realOrder.total_amount || cart?.total || 0);
+      const orderAction = {
+        type: "ORDER_PLACED",
+        order_id: realOrder.id,
+        total: orderTotal,
+        payment_method: realOrder.payment_method || payMethod,
+        delivery_pin: realOrder.delivery_otp || realOrder.delivery_pincode || "000000",
+      };
+
+      const statusAction = {
+        type: "ORDER_STATUS_CARD",
+        order: {
+          id: realOrder.id,
+          status: realOrder.status || "ACCEPTED",
+          delivery_eta: "15-20 mins",
+          payment_method: realOrder.payment_method || payMethod,
+          total: orderTotal,
+        },
+      };
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `Order #${realOrder.id} confirmed via ${payMethod === "PAYPAL" ? "PayPal" : payMethod === "WALLET" ? "Wallet" : "COD"}. Total: ₹${orderTotal.toFixed(2)}.`,
+          actions: [orderAction, statusAction],
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+
+      setTimeout(() => {
+        setPaymentReview(null);
+      }, 2600);
+
+      return realOrder;
+    } catch (err) {
+      console.error("Inline order placement failed:", err);
+      const errMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Could not place order inline. Please complete checkout.";
+      toast.error(errMsg);
+      if (err?.response?.status === 401) {
+        onClose?.();
+        navigate("/login?redirect=/checkout");
+      } else {
+        onClose?.();
+        navigate("/checkout");
+      }
+      setPaymentReview(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSend = async (textToSend, requestMode = mode) => {
     const prompt = (textToSend || input).trim();
     if (!prompt || requestRef.current) return;
@@ -241,20 +326,11 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
         return { reply: "Checkout cancelled. What else can I help you with?" };
       }
       if (/^(confirm|pay|place order|complete|yes|proceed)\b/i.test(lower)) {
-        playOrderConfirmedChime();
-        clearCart?.();
-        setAddedItems({});
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "Order confirmed via PayPal.",
-            actions: [],
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ]);
-        setPaymentReview(null);
-        return { reply: "Order confirmed via PayPal." };
+        const realOrder = await handlePlaceInlineOrder({ payMethod: "PAYPAL" });
+        if (realOrder) {
+          return { reply: `Order #${realOrder.id} confirmed via PayPal.` };
+        }
+        return { reply: "Could not place order inline. Redirecting to checkout..." };
       }
       // Any other query or command automatically dismisses the checkout review and proceeds
       setPaymentReview(null);
@@ -999,23 +1075,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
             busy={loading}
             cartItems={liveItems}
             cartTotal={cartTotal}
-            onPlaceInlineOrder={(orderInfo) => {
-              playOrderConfirmedChime();
-              clearCart?.();
-              setAddedItems({});
-              setMessages((prev) => [
-                ...prev,
-                {
-                  role: "assistant",
-                  content: `Order #${orderInfo.id} confirmed.`,
-                  actions: [],
-                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                },
-              ]);
-              setTimeout(() => {
-                setPaymentReview(null);
-              }, 2600);
-            }}
+            onPlaceInlineOrder={handlePlaceInlineOrder}
           />
         )}
         {mode === "voice" ? (
@@ -1036,23 +1096,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose }) {
               busy={loading}
               cartItems={liveItems}
               cartTotal={cartTotal}
-              onPlaceInlineOrder={(orderInfo) => {
-                playOrderConfirmedChime();
-                clearCart?.();
-                setAddedItems({});
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    role: "assistant",
-                    content: `Order #${orderInfo.id} confirmed.`,
-                    actions: [],
-                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                  },
-                ]);
-                setTimeout(() => {
-                  setPaymentReview(null);
-                }, 2600);
-              }}
+              onPlaceInlineOrder={handlePlaceInlineOrder}
             />
             <ActionCards
               key={messages.length}

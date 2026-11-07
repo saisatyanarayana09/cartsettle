@@ -718,7 +718,7 @@ class AgentTools:
             except Order.DoesNotExist:
                 return {"status": "error", "message": f"Order {order_id} not found."}
 
-            if order.status not in [Order.Status.ACCEPTED, Order.Status.PREPARING, Order.Status.NEW]:
+            if order.status not in [Order.Status.ACCEPTED, Order.Status.PREPARING, Order.Status.NEW, Order.Status.READY]:
                 return {"status": "error", "message": f"Order {order_id} is in status '{order.status}' and cannot be packed."}
 
             packed_total = Decimal("0.00")
@@ -2556,7 +2556,7 @@ class AgentService:
         # --- B. AUTO-SETTLE ORDER ("Settle order ORD...", "Settle pending order", "Settle all pending orders") ---
         if any(w in lower for w in ["settle", "capture", "pack order", "pack and settle", "pack all", "accept all pending"]):
             if ("all" in lower or "pending orders" in lower) and persona == "owner":
-                pending_list = list(Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).order_by("-created_at")[:10])
+                pending_list = list(Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING", "READY"]).order_by("-created_at")[:10])
                 if not pending_list:
                     return {
                         "reply": "All orders are already settled.",
@@ -2589,7 +2589,7 @@ class AgentService:
             if ord_match:
                 target_id = ord_match.group(1).upper()
             else:
-                pending_ord = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).order_by("-created_at").first() or Order.objects.order_by("-created_at").first()
+                pending_ord = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING", "READY"]).order_by("-created_at").first() or Order.objects.order_by("-created_at").first()
                 target_id = str(pending_ord.id) if pending_ord else ""
             if target_id:
                 res = AgentTools.execute_tool("auto_settle_order_packing", {"order_id": target_id}, session_id)
@@ -3734,12 +3734,14 @@ class AgentService:
             return msg
 
         elif fn_name == "auto_settle_order_packing":
-            return f"Order #{res.get('order_id')} settled for ${res.get('captured_amount', 0):.2f}."
+            if res.get("status") == "SUCCESS":
+                return f"Order #{res.get('order_id')} settled for ${float(res.get('captured_amount', 0)):.2f}."
+            return res.get("message", "Could not settle order.")
 
         elif fn_name == "execute_supplier_restock_payout":
             if res.get("status") == "SUCCESS":
-                return f"Paid ${res.get('amount_paid', 0):.2f} to restock {res.get('quantity')} {res.get('product')}."
-            return msg
+                return f"Paid ${float(res.get('amount_paid', 0)):.2f} to restock {res.get('quantity')} {res.get('product')}."
+            return res.get("message", "Supplier restock payout failed.")
 
         elif fn_name == "update_order_status":
             return res.get("message", f"Order #{res.get('order_id')} updated to {res.get('new_status')}.")

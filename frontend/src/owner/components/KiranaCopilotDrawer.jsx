@@ -54,13 +54,32 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
         .catch(() => {});
   }, []);
 
-  const handleSend = async (text = input, requestMode = mode) => {
+  const handleConfirmPayment = async () => {
+    const pendingPrompt = paymentReview?.prompt;
+    setPaymentReview(null);
+    if (!pendingPrompt) return;
+    await handleSend(pendingPrompt, mode, true);
+  };
+
+  const handleSend = async (text = input, requestMode = mode, confirmed = false) => {
     const prompt = text.trim();
     if (!prompt || busy.current) return;
     if (paymentReview) {
+      const lower = prompt.toLowerCase();
+      if (/^(cancel|no|nevermind|back|close|exit|stop)\b/i.test(lower)) {
+        setPaymentReview(null);
+        return { reply: "Cancelled." };
+      }
+      if (/^(confirm|pay|place order|complete|yes|proceed|settle|do it|ok|okay)\b/i.test(lower)) {
+        const pendingPrompt = paymentReview.prompt;
+        setPaymentReview(null);
+        if (pendingPrompt) {
+          return handleSend(pendingPrompt, requestMode, true);
+        }
+      }
       setPaymentReview(null);
     }
-    if (requiresPaymentReview(prompt)) {
+    if (!confirmed && requiresPaymentReview(prompt)) {
       voice.stop();
       setInput("");
       setPaymentReview({ prompt });
@@ -76,6 +95,7 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
         prompt,
         session_id: SESSION_ID,
         persona: "owner",
+        ...(confirmed ? { confirmed: true } : {}),
         ...(requestMode === "voice" ? { mode: "voice" } : {}),
         history: history.map(({ role, content }) => ({ role, content })),
       });
@@ -260,9 +280,12 @@ export default function KiranaCopilotDrawer({ isOpen, onClose }) {
           </div>
         </div>
       )}
-      <PaymentReview review={paymentReview} busy={loading} onCancel={() => setPaymentReview(null)}
+      <PaymentReview
+        review={paymentReview}
+        busy={loading}
+        onCancel={() => setPaymentReview(null)}
         onOpen={() => { close(); navigate("/owner/orders"); }}
-        />
+      />
       {mode === "voice" ? (
         <VoiceView
           voice={voice}
