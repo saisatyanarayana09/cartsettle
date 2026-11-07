@@ -485,6 +485,43 @@
   );
   animation: orb-aura-active 1.3s ease-in-out infinite alternate;
 }
+.voice-orb-aura[data-glow="checkout"] {
+  background: radial-gradient(
+    circle,
+    rgba(0, 112, 186, 0.56) 0%,
+    rgba(255, 196, 57, 0.34) 48%,
+    rgba(56, 189, 248, 0.16) 68%,
+    transparent 82%
+  );
+}
+.voice-orb-aura[data-glow="discovery"] {
+  background: radial-gradient(
+    circle,
+    rgba(245, 158, 11, 0.48) 0%,
+    rgba(16, 185, 129, 0.36) 48%,
+    rgba(52, 211, 153, 0.16) 68%,
+    transparent 82%
+  );
+}
+.voice-orb-aura[data-glow="thinking"],
+.voice-orb-aura[data-glow="order-track"] {
+  background: radial-gradient(
+    circle,
+    rgba(14, 165, 233, 0.54) 0%,
+    rgba(99, 102, 241, 0.36) 48%,
+    rgba(139, 92, 246, 0.16) 68%,
+    transparent 82%
+  );
+}
+.voice-orb-aura[data-glow="theme-switch"] {
+  background: radial-gradient(
+    circle,
+    rgba(139, 92, 246, 0.56) 0%,
+    rgba(236, 72, 153, 0.34) 48%,
+    rgba(245, 158, 11, 0.16) 68%,
+    transparent 82%
+  );
+}
 
 /* Layer 2: Stationary 3D Crystal Glass Sphere Shell */
 .voice-orb-sphere {

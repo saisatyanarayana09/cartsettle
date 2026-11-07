@@ -40,6 +40,7 @@ describe("VoiceOrb", () => {
     expect(containerEl).toHaveStyle({ "--orb-level": "0.750" });
     const sphere = container.querySelector(".voice-orb-sphere");
     expect(sphere).toHaveAttribute("data-state", "listening");
+    expect(sphere).toHaveAttribute("data-model", "liquid");
     expect(container.querySelector(".voice-orb-canvas")).toBeInTheDocument();
     expect(container.querySelector(".voice-orb-sphere img")).toBeNull();
     expect(container.querySelector(".voice-orb-plasma-ribbon-a")).toBeInTheDocument();
@@ -47,6 +48,15 @@ describe("VoiceOrb", () => {
     expect(container.querySelector(".voice-orb-acoustic-core")).toBeInTheDocument();
     expect(container.querySelector(".voice-orb-pulse-ring")).toBeNull();
     expect(container.querySelector(".voice-orb-orbital-halo")).toBeNull();
+  });
+
+  it("supports switching between Liquid Silk 3D and Crystal Ribbon 3D models with dynamic task glow", () => {
+    const { container } = render(
+      <VoiceOrb status="working" glowPalette="checkout" model="ribbon" micLevel={0.4} />,
+    );
+    const sphere = container.querySelector(".voice-orb-sphere");
+    expect(sphere).toHaveAttribute("data-model", "ribbon");
+    expect(sphere).toHaveAttribute("data-glow", "checkout");
   });
 });
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Keyboard, Mic, MoreHorizontal, Trash2 } from "lucide-react";
+import { Keyboard, Mic, MoreHorizontal, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMicLevel } from "./useMicLevel";
 import { VoiceOrb } from "./VoiceOrb";
@@ -10,6 +10,41 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+const ORB_MODEL_KEY = "cartsettle_orb_model";
+const ORB_MODEL_EVENT = "cartsettle:orb-model";
+
+function useOrbModel() {
+  const [orbModel, setOrbModelState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(ORB_MODEL_KEY);
+      return saved === "ribbon" ? "ribbon" : "liquid";
+    } catch {
+      return "liquid";
+    }
+  });
+
+  useEffect(() => {
+    const onModelChange = (e) => {
+      if (e?.detail) setOrbModelState(e.detail);
+    };
+    window.addEventListener(ORB_MODEL_EVENT, onModelChange);
+    return () => window.removeEventListener(ORB_MODEL_EVENT, onModelChange);
+  }, []);
+
+  const setOrbModel = (nextModel) => {
+    const valid = nextModel === "ribbon" ? "ribbon" : "liquid";
+    setOrbModelState(valid);
+    try {
+      localStorage.setItem(ORB_MODEL_KEY, valid);
+    } catch {
+      /* ignore */
+    }
+    window.dispatchEvent(new CustomEvent(ORB_MODEL_EVENT, { detail: valid }));
+  };
+
+  return [orbModel, setOrbModel];
+}
 
 /** Single icon that flips between voice and typing. */
 export function ModeSwitch({ mode, onChange }) {
@@ -28,6 +63,7 @@ export function ModeSwitch({ mode, onChange }) {
 }
 
 export function PanelMenu({ onClear, disabled }) {
+  const [orbModel, setOrbModel] = useOrbModel();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -36,6 +72,14 @@ export function PanelMenu({ onClear, disabled }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="z-[110]">
+        <DropdownMenuItem
+          onSelect={() => setOrbModel(orbModel === "liquid" ? "ribbon" : "liquid")}
+        >
+          <Sparkles className="text-emerald-500" />
+          {orbModel === "liquid"
+            ? "Orb: Switch to Crystal Ribbon 3D"
+            : "Orb: Switch to Liquid Silk 3D"}
+        </DropdownMenuItem>
         <DropdownMenuItem disabled={disabled} onSelect={onClear}>
           <Trash2 />
           Clear conversation
@@ -104,6 +148,7 @@ export function VoiceView({
   replyText,
   activeTaskType = "idle",
 }) {
+  const [orbModel] = useOrbModel();
   const status = busy && voice.status !== "speaking" ? "working" : voice.status;
   const hasTranscript = Boolean(voice.transcript && voice.transcript.trim());
   const baseMicLevel = useMicLevel(status === "listening" || status === "speaking");
@@ -197,7 +242,7 @@ export function VoiceView({
         <div className="assistant-live-cards">{children}</div>
       </div>
 
-      {/* Bottom Compact Caption & Living 3D Internal-Plasma Orb */}
+      {/* Bottom Compact Caption & Living 3D Orb */}
       <div className="voice-bottom flex flex-col items-center justify-end z-10 px-5 pb-6">
         <div className="mb-3.5 w-full text-center flex flex-col items-center min-h-[38px] justify-center">
           <KineticWords
@@ -209,6 +254,8 @@ export function VoiceView({
 
         <VoiceOrb
           status={status}
+          glowPalette={glowPalette}
+          model={orbModel}
           micLevel={micLevel}
           onClick={handleToggle}
           onKeyDown={handleKeyDown}
