@@ -31,19 +31,10 @@ const clearStoredGuestCart = () => {
   } catch {}
 };
 
-const getStoredCustomerCart = () => {
-  try {
-    const raw = localStorage.getItem(CUSTOMER_CART_CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
 const getStoredCart = () => {
   try {
     const isCust = Boolean(getUser()?.is_customer);
-    return isCust ? getStoredCustomerCart() : getStoredGuestCart();
+    return isCust ? null : getStoredGuestCart();
   } catch {
     return null;
   }
@@ -140,22 +131,16 @@ export function CartProvider({ children }) {
   const replaceCart = useCallback((nextCart) => {
     cartRef.current = nextCart
     setCart(nextCart)
-    if (nextCart) {
-      try {
-        if (!isCustomer) {
+    if (!isCustomer) {
+      if (nextCart) {
+        try {
           localStorage.setItem(GUEST_CART_KEY, JSON.stringify(nextCart));
-        } else {
-          localStorage.setItem(CUSTOMER_CART_CACHE_KEY, JSON.stringify(nextCart));
-        }
-      } catch {}
-    } else {
-      try {
-        if (!isCustomer) {
+        } catch {}
+      } else {
+        try {
           localStorage.removeItem(GUEST_CART_KEY);
-        } else {
-          localStorage.removeItem(CUSTOMER_CART_CACHE_KEY);
-        }
-      } catch {}
+        } catch {}
+      }
     }
   }, [isCustomer])
 

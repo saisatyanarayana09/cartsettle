@@ -15,7 +15,8 @@ vi.mock('../../cart-context', () => ({ useCart: () => context }));
 beforeEach(() => { vi.clearAllMocks(); item.quantity = 1; mocks.get.mockImplementation((path: string) => Promise.resolve({ data: path.includes('wallet') ? { balance: '0' } : [] })); mocks.post.mockResolvedValue({ data: { id: 123 } }); });
 afterEach(cleanup);
 function clickFirstAction(name: string) {
- const button = screen.getAllByRole('button', { name })[0];
+ const pattern = name === 'Authorize PayPal' ? /(?:Authorize PayPal|Pay with PayPal)/ : name;
+ const button = screen.getAllByRole('button', { name: pattern })[0];
  if (!button) throw new Error(`Missing action: ${name}`);
  fireEvent.click(button);
 }
@@ -68,7 +69,7 @@ it('does not submit an empty cart', async () => {
   if (buttons[0]) fireEvent.click(buttons[0]);
   await new Promise(resolve => setTimeout(resolve, 20));
   expect(mocks.post).not.toHaveBeenCalled();
-  expect(screen.queryByRole('button', { name: 'Authorize PayPal' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /(?:Authorize PayPal|Pay with PayPal)/ })).not.toBeInTheDocument();
  } finally { context.cart.items = saved; }
 });
 it('keeps delivery blocked after deleting the selected address', async () => {
@@ -77,11 +78,11 @@ it('keeps delivery blocked after deleting the selected address', async () => {
  render(<CheckoutPage />);
  fireEvent.click(screen.getByRole('button', { name: 'Delivery' }));
  await screen.findByRole('radio', { name: 'Home: 12 Market Road' });
- expect(screen.getAllByRole('button', { name: 'Authorize PayPal' })[0]).not.toBeDisabled();
+ expect(screen.getAllByRole('button', { name: /(?:Authorize PayPal|Pay with PayPal)/ })[0]).not.toBeDisabled();
  const dialog = vi.spyOn(window, 'confirm').mockReturnValue(true);
  fireEvent.click(screen.getByRole('button', { name: 'Delete Home address' }));
  await waitFor(() => expect(screen.queryByRole('radio', { name: 'Home: 12 Market Road' })).not.toBeInTheDocument());
- expect(screen.getAllByRole('button', { name: 'Authorize PayPal' })[0]).toBeDisabled();
+ expect(screen.getAllByRole('button', { name: /(?:Authorize PayPal|Pay with PayPal)/ })[0]).toBeDisabled();
  dialog.mockRestore();
 });
 it('keeps the chosen fulfillment method when settings refresh', async () => {
@@ -113,5 +114,5 @@ it('moves keyboard focus to confirmation after a successful order', async () => 
  clickFirstAction('Authorize PayPal');
  const confirmation = await screen.findByRole('heading', { name: 'Order placed' });
  await waitFor(() => expect(confirmation).toHaveFocus());
- expect(screen.queryByRole('button', { name: 'Authorize PayPal' })).not.toBeInTheDocument();
+ expect(screen.queryByRole('button', { name: /(?:Authorize PayPal|Pay with PayPal)/ })).not.toBeInTheDocument();
 });

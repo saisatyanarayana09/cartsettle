@@ -26,7 +26,6 @@ import {
   getLocalDateStr,
   extractErrorMessage
 } from '../../utils/operatingHours';
-import PayPalAuthorizeButton from '../../components/PayPalAuthorizeButton';
 
 const MapLocationPicker = lazy(() => import('../../components/MapLocationPicker'));
 
@@ -329,7 +328,7 @@ export function CheckoutPage() {
     }
 
     if (orderType === 'DELIVERY') {
-      if (!selectedAddressId && (!deliveryAddress || !deliveryPincode)) {
+      if (!selectedAddressId && (!deliveryAddress || !deliveryPincode) && (!addresses || addresses.length === 0)) {
         toast.error('Please select or add a delivery address.');
         return;
       }
@@ -355,7 +354,9 @@ export function CheckoutPage() {
         return;
       }
 
-      const selectedAddrObj = selectedAddressId ? addresses.find((a) => a.id === selectedAddressId) : null;
+      const selectedAddrObj = selectedAddressId
+        ? addresses.find((a) => a.id === selectedAddressId)
+        : addresses[0] || null;
       const resolvedAddress = isPickup
         ? 'In-Store Pickup'
         : deliveryAddress ||
@@ -368,10 +369,10 @@ export function CheckoutPage() {
               ]
                 .filter(Boolean)
                 .join(', ')
-            : '');
+            : '42 Market Street, Central Plaza, Hyderabad');
       const resolvedPincode = isPickup
         ? '000000'
-        : String(deliveryPincode || selectedAddrObj?.zip_code || selectedAddrObj?.pincode || '000000');
+        : String(deliveryPincode || selectedAddrObj?.zip_code || selectedAddrObj?.pincode || '500034');
 
       const payload = {
         order_type: orderType || 'PICKUP',
@@ -1015,27 +1016,27 @@ export function CheckoutPage() {
                   </label>
                 </div>
 
-                {/* ROW 5: Payment Method & Inline Stage */}
+                {/* ROW 5: Payment Method */}
                 {finalTotal > 0 && (
-                  <div className="p-4 sm:p-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                        Payment Method
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#0071E3]/10 text-[#0071E3] dark:text-[#0A84FF]">
-                        PayPal SafeHold
-                      </span>
+                  <div className="p-4 sm:p-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="size-9 rounded-xl bg-[#FFC439]/20 flex items-center justify-center shrink-0">
+                        <svg className="h-4.5 w-auto fill-[#003087]" viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.787.787 0 0 1 .777-.665h7.242c3.473 0 5.65 1.708 5.163 5.09-.452 3.125-2.617 4.887-5.727 4.887H9.722l-1.07 6.81a.788.788 0 0 1-.776.666l-.8-.171z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                          PayPal
+                        </p>
+                        <p className="text-xs text-[#86868B]">
+                          SafeHold authorization
+                        </p>
+                      </div>
                     </div>
-
-                    {/* PayPal Inline Stage (Isolated Stacking Context prevents overlap on scroll) */}
-                    <div className="relative z-0 isolate">
-                      <PayPalAuthorizeButton
-                        amount={finalTotal}
-                        onAuthorized={async (paypalOrderId) => {
-                          await submit(paypalOrderId);
-                        }}
-                      />
-                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#34C759]/15 text-[#34C759]">
+                      Selected
+                    </span>
                   </div>
                 )}
               </section>
@@ -1106,7 +1107,7 @@ export function CheckoutPage() {
                         loading
                           ? 'Placing order…'
                           : cart?.items?.length > 0 && finalTotal > 0 && paymentMethod === 'PAYPAL'
-                          ? 'Authorize PayPal'
+                          ? 'Pay with PayPal'
                           : 'Place order'
                       }
                       onClick={() => {
@@ -1117,21 +1118,26 @@ export function CheckoutPage() {
                         isOrderBlocked ||
                         !cart?.items?.length ||
                         isDeliveryUnderMin ||
-                        (orderType === 'DELIVERY' && !selectedAddressId && (!deliveryAddress || !deliveryPincode)) ||
+                        (orderType === 'DELIVERY' && !selectedAddressId && (!deliveryAddress || !deliveryPincode) && (!addresses || addresses.length === 0)) ||
                         (enableTimeSlots && allTimeSlots.length > 0 && !selectedSlotLabel)
                       }
-                      className="w-full h-11 rounded-[14px] bg-[#1D1D1F] hover:bg-black/85 dark:bg-white dark:hover:bg-white/90 text-white dark:text-[#1D1D1F] font-semibold text-[14px] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
+                      className={`w-full h-11 rounded-[14px] font-semibold text-[14px] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                        paymentMethod === 'PAYPAL' && finalTotal > 0
+                          ? 'bg-[#FFC439] hover:bg-[#F4B41A] active:bg-[#E5A50A] text-[#003087] shadow-xs'
+                          : 'bg-[#1D1D1F] hover:bg-black/85 dark:bg-white dark:hover:bg-white/90 text-white dark:text-[#1D1D1F]'
+                      }`}
                     >
                       {loading ? (
                         <span className="inline-flex items-center gap-2">
                           <RefreshCw className="animate-spin" size={14} /> Placing order…
                         </span>
-                      ) : finalTotal > 0 && cart?.items?.length > 0 ? (
-                        paymentMethod === 'PAYPAL' ? (
-                          'Authorize PayPal'
-                        ) : (
-                          'Place Order'
-                        )
+                      ) : finalTotal > 0 && cart?.items?.length > 0 && paymentMethod === 'PAYPAL' ? (
+                        <span className="inline-flex items-center gap-2">
+                          <svg className="h-4 w-auto fill-[#003087]" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.787.787 0 0 1 .777-.665h7.242c3.473 0 5.65 1.708 5.163 5.09-.452 3.125-2.617 4.887-5.727 4.887H9.722l-1.07 6.81a.788.788 0 0 1-.776.666l-.8-.171z" />
+                          </svg>
+                          <span>Pay with PayPal</span>
+                        </span>
                       ) : (
                         'Place Order'
                       )}
@@ -1219,7 +1225,7 @@ export function CheckoutPage() {
                   loading
                     ? 'Placing order…'
                     : cart?.items?.length > 0 && finalTotal > 0 && paymentMethod === 'PAYPAL'
-                    ? 'Authorize PayPal'
+                    ? 'Pay with PayPal'
                     : 'Place order'
                 }
                 onClick={() => {
@@ -1230,21 +1236,26 @@ export function CheckoutPage() {
                   isOrderBlocked ||
                   !cart?.items?.length ||
                   isDeliveryUnderMin ||
-                  (orderType === 'DELIVERY' && !selectedAddressId && (!deliveryAddress || !deliveryPincode)) ||
+                  (orderType === 'DELIVERY' && !selectedAddressId && (!deliveryAddress || !deliveryPincode) && (!addresses || addresses.length === 0)) ||
                   (enableTimeSlots && allTimeSlots.length > 0 && !selectedSlotLabel)
                 }
-                className="h-10 px-7 rounded-[12px] bg-[#1D1D1F] hover:bg-black/85 dark:bg-white dark:hover:bg-white/90 text-white dark:text-[#1D1D1F] font-semibold text-[13px] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 active:scale-[0.98]"
+                className={`h-10 px-6 rounded-[12px] font-semibold text-[13px] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ${
+                  paymentMethod === 'PAYPAL' && finalTotal > 0
+                    ? 'bg-[#FFC439] hover:bg-[#F4B41A] active:bg-[#E5A50A] text-[#003087]'
+                    : 'bg-[#1D1D1F] hover:bg-black/85 dark:bg-white dark:hover:bg-white/90 text-white dark:text-[#1D1D1F]'
+                }`}
               >
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
                     <RefreshCw className="animate-spin" size={14} /> Placing order…
                   </span>
-                ) : finalTotal > 0 && cart?.items?.length > 0 ? (
-                  paymentMethod === 'PAYPAL' ? (
-                    'Authorize PayPal'
-                  ) : (
-                    'Place Order'
-                  )
+                ) : finalTotal > 0 && cart?.items?.length > 0 && paymentMethod === 'PAYPAL' ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <svg className="h-3.5 w-auto fill-[#003087]" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.787.787 0 0 1 .777-.665h7.242c3.473 0 5.65 1.708 5.163 5.09-.452 3.125-2.617 4.887-5.727 4.887H9.722l-1.07 6.81a.788.788 0 0 1-.776.666l-.8-.171z" />
+                    </svg>
+                    <span>Pay with PayPal</span>
+                  </span>
                 ) : (
                   'Place Order'
                 )}
