@@ -257,20 +257,41 @@ class AgentTools:
             },
             {
                 "name": "add_to_shopper_cart",
-                "description": "Autonomously prepares an item to be added to the shopper's active cart.",
+                "description": "Autonomously adds an item directly into the shopper's active cart. If product_id is not known, provide product_name.",
                 "parameters": {
                     "type": "OBJECT",
                     "properties": {
+                        "product_name": {
+                            "type": "STRING",
+                            "description": "Name or keyword of the product to add (e.g. 'milk', 'dahi', 'bread', 'maggi')."
+                        },
                         "product_id": {
                             "type": "INTEGER",
-                            "description": "Product ID to add to cart."
+                            "description": "Optional Product ID to add to cart."
                         },
                         "quantity": {
                             "type": "INTEGER",
                             "description": "Quantity to add (default 1)."
                         }
-                    },
-                    "required": ["product_id"]
+                    }
+                }
+            },
+            {
+                "name": "bulk_add_to_cart",
+                "description": "Autonomously adds multiple products or a requested count of random or diverse in-stock grocery items directly into the shopper's active cart.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "count": {
+                            "type": "INTEGER",
+                            "description": "Number of random or diverse in-stock items to add to cart (e.g. 3, 5)."
+                        },
+                        "product_ids": {
+                            "type": "ARRAY",
+                            "items": {"type": "INTEGER"},
+                            "description": "Optional specific list of product IDs to add."
+                        }
+                    }
                 }
             },
             {
@@ -849,25 +870,63 @@ class AgentTools:
             }
 
         elif name == "add_to_shopper_cart":
-            prod_id = args.get("product_id")
+            prod_id = args.get("product_id") or args.get("id")
+            prod_name = args.get("product_name") or args.get("name") or args.get("query")
             qty = max(1, int(args.get("quantity", 1)))
-            try:
-                p = Product.objects.select_related("category").get(id=prod_id, is_active=True)
-                stock_avail = p.stock_quantity if p.stock_quantity is not None else 99
-                if stock_avail > 0 and qty > stock_avail:
-                    actual_qty = stock_avail
-                    msg = f"Only {stock_avail} in stock. Added {actual_qty} {p.name}."
-                else:
-                    actual_qty = min(qty, 999)
-                    msg = f"Added {actual_qty} {p.name}."
-                return {
-                    "status": "success",
-                    "action": "ADD_TO_CART",
-                    "item": _serialize_card_product(p, quantity=actual_qty),
-                    "message": msg
+            p = None
+            if prod_id:
+                p = Product.objects.select_related("category").filter(id=prod_id, is_active=True).first()
+            if not p and prod_name:
+                p = Product.objects.select_related("category").filter(name__icontains=str(prod_name).strip(), is_active=True).first()
+            if not p and prod_name:
+                synonyms = {
+                    "yogurt": "dahi",
+                    "curd": "dahi",
+                    "cottage cheese": "paneer",
+                    "butter": "butter",
+                    "flour": "atta",
+                    "wheat": "atta",
+                    "cookie": "biscuit",
+                    "cookies": "biscuit",
                 }
-            except Product.DoesNotExist:
-                return {"status": "error", "message": f"Product #{prod_id} is unavailable."}
+                syn_target = synonyms.get(str(prod_name).strip().lower())
+                if syn_target:
+                    p = Product.objects.select_related("category").filter(name__icontains=syn_target, is_active=True).first()
+            if not p:
+                return {"status": "error", "message": f"Product #{prod_id or prod_name} is unavailable."}
+
+            stock_avail = p.stock_quantity if p.stock_quantity is not None else 99
+            if stock_avail > 0 and qty > stock_avail:
+                actual_qty = stock_avail
+                msg = f"Only {stock_avail} in stock. Added {actual_qty} {p.name}."
+            else:
+                actual_qty = min(qty, 999)
+                msg = f"Added {actual_qty} {p.name}."
+            return {
+                "status": "success",
+                "action": "ADD_TO_CART",
+                "item": AgentTools.serialize_card_product(p, quantity=actual_qty),
+                "message": msg
+            }
+
+        elif name == "bulk_add_to_cart":
+            count = max(1, min(int(args.get("count", 5)), 20))
+            p_ids = args.get("product_ids") or []
+            active_prods = list(Product.objects.filter(is_active=True, stock_quantity__gt=0))
+            if p_ids:
+                chosen = [p for p in active_prods if p.id in p_ids]
+            else:
+                chosen = random.sample(active_prods, min(count, len(active_prods))) if len(active_prods) >= count else active_prods
+            items_serialized = [AgentTools.serialize_card_product(p, quantity=1) for p in chosen]
+            tot_price = sum(it["price"] for it in items_serialized)
+            names_preview = ", ".join(it["name"] for it in items_serialized[:3])
+            suffix = f" and {len(items_serialized)-3} more" if len(items_serialized) > 3 else ""
+            return {
+                "status": "success",
+                "action": "ADD_TO_CART",
+                "items": items_serialized,
+                "message": f"Added {len(items_serialized)} items to your cart: {names_preview}{suffix} (Total: ₹{tot_price:.2f})."
+            }
 
         elif name == "inspect_margin":
             query = args.get("query", "").strip()
@@ -2234,8 +2293,8 @@ class AgentService:
         for pattern, token in protected_cards:
             out = re.sub(pattern, token, out, flags=re.IGNORECASE)
 
-        # 2. CART Phonetic Normalization (handling common STT slips: card, part, car, court, cot, caught, kart, chart, etc.)
-        out = re.sub(r"\b(?:kart|caart|kaart|kaat|kurt)\b", "cart", out, flags=re.IGNORECASE)
+        # 2. CART Phonetic Normalization (handling common STT & typo slips: cut, kut, curt, card, part, car, court, cot, caught, kart, chart, etc.)
+        out = re.sub(r"\b(?:kart|caart|kaart|kaat|kurt|curt|kut|kat)\b", "cart", out, flags=re.IGNORECASE)
         out = re.sub(
             r"\b(to|into|in|from|my|the|this|that|view|show|open|check|clear|empty|clean|reset|see)\s+card\b",
             r"\1 cart",
@@ -2258,19 +2317,21 @@ class AgentService:
         out = re.sub(r"\bpart\s+(total|items?|summary|contents?)\b", r"cart \1", out, flags=re.IGNORECASE)
         out = re.sub(r"\b(add\b.*?\b(?:to|into|in))\s+(?:the\s+)?part\b", r"\1 cart", out, flags=re.IGNORECASE)
 
-        # "car" / "court" / "cot" / "caught" / "chart" slips
-        out = re.sub(r"\b(items?\s+(?:in|from)\s+(?:the\s+|my\s+)?)(?:court|cot|caught|chart|kart|car|card)\b", r"\1cart", out, flags=re.IGNORECASE)
+        # "car" / "court" / "cot" / "caught" / "chart" / "cut" / "curt" / "kut" slips
+        cart_slips_re = r"(?:court|cot|caught|chart|kart|car|card|cut|kut|curt|cat|kat)"
+        out = re.sub(rf"\b(items?\s+(?:in|from)\s+(?:the\s+|my\s+)?){cart_slips_re}\b", r"\1cart", out, flags=re.IGNORECASE)
         out = re.sub(
-            r"\b(to|into|in|from|view|show|open|check|clear|empty|see|list|display)\s+(the\s+|my\s+)?(?:car|court|cot|caught|chart)\b",
+            rf"\b(to|into|in|from|view|show|open|check|clear|empty|see|list|display)\s+(the\s+|my\s+)?{cart_slips_re}\b",
             lambda m: f"{m.group(1)} {m.group(2) or ''}cart",
             out,
             flags=re.IGNORECASE
         )
-        out = re.sub(r"\b(?:car|court|cot|caught|chart)\s+(total|items?|summary|contents?)\b", r"cart \1", out, flags=re.IGNORECASE)
-        out = re.sub(r"\b(add\b.*?\b(?:to|into|in))\s+(the\s+|my\s+)?(?:car|court|cot|caught|chart)\b", lambda m: f"{m.group(1)} {m.group(2) or ''}cart", out, flags=re.IGNORECASE)
+        out = re.sub(rf"\b{cart_slips_re}\s+(total|items?|summary|contents?)\b", r"cart \1", out, flags=re.IGNORECASE)
+        out = re.sub(rf"\b(add\b.*?\b(?:to|into|in))\s+(the\s+|my\s+)?{cart_slips_re}\b", lambda m: f"{m.group(1)} {m.group(2) or ''}cart", out, flags=re.IGNORECASE)
+        out = re.sub(rf"\b(put\b.*?\b(?:in|into|to))\s+(the\s+|my\s+)?{cart_slips_re}\b", lambda m: f"{m.group(1)} {m.group(2) or ''}cart", out, flags=re.IGNORECASE)
         out = re.sub(r"\b(?<!food\s)court\b", "cart", out, flags=re.IGNORECASE)
-        if re.fullmatch(r"\s*(?:my\s+|the\s+)?(?:car|court|cot|kart)\s*", out, re.IGNORECASE):
-            out = re.sub(r"\b(?:car|court|cot|kart)\b", "cart", out, flags=re.IGNORECASE)
+        if re.fullmatch(r"\s*(?:my\s+|the\s+)?(?:car|court|cot|kart|cut|kut|curt)\s*", out, re.IGNORECASE):
+            out = re.sub(r"\b(?:car|court|cot|kart|cut|kut|curt)\b", "cart", out, flags=re.IGNORECASE)
 
         # Restore protected payment cards
         out = re.sub(r"##([a-z0-9]+)_CARD##", r"\1 card", out, flags=re.IGNORECASE)
@@ -2534,6 +2595,10 @@ class AgentService:
                 "You assist shoppers with product search, cart curation, meal planning, deal negotiation, and checkout, "
                 "as well as any general questions or tasks they ask.\n"
                 "When a shopper requests product information, meal kits, or cart modifications, trigger the corresponding tools to render live interactive preview cards in the drawer.\n"
+                "CART ADDITION RULE: When the shopper asks to ADD items to cart (e.g. 'add milk to cart', 'add 2 dahi', 'add 5 random items to cart'):\n"
+                "- For bulk, multiple, or random items, call 'bulk_add_to_cart(count=N)'.\n"
+                "- For specific items, call 'add_to_shopper_cart(product_name=...)' directly so the item is placed into their active cart.\n"
+                "- Do NOT merely call 'search_products_and_stock' when the user explicitly asked to ADD items to their cart.\n"
                 f"{recent_context_note}"
                 f"{cart_note}"
                 f"{cart_guard}"
@@ -2719,8 +2784,19 @@ class AgentService:
                     # Synthesize final human response directly from the executed tool result
                     # to eliminate the second remote round-trip to Google (saving 1.5 - 2.0s latency).
                     if accumulated_tools:
-                        last_tool = accumulated_tools[-1]
-                        final_reply_text = self._synthesize_tool_response(last_tool["name"], last_tool_result, persona)
+                        add_actions = [a for a in accumulated_actions if a.get("type") == "ADD_TO_CART"]
+                        if add_actions:
+                            item_names = [a.get("item", {}).get("name") for a in add_actions if a.get("item", {}).get("name")]
+                            tot_price = sum(float(a.get("item", {}).get("price", 0)) * int(a.get("item", {}).get("quantity", 1)) for a in add_actions)
+                            if len(item_names) > 1:
+                                preview_names = ", ".join(item_names[:3])
+                                suffix = f" and {len(item_names) - 3} more" if len(item_names) > 3 else ""
+                                final_reply_text = f"Added {len(item_names)} items to your cart: {preview_names}{suffix} (Total: ₹{tot_price:.2f})."
+                            elif len(item_names) == 1:
+                                final_reply_text = f"Added {item_names[0]} to your cart (₹{tot_price:.2f})."
+                        else:
+                            last_tool = accumulated_tools[-1]
+                            final_reply_text = self._synthesize_tool_response(last_tool["name"], last_tool_result, persona)
                     break
 
                 # Model completed reasoning and returned text response
@@ -2729,9 +2805,20 @@ class AgentService:
                 break
 
             if not final_reply_text and accumulated_tools:
-                # If model ended without explicit text after tool, synthesize from last tool
-                last_tool = accumulated_tools[-1]
-                final_reply_text = self._synthesize_tool_response(last_tool["name"], last_tool_result, persona)
+                # If model ended without explicit text after tool, synthesize from tool results
+                add_actions = [a for a in accumulated_actions if a.get("type") == "ADD_TO_CART"]
+                if add_actions:
+                    item_names = [a.get("item", {}).get("name") for a in add_actions if a.get("item", {}).get("name")]
+                    tot_price = sum(float(a.get("item", {}).get("price", 0)) * int(a.get("item", {}).get("quantity", 1)) for a in add_actions)
+                    if len(item_names) > 1:
+                        preview_names = ", ".join(item_names[:3])
+                        suffix = f" and {len(item_names) - 3} more" if len(item_names) > 3 else ""
+                        final_reply_text = f"Added {len(item_names)} items to your cart: {preview_names}{suffix} (Total: ₹{tot_price:.2f})."
+                    elif len(item_names) == 1:
+                        final_reply_text = f"Added {item_names[0]} to your cart (₹{tot_price:.2f})."
+                else:
+                    last_tool = accumulated_tools[-1]
+                    final_reply_text = self._synthesize_tool_response(last_tool["name"], last_tool_result, persona)
 
             # Enrich with deterministic UI cards (e.g. ORDERS_LIST_CARD, TOP_CUSTOMERS_CARD, CUSTOMER_PROFILE_CARD) if Gemini did not emit them directly
             specialized_card_types = {"ORDERS_LIST_CARD", "TOP_CUSTOMERS_CARD", "CUSTOMER_PROFILE_CARD"}
@@ -6237,6 +6324,9 @@ class AgentService:
         elif fn_name == "add_to_shopper_cart":
             return msg
 
+        elif fn_name == "bulk_add_to_cart":
+            return msg
+
         elif fn_name == "auto_settle_order_packing":
             if res.get("status") == "SUCCESS":
                 return f"Order #{res.get('order_id')} settled for ₹{float(res.get('captured_amount', 0)):.2f}."
@@ -6309,6 +6399,9 @@ class AgentService:
             })
         elif fn_name == "add_to_shopper_cart" and res.get("status") == "success":
             actions.append({"type": "ADD_TO_CART", "item": res.get("item")})
+        elif fn_name == "bulk_add_to_cart" and res.get("status") == "success":
+            for it in res.get("items", []):
+                actions.append({"type": "ADD_TO_CART", "item": it})
         elif fn_name == "recommend_recipe_basket" and res.get("status") == "success":
             actions.append({"type": "RECOMMEND_BASKET", "items": res.get("items", []), "recipe": res.get("recipe")})
         elif fn_name == "search_products_and_stock" and res.get("status") == "success" and res.get("products"):

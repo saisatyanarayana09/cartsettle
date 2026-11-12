@@ -86,18 +86,20 @@ export function normalizeVoiceTranscript(rawText) {
   out = out.replace(/\bpart\s+(total|items?|summary|contents?)\b/gi, 'cart $1');
   out = out.replace(/\b(add\b.*?\b(?:to|into|in))\s+(?:the\s+)?part\b/gi, '$1 cart');
 
-  // "car" / "court" / "cot" / "caught" / "chart" slips
-  out = out.replace(/\b(items?\s+(?:in|from)\s+(?:the\s+|my\s+)?)(?:court|cot|caught|chart|kart|car|card)\b/gi, '$1cart');
+  // "car" / "court" / "cot" / "caught" / "chart" / "cut" / "kut" / "curt" slips
+  const CART_SLIPS = '(?:court|cot|caught|chart|kart|car|card|cut|kut|curt|cat|kat)';
+  out = out.replace(new RegExp(`\\b(items?\\s+(?:in|from)\\s+(?:the\\s+|my\\s+)?)${CART_SLIPS}\\b`, 'gi'), '$1cart');
   out = out.replace(
-    /\b(to|into|in|from|view|show|open|check|clear|empty|see|list|display)\s+(the\s+|my\s+)?(?:car|court|cot|caught|chart)\b/gi,
+    new RegExp(`\\b(to|into|in|from|view|show|open|check|clear|empty|see|list|display)\\s+(the\\s+|my\\s+)?${CART_SLIPS}\\b`, 'gi'),
     (m, p1, p2) => `${p1} ${p2 || ''}cart`
   );
-  out = out.replace(/\b(?:car|court|cot|caught|chart)\s+(total|items?|summary|contents?)\b/gi, 'cart $1');
-  out = out.replace(/\b(add\b.*?\b(?:to|into|in))\s+(the\s+|my\s+)?(?:car|court|cot|caught|chart)\b/gi, (m, p1, p2) => `${p1} ${p2 || ''}cart`);
+  out = out.replace(new RegExp(`\\b${CART_SLIPS}\\s+(total|items?|summary|contents?)\\b`, 'gi'), 'cart $1');
+  out = out.replace(new RegExp(`\\b(add\\b.*?\\b(?:to|into|in))\\s+(the\\s+|my\\s+)?${CART_SLIPS}\\b`, 'gi'), (m, p1, p2) => `${p1} ${p2 || ''}cart`);
+  out = out.replace(new RegExp(`\\b(put\\b.*?\\b(?:in|into|to))\\s+(the\\s+|my\\s+)?${CART_SLIPS}\\b`, 'gi'), (m, p1, p2) => `${p1} ${p2 || ''}cart`);
   out = out.replace(/\b(?<!food\s)court\b/gi, 'cart');
 
-  if (/^\s*(?:my\s+|the\s+)?(?:car|court|cot|kart)\s*$/i.test(out)) {
-    out = out.replace(/\b(?:car|court|cot|kart)\b/gi, 'cart');
+  if (/^\s*(?:my\s+|the\s+)?(?:car|court|cot|kart|cut|kut|curt)\s*$/i.test(out)) {
+    out = out.replace(/\b(?:car|court|cot|kart|cut|kut|curt)\b/gi, 'cart');
   }
 
   // Restore protected payment card tokens
