@@ -7,10 +7,25 @@
 
 ---
 
+## Intro: Real-World Problem (add before the video, ~20 seconds)
+
+Visual: 3 text cards on a dark background (about 6 to 7 seconds each).
+1. "One item out of stock."
+2. "Customer already charged in full. Refund takes days."
+3. "The local shop loses money, trust, and the customer."
+
+```text
+Every day, someone orders groceries from their local shop. One item is out of stock. But they were already charged the full amount. Now they wait days for a refund, or open a dispute. The shop loses money, trust, and finally the customer, to big delivery apps. CartSettle fixes this.
+```
+
+(50 words, about 20 seconds)
+
+---
+
 ## Master Copy-Paste Script for ElevenLabs (1 Click Generation)
 
 ```text
-Over forty million independent neighborhood grocers are losing ground to dark-store giants. Meet CartSettle: an autonomous retail engine that gives local merchants an enterprise tech stack. Our live catalog tracks real-time inventory with instant category filtering. When shoppers tap Ask AI, the storefront smoothly glides into an interactive split screen, keeping shopping completely frictionless.
+Meet CartSettle: an autonomous retail engine that gives local merchants an enterprise tech stack. Our live catalog tracks real-time inventory with instant category filtering. When shoppers tap Ask AI, the storefront smoothly glides into an interactive split screen, keeping shopping completely frictionless.
 
 Most everyday shoppers still rely on paper lists. Powered by Gemini Multimodal Vision, CartSettle lets customers snap a photo of handwritten notes or receipts. The AI instantly digitizes the handwriting, cross-references shelf availability in real time, and automatically adds all available grocery items to the shopper's bag with zero manual typing or barcode scanning.
 
