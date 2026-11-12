@@ -73,27 +73,34 @@ The payable total drops from five hundred and sixty-six rupees to four hundred r
 
 ---
 
-## 4. Prompt to Paste Directly into OpenCode
+## 4. HyperFrames Lightweight Prompt (Paste Directly into OpenCode — Quota-Safe)
 
-Copy and paste the block below directly into OpenCode:
+Copy and paste the block below directly into OpenCode (`GLM 5.3 Flash`):
 
 ```text
-Build the final hackathon demo video for CartSettle using our recorded screencast at:
-"C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\final.mp4" (1920x1080, 30fps, 104.13s)
-and read the full scene-by-scene specification in:
-"S:\Hackathon\cartsettle\opencode_video_and_voiceover_master_script.md"
+Use the local HyperFrames framework in "C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\hyperframes" (read skills/hyperframes/SKILL.md) to build and render a simple, clean 1920x1080 30fps hackathon demo video with NO STOPS and minimal token usage (skip the 3-storyline proposal and SPEC.md; use 100% free local rendering, no paid HeyGen cloud APIs).
 
-Tasks:
-1. Prepend a 20-second animated Motion Graphics Intro (1920x1080, 30fps, dark navy #0B1221 background with PayPal Gold #FFC439 and Emerald #10B981 accents) illustrating the Real-World Problem:
-   - 0:00-0:06: "1 Item Out of Stock in a 4-Item Grocery Order"
-   - 0:06-0:13: "Customer Charged 100% Upfront -> Days Waiting for Refund & Disputes"
-   - 0:13-0:20: "CartSettle: Gemini Vision + PayPal SafeHold Dynamic Settlement"
-2. Stitch the main demo video (final.mp4, 104.13s) from 0:20 to 2:04 with clean lower-third feature callout pills at each scene transition:
-   - At source video time 0:51-0:58 (composite 1:11-1:18, on the Bag & Checkout screen), animate a clean callout graphic card highlighting Block 3: "AI Conversational Price Discovery — Margin-Guarded Bundle Deal Locked (-₹31.00 Store Savings)".
-   - At source video time 1:24-1:40 (composite 1:44-2:00, on the Packing Table Auto-Settlement modal), highlight: "PayPal Authorized: ₹566.00 -> Captured: ₹400.00 | Auto-Released: ₹166.00".
-3. Append a 10-second Motion Graphics Outro Card (2:04-2:14) showcasing:
-   "CartSettle — Autonomous AI & Frictionless PayPal Settlement" with 3 badges: "Gemini Multimodal Vision", "PayPal Orders v2 SafeHold", and "Dynamic Partial Capture & Invoicing v2".
-4. Sync the voiceover audio track and export the final 1080p MP4 under 15 MB (H.264 CRF 25, AAC 128k, faststart):
-   - If a single `voiceover.mp3` is provided, use `ffmpeg silencedetect` (noise=-35dB, d=0.45) to split the 6 paragraphs or time-stretch (`atempo`) each segment so they start at the exact composite timestamps: `0:00`, `0:20`, `0:42`, `1:11`, `1:24`, `1:47`, and `2:04`.
-   - If separate audio files (`p1.mp3`..`p6.mp3`) are provided, place them at those exact timestamps using `adelay` and `amix`.
+Source Files:
+- Video: "C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\final_compressed.mp4" (104.13s, 1920x1080, 30fps)
+- Voiceover: "C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\voiceover.mp3"
+- Scene Timestamps & Script: "S:\Hackathon\cartsettle\opencode_video_and_voiceover_master_script.md"
+
+Exact Composition Plan (Total Duration: 124.13s, root `data-duration="124.13"`):
+1. Initialize a lightweight project `cartsettle-hyperframes` and copy `final_compressed.mp4` and `voiceover.mp3` into `assets/` (use `assets/...` paths with no leading `/`).
+2. Scene 1 (`compositions/problem-intro.html`, `data-start="0"`, `data-duration="20"`):
+   - Clean dark-navy (`#0B1221`) problem card with GSAP timeline registered on `window.__timelines`:
+   - `0s–7s`: "THE QUICK-COMMERCE PROBLEM: 15% of Grocery Items Go Out of Stock at the Packing Table"
+   - `7s–14s`: "100% Charged Upfront -> Manual Refund Disputes & 5–7 Day Delays"
+   - `14s–20s`: "Meet CartSettle — Powered by Google Gemini Vision & PayPal SafeHold (`#FFC439` / `#10B981`)"
+3. Scene 2 (`<video class="clip" id="demo-video" src="assets/final_compressed.mp4" data-start="20" data-duration="104.13" muted></video>`):
+   - Add 5 minimal lower-third glassmorphic badge clips (`class="clip"`, `data-track-kind="graphics"`, inside the 80% title-safe box) synced to the exact recording actions:
+     * `data-start="20" data-duration="22"`: "1. Storefront & Gemini Ask AI Split-Screen"
+     * `data-start="42" data-duration="29"`: "2. Handwritten Grocery List Laser Scan -> 1-Click Add to Bag"
+     * `data-start="71" data-duration="13"`: "3. AI Bargain (-₹31.00 Savings) & PayPal Orders v2 SafeHold (₹566.00)"
+     * `data-start="84" data-duration="23"`: "4. Dark Store Owner Dashboard -> AI Packing Table Scanner"
+     * `data-start="107" data-duration="17.13"`: "5. Gemini Vision Audit: Capture ₹400.00 & Auto-Release -₹166.00 via PayPal"
+4. Audio Sync (`<audio class="clip" id="voiceover-track" ...>`):
+   - Use `ffmpeg silencedetect` to split `assets/voiceover.mp3` at paragraph pauses into 6 clips (`assets/p1.mp3` to `assets/p6.mp3`) and mount each `<audio class="clip" id="vo-1"...>` at exact start times: `0`, `20`, `42`, `71`, `84`, and `107`.
+5. Validate & Render Directly (No Stops):
+   - Run `npx hyperframes lint` and `npx hyperframes check --json`, fix any contract issues, and render the final MP4 to `C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\CartSettle_HyperFrames_Final.mp4`.
 ```
