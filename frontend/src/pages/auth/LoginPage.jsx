@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from '../../router';
-import { ArrowLeft, Phone, X, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Phone, X, ArrowRight, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '../../services/api';
@@ -40,6 +40,7 @@ export function CustomerLoginPage() {
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
   const [submittingDemo, setSubmittingDemo] = useState(false);
+  const [showOtherOptions, setShowOtherOptions] = useState(false);
 
   // Modal for mandatory mobile number on signup
   const [showMobileModal, setShowMobileModal] = useState(false);
@@ -176,6 +177,27 @@ export function CustomerLoginPage() {
       });
       completeLogin(res.data);
     } catch (err) {
+      if (err.response?.status === 401) {
+        try {
+          await api.post('/auth/signup/', {
+            username: demoUser,
+            email: `${demoUser}@cartsettle.store`,
+            password: demoPass,
+            first_name: 'Demo',
+            last_name: 'Shopper',
+            mobile_number: '9999999901',
+          }).catch(() => {});
+          const retryRes = await api.post('/auth/login/', {
+            username: demoUser,
+            password: demoPass,
+          });
+          completeLogin(retryRes.data);
+          return;
+        } catch (retryErr) {
+          setError(retryErr.response?.data?.detail || retryErr.response?.data?.error || 'Demo login failed.');
+          return;
+        }
+      }
       setError(err.response?.data?.detail || err.response?.data?.error || 'Demo login failed.');
     } finally {
       setSubmittingDemo(false);
@@ -249,24 +271,75 @@ export function CustomerLoginPage() {
             </button>
           </div>
 
-          {/* Clean Single Divider */}
-          <div className="w-full flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-            <span className="text-xs text-slate-400 font-medium">or</span>
-            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-          </div>
-
-          {/* Google Sign-In Button */}
-          <div className="w-full">
+          {/* Collapsible Dropdown for Other Sign-In Options */}
+          <div className="mt-3 w-full">
             <button
               type="button"
-              disabled={googleLoading}
-              onClick={() => handleGoogleSignIn()}
-              className="w-full h-11 flex items-center justify-center gap-2.5 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 transition-all text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-2xs hover:shadow-xs active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+              onClick={() => setShowOtherOptions((prev) => !prev)}
+              aria-expanded={showOtherOptions}
+              className="w-full py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
             >
-              <GoogleIcon className="w-4 h-4" />
-              <span>{googleLoading ? 'Connecting...' : 'Continue with Google'}</span>
+              <span>Other sign-in options</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  showOtherOptions ? 'rotate-180' : ''
+                }`}
+              />
             </button>
+
+            {showOtherOptions && (
+              <div className="mt-2 pt-3 border-t border-slate-200/70 dark:border-slate-800 space-y-3 animate-in fade-in slide-in-from-top-1 duration-150">
+                {/* Google Sign-In Button */}
+                <button
+                  type="button"
+                  disabled={googleLoading}
+                  onClick={() => handleGoogleSignIn()}
+                  className="w-full h-10 flex items-center justify-center gap-2.5 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 transition-all text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-2xs hover:shadow-xs active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+                >
+                  <GoogleIcon className="w-4 h-4" />
+                  <span>{googleLoading ? 'Connecting...' : 'Continue with Google'}</span>
+                </button>
+
+                {/* Inline Invite Code Drawer */}
+                {!referralCode && (
+                  <div className="w-full">
+                    {!showInviteInput ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowInviteInput(true)}
+                        className="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                      >
+                        Have an invite code?
+                      </button>
+                    ) : (
+                      <form onSubmit={handleApplyInviteCode} className="mt-1 flex items-center justify-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="CODE"
+                          value={manualCode}
+                          onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                          autoFocus
+                          className="w-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs uppercase font-mono font-bold tracking-wider focus:outline-emerald-500 text-slate-900 dark:text-white"
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-slate-900 dark:bg-slate-100 px-3 py-1 text-xs font-bold text-white dark:text-slate-900 hover:opacity-90 transition-opacity"
+                        >
+                          Apply
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowInviteInput(false)}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                        >
+                          <X size={13} />
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Quick link to Owner Portal */}
@@ -277,45 +350,6 @@ export function CustomerLoginPage() {
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-
-          {/* Inline Invite Code Drawer */}
-          {!referralCode && (
-            <div className="mt-4 w-full">
-              {!showInviteInput ? (
-                <button
-                  type="button"
-                  onClick={() => setShowInviteInput(true)}
-                  className="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
-                >
-                  Invite code
-                </button>
-              ) : (
-                <form onSubmit={handleApplyInviteCode} className="mt-2 flex items-center justify-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="CODE"
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                    autoFocus
-                    className="w-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs uppercase font-mono font-bold tracking-wider focus:outline-emerald-500 text-slate-900 dark:text-white"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-slate-900 dark:bg-slate-100 px-3 py-1 text-xs font-bold text-white dark:text-slate-900 hover:opacity-90 transition-opacity"
-                  >
-                    Apply
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowInviteInput(false)}
-                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
-                  >
-                    <X size={13} />
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
 
           {/* Clean Footer */}
           <p className="mt-10 text-[11px] font-medium text-slate-400 tracking-tight">

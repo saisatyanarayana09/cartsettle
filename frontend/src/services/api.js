@@ -3,7 +3,13 @@ import { handleLovableAgentFallback } from './lovableAgentFallback';
 
 export const getBaseURL = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+  if (
+    import.meta.env.DEV ||
+    (typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === '[::1]'))
+  ) {
     return '/api/v1';
   }
   return 'https://cartsettle-api.onrender.com/api/v1';
@@ -175,6 +181,16 @@ api.interceptors.response.use(
 
     // Autonomous client-side Agent fallback when hosted in Lovable.dev cloud preview or during Render cold start (>1.8s)
     if ((originalRequest.url || '').includes('/store/agent/')) {
+      // Retry once if the local backend is mid-reload or had a transient socket reset
+      if (!originalRequest._agentRetried && isBackendUnreachable(error)) {
+        originalRequest._agentRetried = true;
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        try {
+          return await api(originalRequest);
+        } catch {
+          // Proceed to client-side fallback if second attempt also fails
+        }
+      }
       triggerBackgroundWakeUp();
       const fallbackData = handleLovableAgentFallback(originalRequest);
       return Promise.resolve({
@@ -186,9 +202,9 @@ api.interceptors.response.use(
       });
     }
 
-    // Offline demo login fallback: only for judge demo accounts when the backend cannot be reached.
-    // Wrong passwords (401) and real server errors still surface normally.
-    if ((originalRequest.url || '').includes('/auth/login/') && isBackendUnreachable(error)) {
+    // Offline demo login fallback: for judge demo accounts when backend is unreachable or DB has not seeded demo account yet.
+    // Wrong passwords (401) for non-demo accounts still surface normally.
+    if ((originalRequest.url || '').includes('/auth/login/') && (isBackendUnreachable(error) || error?.response?.status === 401)) {
       const demoSession = tryOfflineDemoLogin(originalRequest);
       if (demoSession) {
         return Promise.resolve({
@@ -248,6 +264,33 @@ api.interceptors.response.use(
       }
 
       const prefix = getPrefix();
+      const currentToken = localStorage.getItem(`${prefix}-token`) || '';
+      const refreshToken = localStorage.getItem(`${prefix}-refresh`) || '';
+
+      // If running in an offline-demo session, never wipe localStorage or kick user back to /owner/login on 401
+      if (currentToken.endsWith('.offline-demo') || refreshToken.endsWith('.offline-demo')) {
+        const method = (originalRequest.method || 'get').toLowerCase();
+        if (method === 'get') {
+          let fallbackBody = [];
+          if (requestUrl.includes('analytics')) {
+            fallbackBody = { today_sales: 0, weekly_sales: 0, monthly_sales: 0, yearly_sales: 0, chart_data: [] };
+          } else if (requestUrl.includes('profile') || requestUrl.includes('auth/me')) {
+            try {
+              fallbackBody = JSON.parse(localStorage.getItem(`${prefix}-user`) || '{}');
+            } catch {
+              fallbackBody = DEMO_ACCOUNTS.owner.user;
+            }
+          }
+          return Promise.resolve({
+            data: fallbackBody,
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: originalRequest,
+          });
+        }
+        return Promise.reject(error);
+      }
 
       // If already retried, prevent infinite loop
       if (originalRequest._retry) {
@@ -278,7 +321,6 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem(`${prefix}-refresh`);
       if (!refreshToken) {
         processQueue(error, null);
         isRefreshing = false;

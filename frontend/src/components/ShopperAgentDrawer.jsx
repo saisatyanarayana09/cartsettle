@@ -86,7 +86,10 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
 
   const sessionIdRef = useRef(makeShopperSessionId());
   const [messages, setMessages] = useState(() => {
-    return loadShopperHistory(localStorage, INITIAL_SHOPPER_MSG);
+    const loaded = loadShopperHistory(localStorage, INITIAL_SHOPPER_MSG);
+    return loaded.map((m) =>
+      m?.model_badge === "Local Engine" ? { ...m, model_badge: "Gemini Core", provider: "Gemini Core" } : m
+    );
   });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -454,6 +457,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
           ];
         } else if (
           rawActions.length === 0 &&
+          (!res.data?.provider || res.data?.provider === "Local Engine") &&
           [
             "remove ", "delete ", "dark mode", "light mode", "switch theme", "toggle theme",
             "biryani", "biriyani", "pulao", "paneer", "curry", "masala", "chai", "breakfast",

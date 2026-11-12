@@ -1653,7 +1653,41 @@ class Command(BaseCommand):
         cache.delete('categories_all_cached')
         self.stdout.write(self.style.SUCCESS("Caches cleared. 100-packet catalog ready!"))
 
-        # 7. Automatically populate the 5 meaningful showcase sections
+        # 7. Ensure canonical Demo Login accounts ('owner' and 'shopper') exist and are active
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        owner_u, _ = User.objects.get_or_create(
+            username='owner',
+            defaults={
+                'email': 'owner@cartsettle.store',
+                'first_name': 'Store',
+                'last_name': 'Owner',
+                'is_active': True,
+                'is_owner': True,
+                'is_staff': True,
+            }
+        )
+        owner_u.is_active = True
+        owner_u.is_owner = True
+        owner_u.is_staff = True
+        owner_u.set_password('CartSettle@2026')
+        owner_u.save()
+
+        shopper_u, _ = User.objects.get_or_create(
+            username='shopper',
+            defaults={
+                'email': 'shopper@cartsettle.store',
+                'first_name': 'Demo',
+                'last_name': 'Shopper',
+                'is_active': True,
+            }
+        )
+        shopper_u.is_active = True
+        shopper_u.set_password('Shopper@2026')
+        shopper_u.save()
+        self.stdout.write(self.style.SUCCESS("Verified Demo Login accounts: 'owner' and 'shopper'."))
+
+        # 8. Automatically populate the 5 meaningful showcase sections
         from django.core.management import call_command
         try:
             call_command('seed_showcase_sections')

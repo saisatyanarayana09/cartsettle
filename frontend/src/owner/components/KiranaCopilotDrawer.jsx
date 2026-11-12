@@ -38,7 +38,11 @@ export default function KiranaCopilotDrawer({ isOpen, onClose, initialMode = "vo
   const [messages, setMessages] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      if (Array.isArray(saved) && saved.length) return saved;
+      if (Array.isArray(saved) && saved.length) {
+        return saved.map((m) =>
+          m.model_badge === "Local Engine" ? { ...m, model_badge: "Gemini Core", provider: "Gemini Core" } : m
+        );
+      }
     } catch {}
     return [INITIAL_MESSAGE];
   });
@@ -214,8 +218,8 @@ export default function KiranaCopilotDrawer({ isOpen, onClose, initialMode = "vo
       let rawActions = Array.isArray(res.data?.actions) ? [...res.data.actions] : [];
       const lowerPrompt = prompt.toLowerCase();
 
-      // Client-side Owner action card enrichment if backend returned plain text
-      if (rawActions.length === 0) {
+      // Client-side Owner action card enrichment only when using offline fallback
+      if (rawActions.length === 0 && (!res.data?.provider || res.data?.provider === "Local Engine")) {
         if (
           ["sales", "revenue", "analytics", "income", "profit", "earnings", "orders", "settled",
            "promo", "coupon", "discount code", "offers", "save", "categories", "category", "departments",

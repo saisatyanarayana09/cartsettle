@@ -199,14 +199,17 @@ export function createVoiceSession({
       speech.rate = 1.02;
       speech.pitch = 1.0;
 
+      let speechFinished = false;
       const finishSpeech = () => {
+        if (speechFinished) return;
+        speechFinished = true;
         clearTimeout(speechWatchdog);
         if (active && turn === generation) listen();
       };
 
       speech.onstart = () => {
         clearTimeout(speechWatchdog);
-        const maxDuration = Math.min(5500, Math.max(2200, String(reply).length * 65));
+        const maxDuration = Math.min(8000, Math.max(2500, String(reply).length * 75));
         speechWatchdog = setTimeout(finishSpeech, maxDuration);
       };
       speech.onend = finishSpeech;
@@ -218,9 +221,9 @@ export function createVoiceSession({
       } catch {}
       browser.speechSynthesis.speak(speech);
 
-      // Fast start watchdog: if browser TTS fails to start within 1.2s, immediately reopen mic
+      // Fast start watchdog: if browser TTS fails to start within 2.0s, immediately reopen mic
       clearTimeout(speechWatchdog);
-      speechWatchdog = setTimeout(finishSpeech, 1200);
+      speechWatchdog = setTimeout(finishSpeech, 2000);
     } catch {
       if (active && turn === generation) {
         emit("error", "Try again.");

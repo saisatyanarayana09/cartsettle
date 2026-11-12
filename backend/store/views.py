@@ -23,6 +23,7 @@ from .serializers import (
 
 
 from django.shortcuts import redirect
+from services.agent_service import agent_service, AgentTools
 
 class RootDashboardView(TemplateView):
     """Secure dashboard shown at the service root for authenticated admins."""

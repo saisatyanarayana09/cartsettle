@@ -59,9 +59,12 @@ _SESSION_MEMORY = {}
 _CATALOG_CACHE = {
     "products": None,
     "categories_count": None,
+    "live_ctx": None,
+    "live_ctx_ts": 0.0,
     "ts": 0.0,
 }
 CATALOG_CACHE_TTL = 60.0
+LIVE_CTX_CACHE_TTL = 20.0
 
 
 def _get_cached_active_products() -> list:
@@ -92,6 +95,8 @@ def _get_cached_category_count() -> int:
 def _invalidate_catalog_cache():
     _CATALOG_CACHE["products"] = None
     _CATALOG_CACHE["categories_count"] = None
+    _CATALOG_CACHE["live_ctx"] = None
+    _CATALOG_CACHE["live_ctx_ts"] = 0.0
     _CATALOG_CACHE["ts"] = 0.0
 
 
@@ -1928,7 +1933,7 @@ class AgentService:
         if not self.groq_api_key:
             return None
 
-        groq_messages = [{"role": "system", "content": system_instruction}]
+        groq_messages = [{"role": "system", "content": system_instruction[:6000]}]
         for turn in contents:
             role = "assistant" if turn.get("role") == "model" else "user"
             parts = turn.get("parts", [])
@@ -2018,19 +2023,22 @@ class AgentService:
         keys = self.get_active_gemini_keys()
         return keys[0][1] if keys else ""
 
-    def get_active_gemini_keys(self) -> list:
+    def get_active_gemini_keys(self, model_name: str = "") -> list:
         """Returns Gemini keys ordered with primary first, excluding invalid or temporarily rate-limited keys."""
         now = time.time()
         healthy_keys = []
+        all_valid_keys = []
         invalid_keys = getattr(self, "_invalid_keys", set())
         cooldowns = getattr(self, "_key_cooldowns", {})
         for idx, key in enumerate(self.api_keys):
             if idx in invalid_keys:
                 continue
-            cooldown_until = cooldowns.get(idx, 0)
+            all_valid_keys.append((idx, key))
+            cd_key = (model_name, idx) if model_name else idx
+            cooldown_until = max(cooldowns.get(cd_key, 0), cooldowns.get(idx, 0))
             if now >= cooldown_until:
                 healthy_keys.append((idx, key))
-        return healthy_keys
+        return healthy_keys if healthy_keys else all_valid_keys
 
     def mark_key_invalid(self, key_idx: int, reason: str = ""):
         """Permanently disables an invalid, deleted, or unauthenticated API key (400/401) for this session."""
@@ -2039,12 +2047,13 @@ class AgentService:
         self._invalid_keys.add(key_idx)
         logger.warning("Marked Gemini key index %d as invalid/unauthenticated (disabled). Reason: %s", key_idx, reason)
 
-    def mark_key_rate_limited(self, key_idx: int, reason: str = ""):
-        """Puts a specific key index into a 60-second cooldown on 429/403 so subsequent turns immediately use the backup."""
+    def mark_key_rate_limited(self, key_idx: int, reason: str = "", model_name: str = ""):
+        """Puts a specific key index into a 15-second cooldown on 429/403 so subsequent turns immediately use the backup."""
         if not hasattr(self, "_key_cooldowns"):
             self._key_cooldowns = {}
-        self._key_cooldowns[key_idx] = time.time() + 60.0
-        logger.warning("Marked Gemini key index %d as rate-limited (60s cooldown). Reason: %s", key_idx, reason)
+        cd_key = (model_name, key_idx) if model_name else key_idx
+        self._key_cooldowns[cd_key] = time.time() + 15.0
+        logger.warning("Marked Gemini key index %d as rate-limited (15s cooldown on %s). Reason: %s", key_idx, model_name or "all", reason)
 
     def rotate_api_key(self, reason: str = "") -> str:
         """Rotates to the next available API key in the pool upon rate-limit (429/403)."""
@@ -2417,20 +2426,6 @@ class AgentService:
             "persona": persona
         })
 
-        # --- Sub-50ms Fast-Path Intent Router for pre-set action chips & common commands ---
-        fast_path_res = self._check_fast_path(resolved_prompt, persona, session_id, cart_items=cart_items, user=user)
-        if fast_path_res:
-            clean_rep, voice_rep = self._to_concise_human_reply(fast_path_res.get("reply", "Done."), mode=mode)
-            fast_path_res["reply"] = clean_rep
-            fast_path_res["voice_reply"] = voice_rep
-            fast_path_res["mode"] = mode
-            fast_path_res["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
-            fast_path_res["model_badge"] = "Local Engine"
-            fast_path_res["provider"] = "Local Engine"
-            fast_path_res["follow_ups"] = self._build_follow_ups(persona, fast_path_res.get("actions", []), mem)
-            self._save_session_turn(session_id, persona, prompt, fast_path_res)
-            return fast_path_res
-
         # Offline / fallback mode if no API keys are configured at all
         if not self.api_key and not self.groq_api_key:
             fb = self._check_fast_path(resolved_prompt, persona, session_id, cart_items=cart_items, user=user) or self._fallback_chat(resolved_prompt, session_id, persona)
@@ -2608,33 +2603,30 @@ class AgentService:
                 candidate_models = [GEMINI_MODEL] + [m for m in FALLBACK_MODELS if m != GEMINI_MODEL]
                 res = None
                 for cand_m in candidate_models:
-                    key_pairs = self.get_active_gemini_keys()
+                    key_pairs = self.get_active_gemini_keys(cand_m)
                     if not key_pairs:
                         break
-                    timeout_occurred = False
                     for k_idx, active_key in key_pairs:
                         c_url = f"https://generativelanguage.googleapis.com/v1beta/models/{cand_m}:generateContent?key={active_key}"
                         try:
-                            res = self.http_session.post(c_url, json=payload, timeout=(3.0, 7.5))
+                            res = self.http_session.post(c_url, json=payload, timeout=(3.0, 12.0))
                             if res.status_code == 200:
                                 successful_key_idx = k_idx
                                 break
                             elif res.status_code in (429, 403):
-                                self.mark_key_rate_limited(k_idx, f"Status {res.status_code} on {cand_m}")
-                            elif res.status_code in (400, 401):
+                                self.mark_key_rate_limited(k_idx, f"Status {res.status_code} on {cand_m}", model_name=cand_m)
+                            elif res.status_code == 401 or (res.status_code == 400 and ("API_KEY_INVALID" in res.text or "API key not valid" in res.text)):
                                 self.mark_key_invalid(k_idx, f"Status {res.status_code} on {cand_m}")
                                 break
                             else:
                                 logger.warning("Gemini model %s returned status %s on key %d", cand_m, res.status_code, k_idx)
                         except requests.exceptions.Timeout:
                             logger.warning("Gemini model %s timed out on key %d", cand_m, k_idx)
-                            timeout_occurred = True
-                            break
                         except Exception as ex:
                             logger.warning("Gemini model %s failed on key %d: %s", cand_m, k_idx, ex)
                     if res is not None and res.status_code == 200:
                         break
-                    if timeout_occurred or not self.get_active_gemini_keys():
+                    if not self.get_active_gemini_keys(cand_m):
                         break
 
                 if res is None or res.status_code != 200:
@@ -2719,6 +2711,18 @@ class AgentService:
                 last_tool = accumulated_tools[-1]
                 final_reply_text = self._synthesize_tool_response(last_tool["name"], last_tool_result, persona)
 
+            # Enrich with deterministic UI cards (e.g. ORDERS_LIST_CARD, TOP_CUSTOMERS_CARD, CUSTOMER_PROFILE_CARD) if Gemini did not emit them directly
+            specialized_card_types = {"ORDERS_LIST_CARD", "TOP_CUSTOMERS_CARD", "CUSTOMER_PROFILE_CARD"}
+            if not any(a.get("type") in specialized_card_types for a in accumulated_actions):
+                fp_check = self._check_fast_path(resolved_prompt, persona, session_id, cart_items=cart_items, user=user)
+                if fp_check and fp_check.get("actions"):
+                    fp_types = {a.get("type") for a in fp_check["actions"]}
+                    if fp_types & specialized_card_types:
+                        accumulated_actions = fp_check["actions"]
+                        final_reply_text = fp_check.get("reply") or final_reply_text
+                    elif not accumulated_actions:
+                        accumulated_actions = fp_check["actions"]
+
             final_reply_text = final_reply_text or "How can I help you today?"
             final_reply, voice_rep = self._to_concise_human_reply(final_reply_text, mode=mode)
 
@@ -2775,6 +2779,9 @@ class AgentService:
 
     def _get_live_store_context(self) -> str:
         """Builds a comprehensive real-time database snapshot of products, categories, orders, and financials."""
+        now = time.monotonic()
+        if _CATALOG_CACHE.get("live_ctx") and (now - _CATALOG_CACHE.get("live_ctx_ts", 0.0)) < LIVE_CTX_CACHE_TTL:
+            return _CATALOG_CACHE["live_ctx"]
         try:
             from django.db.models import Sum
             active_prods = _get_cached_active_products()
@@ -2795,7 +2802,7 @@ class AgentService:
 
             prod_summaries = [
                 f"{p.name} (ID:{p.id}, sell:${float(p.offer_price or p.regular_price):.2f}, cost:${float(p.cost_price or 0):.2f}, stock:{p.stock_quantity})"
-                for p in active_prods
+                for p in active_prods[:25]
             ]
 
             order_summaries = []
@@ -2812,7 +2819,7 @@ class AgentService:
 
             most_recent_str = order_summaries[0] if order_summaries else "None"
 
-            return (
+            ctx_str = (
                 f"- Total Live Active Products: {len(active_prods)} ({len(in_stock_prods)} in stock)\n"
                 f"- Active Categories: {cat_count}\n"
                 f"- Total Store Orders: {total_orders} ({pending_orders} pending packing/settlement)\n"
@@ -2821,6 +2828,9 @@ class AgentService:
                 f"- 10 Most Recent Orders (Newest First): {'; '.join(order_summaries)}\n"
                 f"- Complete Live Product Catalog: {'; '.join(prod_summaries)}"
             )
+            _CATALOG_CACHE["live_ctx"] = ctx_str
+            _CATALOG_CACHE["live_ctx_ts"] = now
+            return ctx_str
         except Exception as e:
             logger.warning("Could not build live store context: %s", e)
             return "Store active with protected 12% margin floor."
@@ -6605,13 +6615,28 @@ class AgentService:
         summary = ""
 
         if "," in image_base64:
-            image_base64 = image_base64.split(",", 1)[1]
+            header, image_base64 = image_base64.split(",", 1)
+            if "image/png" in header:
+                mime_type = "image/png"
+            elif "image/webp" in header:
+                mime_type = "image/webp"
+            elif "image/gif" in header:
+                mime_type = "image/gif"
+        else:
+            b64_head = image_base64.strip()[:16]
+            if b64_head.startswith("iVBOR"):
+                mime_type = "image/png"
+            elif b64_head.startswith("UklGR"):
+                mime_type = "image/webp"
+            elif b64_head.startswith("R0lGOD"):
+                mime_type = "image/gif"
 
         if self.api_keys:
             prompt = (
                 "You are an AI grocery list assistant for CartSettle. "
                 "Examine this photo of a handwritten grocery list, printed receipt, product packaging, or grocery shelf item(s). "
-                "Extract each grocery item name, quantity (if specified, default 1), and unit (e.g. 'bottle', 'pack', 'kg', 'unit'). "
+                "Extract each grocery item name (correcting obvious spelling mistakes on brand/product names if needed), "
+                "quantity (if specified, default 1), and unit (e.g. 'bottle', 'pack', 'kg', 'unit'). "
                 "Return a JSON object with this exact structure:\n"
                 "{\n"
                 '  "extracted_items": [\n'
@@ -6639,28 +6664,39 @@ class AgentService:
                     "response_mime_type": "application/json"
                 }
             }
-            candidate_models = [GEMINI_MODEL, "gemini-2.0-flash", "gemini-1.5-flash"]
+            candidate_models = [GEMINI_MODEL, "gemini-2.5-flash", "gemini-2.5-flash-lite"]
             res = None
             for cand_m in candidate_models:
-                for _ in range(max(1, len(self.api_keys))):
-                    active_key = self.get_api_key()
+                key_pairs = self.get_active_gemini_keys() or [(i, k) for i, k in enumerate(self.api_keys)]
+                for k_idx, active_key in key_pairs:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{cand_m}:generateContent?key={active_key}"
                     try:
-                        res = self.http_session.post(url, json=payload, timeout=(3.0, 6.0))
+                        res = self.http_session.post(url, json=payload, timeout=(5.0, 18.0))
                         if res.status_code == 200:
                             break
                         elif res.status_code in (429, 403):
-                            self.rotate_api_key(f"Vision 429/403 on {cand_m}")
+                            self.mark_key_rate_limited(k_idx, f"Vision {res.status_code} on {cand_m}")
                     except Exception as e:
-                        logger.warning("Grocery vision attempt failed on %s: %s", cand_m, e)
+                        logger.warning("Grocery vision attempt failed on %s (key %d): %s", cand_m, k_idx, e)
                 if res is not None and res.status_code == 200:
                     break
 
             try:
                 if res is not None and res.status_code == 200:
-                    data = json.loads(res.json()["candidates"][0]["content"]["parts"][0]["text"])
-                    extracted_items = data.get("extracted_items", [])
-                    summary = data.get("summary", "")
+                    parts = res.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                    for part in reversed(parts):
+                        txt = (part.get("text") or "").strip()
+                        if txt.startswith("{"):
+                            data = json.loads(txt)
+                            raw_list = data.get("extracted_items", [])
+                            extracted_items = [
+                                ({"name": it, "quantity": 1, "unit": "1 unit"} if isinstance(it, str) else it)
+                                for it in raw_list
+                                if it
+                            ]
+                            summary = data.get("summary", "")
+                            if extracted_items:
+                                break
             except Exception as e:
                 logger.warning(f"Gemini grocery vision parsing error: {e}")
 
@@ -6674,20 +6710,22 @@ class AgentService:
                 {"name": "Whole Wheat Bread", "quantity": 1, "unit": "1 loaf"},
                 {"name": "Farm Fresh Eggs", "quantity": 1, "unit": "1 dozen"},
             ]
-            extracted_items.append({"name": "Imported Alphonso Mangoes (Seasonal)", "quantity": 1, "unit": "1 box", "force_out_of_stock": True})
-            summary = "Recognized 4 grocery items from your handwritten list."
+            summary = "Recognized grocery items from your list."
 
         checklist = []
         matched_products = []
         for item in extracted_items:
-            item_name = item.get("name", "").strip()
-            item_qty = max(1, int(item.get("quantity") or 1))
-            force_oos = bool(item.get("force_out_of_stock"))
+            item_name = (item.get("name", "") if isinstance(item, dict) else str(item)).strip()
+            if not item_name:
+                continue
+            item_qty = max(1, int((item.get("quantity") if isinstance(item, dict) else 1) or 1))
+            force_oos = bool(item.get("force_out_of_stock")) if isinstance(item, dict) else False
             matched_p = None if force_oos else self._match_product_from_text(item_name)
             if matched_p and matched_p.stock_quantity > 0:
                 card = AgentTools.serialize_card_product(matched_p, quantity=item_qty)
                 checklist.append({
-                    "name": item_name,
+                    "name": matched_p.name,
+                    "scanned_name": item_name,
                     "quantity": item_qty,
                     "in_stock": True,
                     "product": card,
@@ -6700,13 +6738,6 @@ class AgentService:
                     "quantity": item_qty,
                     "in_stock": False,
                 })
-
-        if checklist and all(c.get("in_stock") for c in checklist):
-            checklist.append({
-                "name": "Imported Alphonso Mangoes (Seasonal)",
-                "quantity": 1,
-                "in_stock": False,
-            })
 
         available_count = sum(1 for c in checklist if c.get("in_stock"))
         reply = f"Recognized {len(checklist)} items from your photo. {available_count} are available in store right now."
