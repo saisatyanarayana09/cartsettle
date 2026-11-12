@@ -190,7 +190,19 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
       setLoading(true);
 
       try {
-        const liveCartItems = Array.isArray(cart?.items) ? cart.items : [];
+        let liveCartItems = Array.isArray(cart?.items) ? cart.items : [];
+        if (liveCartItems.length === 0) {
+          try {
+            const cached = JSON.parse(
+              localStorage.getItem("smart-kirana-customer-cart-cache") ||
+              localStorage.getItem("smart-kirana-guest-cart") ||
+              "null"
+            );
+            if (Array.isArray(cached?.items) && cached.items.length > 0) {
+              liveCartItems = cached.items;
+            }
+          } catch (_) {}
+        }
         const res = await api.post("/store/agent/chat/", {
           prompt: "Analyze this grocery item or shopping list photo and recommend available store items.",
           image: base64Content,
@@ -200,8 +212,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
             ? {
                 cart_items: liveCartItems.map((ci) => ({
                   id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
-                  name: ci.product_name || ci.name || "Item",
-                  price: Number(ci.unit_price ?? ci.price ?? 0),
+                  name: ci.product?.name || ci.product_name || ci.name || "Item",
+                  price: Number(ci.unit_price ?? ci.product?.price ?? ci.price ?? 0),
                   quantity: Number(ci.quantity || 1),
                 })),
               }
@@ -368,7 +380,19 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
     setLoading(true);
 
     try {
-      const liveCartItems = Array.isArray(cart?.items) ? cart.items : [];
+      let liveCartItems = Array.isArray(cart?.items) ? cart.items : [];
+      if (liveCartItems.length === 0) {
+        try {
+          const cached = JSON.parse(
+            localStorage.getItem("smart-kirana-customer-cart-cache") ||
+            localStorage.getItem("smart-kirana-guest-cart") ||
+            "null"
+          );
+          if (Array.isArray(cached?.items) && cached.items.length > 0) {
+            liveCartItems = cached.items;
+          }
+        } catch (_) {}
+      }
       const res = await api.post("/store/agent/chat/", {
         prompt: prompt,
         session_id: sessionIdRef.current,
@@ -378,8 +402,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
           ? {
               cart_items: liveCartItems.map((ci) => ({
                 id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
-                name: ci.product_name || ci.name || "Item",
-                price: Number(ci.unit_price ?? ci.price ?? 0),
+                name: ci.product?.name || ci.product_name || ci.name || "Item",
+                price: Number(ci.unit_price ?? ci.product?.price ?? ci.price ?? 0),
                 quantity: Number(ci.quantity || 1),
               })),
             }
@@ -748,7 +772,19 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
     } catch (err) {
       console.error("Shopper agent network error, engaging autonomous fallback:", err);
       try {
-        const liveCartItems = Array.isArray(cart?.items) ? cart.items : [];
+        let liveCartItems = Array.isArray(cart?.items) ? cart.items : [];
+        if (liveCartItems.length === 0) {
+          try {
+            const cached = JSON.parse(
+              localStorage.getItem("smart-kirana-customer-cart-cache") ||
+              localStorage.getItem("smart-kirana-guest-cart") ||
+              "null"
+            );
+            if (Array.isArray(cached?.items) && cached.items.length > 0) {
+              liveCartItems = cached.items;
+            }
+          } catch (_) {}
+        }
         const fallbackRes = handleLovableAgentFallback({
           method: "post",
           data: {
@@ -758,8 +794,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
             mode: requestMode,
             cart_items: liveCartItems.map((ci) => ({
               id: Number(ci.product?.id ?? ci.product ?? ci.product_id ?? ci.id),
-              name: ci.product_name || ci.name || "Item",
-              price: Number(ci.unit_price ?? ci.price ?? 0),
+              name: ci.product?.name || ci.product_name || ci.name || "Item",
+              price: Number(ci.unit_price ?? ci.product?.price ?? ci.price ?? 0),
               quantity: Number(ci.quantity || 1),
             })),
           },

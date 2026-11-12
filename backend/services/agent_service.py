@@ -698,8 +698,35 @@ class AgentTools:
         _serialize_card_product = AgentTools.serialize_card_product
 
         if name == "get_active_cart":
-            mem = _SESSION_MEMORY.get(f"shopper:{session_id}", {})
-            c_items = mem.get("cart_items", [])
+            c_items = []
+            shopper_mem = _SESSION_MEMORY.get(f"shopper:{session_id}", {})
+            if shopper_mem.get("cart_items"):
+                c_items = shopper_mem["cart_items"]
+            if not c_items:
+                full_mem = _SESSION_MEMORY.get(f"cartsettle_agent_mem_shopper_{session_id}", {})
+                if full_mem.get("cart_items"):
+                    c_items = full_mem["cart_items"]
+            if not c_items:
+                c_items = cache.get(f"cartsettle_cart_{session_id}") or []
+            if not c_items and session_id:
+                try:
+                    from cart.models import Cart
+                    u_match = re.search(r"usr_(\d+)", session_id)
+                    if u_match:
+                        db_cart = Cart.objects.filter(customer_id=int(u_match.group(1))).prefetch_related("items__product").first()
+                        if db_cart and db_cart.items.exists():
+                            c_items = [
+                                {
+                                    "id": ci.product.id,
+                                    "name": ci.product.name,
+                                    "price": float(ci.negotiated_unit_price or ci.product.offer_price or ci.product.regular_price),
+                                    "quantity": ci.quantity
+                                }
+                                for ci in db_cart.items.all()
+                            ]
+                except Exception:
+                    pass
+
             tot = sum(float(ci.get("price", 0)) * int(ci.get("quantity", 1)) for ci in c_items)
             cnt = sum(int(ci.get("quantity", 1)) for ci in c_items)
             return {
@@ -2487,6 +2514,12 @@ class AgentService:
         mem = self.get_session_memory(session_id, persona)
         if cart_items is not None:
             mem["cart_items"] = cart_items
+            _SESSION_MEMORY[f"shopper:{session_id}"] = {"cart_items": cart_items}
+            _SESSION_MEMORY[self._mem_key(session_id, persona)] = mem
+            cache.set(f"cartsettle_cart_{session_id}", cart_items, timeout=3600)
+        elif mem.get("cart_items"):
+            cart_items = mem.get("cart_items")
+            _SESSION_MEMORY[f"shopper:{session_id}"] = {"cart_items": cart_items}
         stored_msgs = mem.get("messages", [])
 
         # Merge stored backend history with frontend history if backend was empty
@@ -6418,8 +6451,14 @@ class AgentService:
         elif fn_name == "get_active_cart":
             cnt = res.get("count", 0)
             tot = float(res.get("total", 0))
+            items = res.get("items", [])
             if cnt > 0:
-                return f"Cart has {cnt} items totaling ₹{tot:.2f}."
+                item_names = [ci.get("name") for ci in items if ci.get("name")]
+                if item_names:
+                    preview = ", ".join(item_names[:3])
+                    suffix = f" and {len(item_names) - 3} more" if len(item_names) > 3 else ""
+                    return f"You have {cnt} items in your cart: {preview}{suffix} (Total: ₹{tot:.2f})."
+                return f"You have {cnt} items in your cart (Total: ₹{tot:.2f})."
             return "Your cart is currently empty."
 
         return re.sub(r"[*`#]+", "", msg) or "Done."
