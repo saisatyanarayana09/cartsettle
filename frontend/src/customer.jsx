@@ -350,6 +350,9 @@ function BannerCarousel({ banners }) {
   fetchPriority={index === 0 ? 'high' : 'auto'}
   src={optimizeImage(banner.image, 1200)} 
   alt={banner.title} 
+  onError={(e) => {
+    e.currentTarget.style.display = 'none';
+  }}
   className="w-full h-full object-cover"
   />
   </a>

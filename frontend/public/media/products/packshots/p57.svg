@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="60%" stop-color="#000000" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gloss" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="35%" stop-color="#FFFFFF" stop-opacity="0.1"/>
+      <stop offset="70%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="tetraFront_57" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFEDD5"/>
+      <stop offset="100%" stop-color="#FFEDD5"/>
+    </linearGradient>
+    <linearGradient id="tetraTop_57" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#FFEDD5"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="tetraRight_57" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#FFEDD5"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="205" cy="355" rx="125" ry="16" fill="url(#shadow)"/>
+  <polygon points="105,100 165,65 315,65 255,100" fill="url(#tetraTop_57)" stroke="#EA580C" stroke-width="1"/>
+  <polygon points="255,100 315,65 315,295 255,330" fill="url(#tetraRight_57)" stroke="#EA580C" stroke-width="1" opacity="0.85"/>
+  <polygon points="105,100 255,100 255,330 105,330" fill="url(#tetraFront_57)" stroke="#EA580C" stroke-width="1.2"/>
+  <ellipse cx="180" cy="80" rx="14" ry="7" fill="#EA580C" stroke="#FFFFFF" stroke-width="1.5"/>
+  <rect x="105" y="130" width="150" height="65" fill="#EA580C"/>
+  <text x="180" y="172" font-family="'Segoe UI', Roboto, sans-serif" font-size="30" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">REAL</text>
+  <rect x="125" y="215" width="110" height="24" rx="12" fill="#C2410C"/>
+  <text x="180" y="231" font-family="sans-serif" font-size="10" font-weight="900" fill="#FFFFFF" text-anchor="middle">NO ADDED PRESERV</text>
+  <text x="180" y="275" font-family="'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="800" fill="#1E293B" text-anchor="middle">Real Mixed Fruit</text>
+  <text x="180" y="298" font-family="sans-serif" font-size="12" font-weight="700" fill="#64748B" text-anchor="middle">1 L Tetra</text>
+  <text x="285" y="210" font-family="sans-serif" font-size="11" font-weight="800" fill="#FFFFFF" text-anchor="middle" transform="rotate(-30 285 210)">1 L Tetra</text>
+</svg>

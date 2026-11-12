@@ -6,7 +6,7 @@
       "destination": "/.well-known/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.[\\w]+$).*)",
       "destination": "/index.html"
     }
   ],

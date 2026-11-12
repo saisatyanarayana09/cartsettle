@@ -18,6 +18,7 @@ import api from '../../services/api';
 import { CustomerLayout } from '../../customer-layout';
 import { useCart } from '../../cart-context';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { optimizeImage } from '../../utils/image';
 
 const OrderTrackingMap = lazy(() => import('../../components/OrderTrackingMap'));
 
@@ -313,7 +314,7 @@ export function OrderDetailPage() {
                           <div className="size-10 rounded-[10px] bg-[#F5F5F7] dark:bg-[#2C2C2E] shrink-0 overflow-hidden flex items-center justify-center p-1">
                             {item.product_image ? (
                               <img
-                                src={item.product_image}
+                                src={optimizeImage(item.product_image, 100)}
                                 alt=""
                                 className="w-full h-full object-contain"
                                 loading="lazy"

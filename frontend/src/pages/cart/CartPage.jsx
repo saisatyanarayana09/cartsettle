@@ -15,6 +15,7 @@ import {
 import { CustomerLayout } from '../../customer-layout';
 import { useCart } from '../../cart-context';
 import { checkOperatingHours } from '../../utils/operatingHours';
+import { optimizeImage } from '../../utils/image';
 import BargainModal from '../../components/BargainModal';
 
 export function CartPage() {
@@ -249,7 +250,7 @@ export function CartPage() {
                         <div className="size-14 sm:size-16 rounded-[14px] bg-[#F5F5F7] dark:bg-[#2C2C2E] shrink-0 overflow-hidden flex items-center justify-center p-1.5">
                           {item.product_image ? (
                             <img
-                              src={item.product_image}
+                              src={optimizeImage(item.product_image, 120)}
                               alt={item.product_name}
                               className={`w-full h-full object-contain ${
                                 isItemOutOfStock ? 'grayscale opacity-40' : ''

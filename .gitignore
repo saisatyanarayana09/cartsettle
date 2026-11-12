@@ -27,7 +27,10 @@ backend/db.sqlite3
 backend/db.sqlite3-shm
 backend/db.sqlite3-wal
 backend/staticfiles/
-backend/media/
+backend/media/*
+!backend/media/categories/
+!backend/media/products/
+!backend/media/banners/
 
 # Secrets & Environment Variables
 .env
