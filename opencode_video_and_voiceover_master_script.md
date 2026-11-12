@@ -93,5 +93,7 @@ Tasks:
    - At source video time 1:24-1:40 (composite 1:44-2:00, on the Packing Table Auto-Settlement modal), highlight: "PayPal Authorized: ₹566.00 -> Captured: ₹400.00 | Auto-Released: ₹166.00".
 3. Append a 10-second Motion Graphics Outro Card (2:04-2:14) showcasing:
    "CartSettle — Autonomous AI & Frictionless PayPal Settlement" with 3 badges: "Gemini Multimodal Vision", "PayPal Orders v2 SafeHold", and "Dynamic Partial Capture & Invoicing v2".
-4. Sync the voiceover audio track and export the final 1080p MP4 under 15 MB (H.264 CRF 25, AAC 128k, faststart).
+4. Sync the voiceover audio track and export the final 1080p MP4 under 15 MB (H.264 CRF 25, AAC 128k, faststart):
+   - If a single `voiceover.mp3` is provided, use `ffmpeg silencedetect` (noise=-35dB, d=0.45) to split the 6 paragraphs or time-stretch (`atempo`) each segment so they start at the exact composite timestamps: `0:00`, `0:20`, `0:42`, `1:11`, `1:24`, `1:47`, and `2:04`.
+   - If separate audio files (`p1.mp3`..`p6.mp3`) are provided, place them at those exact timestamps using `adelay` and `amix`.
 ```
