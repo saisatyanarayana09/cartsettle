@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, ShoppingBag, Plus, ArrowUp, Keyboard, Mic, Camera, Upload, Sparkles } from "lucide-react";
+import { X, ShoppingBag, Plus, ArrowUp, Keyboard, Mic, Camera, Upload, Sparkles, Loader2 } from "lucide-react";
 import * as apiModule from "../services/api";
 import toast from "react-hot-toast";
 
@@ -94,6 +94,16 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState(initialMode);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (mode === "chat") {
+      const t = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [mode]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -102,6 +112,7 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
         setMode(nextMode);
         if (nextMode === "chat") {
           setTimeout(() => {
+            inputRef.current?.focus();
             const textarea = panelRef.current?.querySelector("textarea");
             textarea?.focus();
           }, 100);
@@ -349,17 +360,34 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
   const handleSend = async (textToSend, requestMode = mode) => {
     const prompt = (textToSend || input).trim();
     if (!prompt || requestRef.current) return;
+    setInput("");
+    const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
     if (paymentReview) {
       const lower = prompt.toLowerCase();
+      setMessages((prev) => [...prev, { role: "user", content: prompt, timestamp: nowTime }]);
+
       if (/^(cancel|no|nevermind|back|close|exit|stop)\b/i.test(lower)) {
         setPaymentReview(null);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Checkout cancelled. What else can I help you with?", timestamp: nowTime },
+        ]);
         return { reply: "Checkout cancelled. What else can I help you with?" };
       }
       if (/^(confirm|pay|place order|complete|yes|proceed)\b/i.test(lower)) {
         const realOrder = await handlePlaceInlineOrder({ payMethod: "PAYPAL" });
         if (realOrder) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: `Order #${realOrder.id} confirmed via PayPal.`, timestamp: nowTime },
+          ]);
           return { reply: `Order #${realOrder.id} confirmed via PayPal.` };
         }
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Could not place order inline. Redirecting to checkout...", timestamp: nowTime },
+        ]);
         return { reply: "Could not place order inline. Redirecting to checkout..." };
       }
       // Any other query or command automatically dismisses the checkout review and proceeds
@@ -367,14 +395,16 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
     }
     if (requiresPaymentReview(prompt)) {
       voice.stop();
-      setInput("");
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: prompt, timestamp: nowTime },
+        { role: "assistant", content: "Review your payment details before continuing.", timestamp: nowTime },
+      ]);
       setPaymentReview({ prompt });
       return { reply: "Review your payment details before continuing." };
     }
     requestRef.current = true;
 
-    setInput("");
-    const nowTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const newMessages = [...messages, { role: "user", content: prompt, timestamp: nowTime }];
     setMessages(newMessages);
     setLoading(true);
@@ -1305,6 +1335,25 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
               }}
               busy={loading || Boolean(paymentReview)}
             />
+            <div className="w-full max-w-xs mx-auto my-2 pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  voice.stop();
+                  setMode("chat");
+                  setTimeout(() => inputRef.current?.focus(), 80);
+                }}
+                className="w-full flex items-center justify-between gap-2 px-3.5 py-2 rounded-full border border-border/80 bg-white/90 dark:bg-slate-900/90 hover:bg-emerald-50 dark:hover:bg-slate-800 backdrop-blur-sm text-muted-foreground hover:text-foreground text-xs font-medium transition cursor-pointer shadow-xs group"
+              >
+                <span className="flex items-center gap-2">
+                  <Keyboard className="size-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <span>Type a message instead...</span>
+                </span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  Chat
+                </span>
+              </button>
+            </div>
           </VoiceView>
         ) : (
           <Conversation className="min-h-0" initial="instant" resize="instant">
@@ -1484,60 +1533,71 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
         )}
 
         {mode === "chat" && (
-          <footer className="shopper-footer shrink-0 border-t border-border bg-background px-4 pt-3">
-            {mode === "chat" && (
-              <PromptInput
-                onSubmit={({ text }) => handleSend(text).catch(() => {})}
-                className="shopper-composer"
-              >
-                <PromptInputTextarea
-                  aria-label="Message Shopper"
-                  value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  placeholder="What do you need today?"
-                  disabled={loading}
-                  className="min-h-14 max-h-32 px-3 text-base"
-                />
-                <PromptInputFooter className="flex items-center justify-between px-2 pb-2 pt-0">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Upload grocery list photo"
-                      title="Upload grocery list image"
-                      className="h-8 gap-1.5 px-2.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer font-bold text-xs"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={loading}
-                    >
-                      <Upload className="size-4" />
-                      <span>Upload</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Capture grocery list with camera"
-                      title="Capture grocery list with camera"
-                      className="h-8 gap-1.5 px-2.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer font-bold text-xs"
-                      onClick={() => setIsCameraModalOpen(true)}
-                      disabled={loading}
-                    >
-                      <Camera className="size-4" />
-                      <span>Camera</span>
-                    </Button>
-                  </div>
-                  <PromptInputSubmit
-                    aria-label="Send message"
-                    status={loading ? "submitted" : "ready"}
-                    disabled={!input.trim() || loading}
-                    className="size-10 shrink-0 rounded-md"
+          <footer className="shopper-footer shrink-0 border-t border-border bg-white dark:bg-[#0b0f17] px-4 pt-3 pb-3">
+            <PromptInput
+              onSubmit={({ text }) => handleSend(text).catch(() => {})}
+              className="shopper-composer"
+            >
+              <PromptInputTextarea
+                ref={inputRef}
+                aria-label="Message Shopper"
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                placeholder="What do you need today?"
+                disabled={loading}
+                className="min-h-12 max-h-32 px-3 text-sm md:text-base leading-relaxed"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    if (input.trim() && !loading) {
+                      handleSend(input).catch(() => {});
+                    }
+                  }
+                }}
+              />
+              <PromptInputFooter className="flex items-center justify-between px-2 pb-2 pt-0.5">
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Upload grocery list photo"
+                    title="Upload grocery list image"
+                    className="h-8 gap-1.5 px-2.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer font-bold text-xs"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={loading}
                   >
-                    {!loading && <ArrowUp />}
-                  </PromptInputSubmit>
-                </PromptInputFooter>
-              </PromptInput>
-            )}
+                    <Upload className="size-4" />
+                    <span>Upload</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Capture grocery list with camera"
+                    title="Capture grocery list with camera"
+                    className="h-8 gap-1.5 px-2.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 cursor-pointer font-bold text-xs"
+                    onClick={() => setIsCameraModalOpen(true)}
+                    disabled={loading}
+                  >
+                    <Camera className="size-4" />
+                    <span>Camera</span>
+                  </Button>
+                </div>
+                <PromptInputSubmit
+                  aria-label="Send message"
+                  status={loading ? "submitted" : "ready"}
+                  disabled={!input.trim() || loading}
+                  className="size-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 cursor-pointer shadow-xs disabled:opacity-40 flex items-center justify-center"
+                >
+                  {loading ? (
+                    <Loader2 className="size-4 animate-spin text-white" />
+                  ) : (
+                    <ArrowUp className="size-4 stroke-[2.5]" />
+                  )}
+                </PromptInputSubmit>
+              </PromptInputFooter>
+            </PromptInput>
           </footer>
         )}
 
