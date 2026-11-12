@@ -217,8 +217,9 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # ─── Media Files ───
-if IS_PRODUCTION:
-    # Cloudinary for production
+has_cloudinary = bool(os.environ.get('CLOUDINARY_CLOUD_NAME') and os.environ.get('CLOUDINARY_API_KEY'))
+if IS_PRODUCTION and has_cloudinary:
+    # Cloudinary for production when credentials are provided
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
     CLOUDINARY_STORAGE = {
         'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
@@ -231,9 +232,13 @@ if IS_PRODUCTION:
     }
     MEDIA_URL = '/media/'
 else:
-    # Local storage for development
+    # Local disk storage with WhiteNoise fallback
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    STORAGES = {
+        'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+        'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage'},
+    }
 
 # ─── Caching ───
 CACHES = {
