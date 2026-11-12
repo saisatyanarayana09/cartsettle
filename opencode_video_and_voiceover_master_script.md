@@ -65,8 +65,10 @@ Exact Composition Plan (Total Duration: 124.13s, root `data-duration="124.13"`):
      * `data-start="71" data-duration="13"`: "3. Local Store Bargaining (-₹31) + PayPal Orders v2 SafeHold (₹566.00)"
      * `data-start="84" data-duration="23"`: "4. Store Counter Verification -> Packing Table Bag Audit"
      * `data-start="107" data-duration="17.13"`: "5. PayPal Dynamic Settlement: Capture ₹400.00 & Auto-Release -₹166.00 Instantly"
-4. Audio Sync (`<audio class="clip" id="voiceover-track" ...>`):
-   - Use `ffmpeg silencedetect` to split `assets/voiceover.mp3` at paragraph pauses into 6 clips (`assets/p1.mp3` to `assets/p6.mp3`) and mount each `<audio class="clip" id="vo-1"...>` at exact start times: `0`, `20`, `42`, `71`, `84`, and `107`.
+4. Audio Sync (100% Pre-Locked to the Millisecond — Zero `silencedetect` Needed!):
+   - `C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\voiceover.mp3` (`123.99s`) is ALREADY pre-synced to the exact scene timestamps (`0s`, `20s`, `42s`, `68s`, `87s`, `101.3s`), and the individual pre-trimmed clips (`p1.mp3` to `p6.mp3`) are also in the same folder.
+   - Simply copy `voiceover.mp3` into `assets/voiceover.mp3` and mount:
+     `<audio class="clip" id="voiceover-track" src="assets/voiceover.mp3" data-start="0" data-duration="124.13"></audio>`
 5. Validate & Render Directly (No Stops):
    - Run `npx hyperframes lint` and `npx hyperframes check --json`, fix any contract issues, and render the final MP4 to `C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\CartSettle_HyperFrames_Final.mp4`.
 ```
