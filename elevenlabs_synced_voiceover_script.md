@@ -1,49 +1,45 @@
-# CartSettle Demo Video — ElevenLabs Synced Voiceover Script
+# CartSettle — ElevenLabs Synced Voiceover Script (Focused on Local Shoppers & PayPal Settlement)
 
-> **Exact Video Duration**: 1 Minute 44 Seconds (104.1 Seconds)  
-> **Target Video**: `C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\final.mp4`  
-> **Total Word Count**: Exactly 245 Words (~140 words/min cadence)  
-> **ElevenLabs Voice Settings**: Voice style: Professional & Confident (e.g., *Adam*, *Antoni*, or *Rachel*). Speed: 1.0x.
-
----
-
-## Intro: Real-World Problem (add before the video, ~20 seconds)
-
-Visual: 3 text cards on a dark background (about 6 to 7 seconds each).
-1. "One item out of stock."
-2. "Customer already charged in full. Refund takes days."
-3. "The local shop loses money, trust, and the customer."
-
-```text
-Every day, someone orders groceries from their local shop. One item is out of stock. But they were already charged the full amount. Now they wait days for a refund, or open a dispute. The shop loses money, trust, and finally the customer, to big delivery apps. CartSettle fixes this.
-```
-
-(50 words, about 20 seconds)
+- **Target Video**: [`C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\final.mp4`](file:///C:/Users/SAI%20SATYANARAYANA/OneDrive/Desktop/DemoVideo/final.mp4) (`01:44.13` / `104.13s`, `1920x1080`, `30fps`)
+- **Compressed Version**: [`C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\final_compressed.mp4`](file:///C:/Users/SAI%20SATYANARAYANA/OneDrive/Desktop/DemoVideo/final_compressed.mp4) (`6.69 MB`, `1920x1080`, `30fps`)
+- **Recommended ElevenLabs Settings**:
+  - **Model**: `Eleven Multilingual v2` or `Eleven Turbo v2.5`
+  - **Voice**: **Adam**, **Brian**, or **Jessica** (Stability: `60%`, Similarity: `75%`, Speed: `1.0x`)
 
 ---
 
-## Master Copy-Paste Script for ElevenLabs (1 Click Generation)
+## Option A: Full 2:04 Script (With 20s Problem Intro + 1:44 Demo Video — For HyperFrames / OpenCode)
+
+Copy and paste this exact **6-paragraph block** into ElevenLabs (keep the blank lines so ElevenLabs creates natural pauses between scenes):
 
 ```text
-Meet CartSettle: an autonomous retail engine that gives local merchants an enterprise tech stack. Our live catalog tracks real-time inventory with instant category filtering. When shoppers tap Ask AI, the storefront smoothly glides into an interactive split screen, keeping shopping completely frictionless.
+When local shoppers order groceries from neighborhood stores, shelf inventory changes every hour. If just one item is out of stock at the packing counter, traditional checkout still charges one hundred percent upfront—locking up the shopper's money for five to seven days in manual refund disputes. Meet CartSettle: built to protect local shoppers and neighborhood merchants through PayPal Dynamic Settlement.
 
-Most everyday shoppers still rely on paper lists. Powered by Gemini Multimodal Vision, CartSettle lets customers snap a photo of handwritten notes or receipts. The AI instantly digitizes the handwriting, cross-references shelf availability in real time, and automatically adds all available grocery items to the shopper's bag with zero manual typing or barcode scanning.
+On the CartSettle storefront, a local shopper browses fresh daily essentials like Dairy and Eggs, then clicks Ask AI. The store smoothly opens a side-by-side assistant built for how real households shop every day.
 
-In the bag, items are confirmed at transparent pricing. To eliminate out-of-stock refund disputes, CartSettle uses PayPal SafeHold. Funds are pre-authorized and held in escrow—never charged upfront. The order is instantly routed to the merchant dashboard, where store owners have a single-click AI Packing shortcut to fulfill incoming orders.
+Instead of searching and typing items one by one, the local shopper simply uploads a photo of their handwritten family grocery list. Watch as our vision scanner reads the handwriting, matches Britannia Good Day, Amul Butter, and Fortune Sunflower Oil against live store stock, and adds all three items to the bag in one click.
 
-At the packing table, the merchant snaps a photo of the packed tote. Gemini Vision audits the physical contents. Notice: Amul Cheese Slices is out of stock. The AI flags it as missing and recalculates the settlement. With one click, PayPal executes Dynamic Partial Capture: capturing four hundred rupees and instantly auto-releasing the difference back to the customer.
+Inside the bag, shoppers get the familiar neighborhood store experience with instant AI price bargaining—saving thirty-one rupees—before heading to checkout. Here is where PayPal transforms the payment: instead of charging the full cart upfront, CartSettle places a PayPal Orders v2 SafeHold authorization for five hundred sixty-six rupees.
+
+Now let's look at the Local Store Owner Dashboard. When order O-R-D-2026-00003 arrives for five hundred sixty-six rupees across four items, the store owner packs the physical bag at the counter and uploads a single photo into the AI Packing and Settlement scanner.
+
+Our vision engine audits the bag before payment is finalized. It verifies three of the four items are packed, and flags Amul Cheese Slices as out of stock. With one click on Capture via PayPal, CartSettle dynamically captures only four hundred rupees for the delivered items, instantly releases the remaining one hundred sixty-six rupees back to the local shopper via PayPal, and issues an itemized PayPal v2 invoice—zero overcharging and zero refund wait times.
 ```
 
 ---
 
-## Second-by-Second Synchronization Table
+## Option B: Direct 1:44 Script (Synced Directly to `final.mp4` With Zero Video Editing Needed)
 
-| Timestamp | What is Happening on Screen in `final.mp4` | ElevenLabs Voiceover Segment | Word Count |
-| :--- | :--- | :--- | :--- |
-| **0:00 – 0:25** | • Storefront starts on dark mode<br>• Scrolls down across live products (Britannia, Parle, Haldiram)<br>• Clicks "Dairy & Eggs" filter<br>• Clicks "**✨ Ask AI**" &rarr; Storefront slides left into Gemini split screen with glowing orb | "Over forty million independent neighborhood grocers are losing ground to dark-store giants. Meet CartSettle: an autonomous retail engine that gives local merchants an enterprise tech stack. Our live catalog tracks real-time inventory with instant category filtering. When shoppers tap Ask AI, the storefront smoothly glides into an interactive split screen, keeping shopping completely frictionless." | **58 words** (~23s) |
-| **0:25 – 0:52** | • Assistant drawer is open<br>• Clicks camera/upload icon<br>• File picker opens &rarr; selects handwritten grocery list image (`WhatsApp Image...`)<br>• Gemini Vision digitizes the handwritten note and adds items to the cart | "Most everyday shoppers still rely on paper lists. Powered by Gemini Multimodal Vision, CartSettle lets customers snap a photo of handwritten notes or receipts. The AI instantly digitizes the handwriting, cross-references shelf availability in real time, and automatically adds all available grocery items to the shopper's bag with zero manual typing or barcode scanning." | **62 words** (~24s) |
-| **0:52 – 1:18** | • Customer navigates to **Bag** (`/cart`)<br>• Shows 4 items: Butter, Milk, Paneer, Cheese Slices (₹566.00)<br>• Clicks **Check Out** & confirms order with PayPal SafeHold<br>• Switches to **Owner Operations Dashboard** (`/owner`) showing Order `#ORD202600003` in ACCEPTED queue | "In the bag, items are confirmed at transparent pricing. To eliminate out-of-stock refund disputes, CartSettle uses PayPal SafeHold. Funds are pre-authorized and held in escrow—never charged upfront. The order is instantly routed to the merchant dashboard, where store owners have a single-click AI Packing shortcut to fulfill incoming orders." | **60 words** (~24s) |
-| **1:18 – 1:44** | • Owner clicks **AI Packing & Settlement**<br>• Clicks **Scan Bag Photo** & uploads packed bag photo<br>• Gemini Vision audits bag: 3 items checked green, Amul Cheese Slices flagged **Missing (Auto-Refund)**<br>• Total updates: ₹566 &rarr; ₹400 (Refund: ₹166)<br>• Clicks **Capture ₹400.00 & Auto-Release Difference via PayPal** | "At the packing table, the merchant snaps a photo of the packed tote. Gemini Vision audits the physical contents. Notice: Amul Cheese Slices is out of stock. The AI flags it as missing and recalculates the settlement. With one click, PayPal executes Dynamic Partial Capture: capturing four hundred rupees and instantly auto-releasing the difference back to the customer." | **65 words** (~25s) |
+If you want to drop the audio directly onto `final.mp4` (`01:44.13`) without adding a 20-second intro slide, copy and paste this **5-paragraph block** into ElevenLabs:
 
----
-**Total Run Time**: 1 Minute 44 Seconds (104.1 Seconds) &bull; **Total Words**: 245 Words
+```text
+When local shoppers order from neighborhood grocery stores, shelf stock changes constantly—yet traditional checkout charges one hundred percent upfront and traps shopper money for days when an item is missing. Meet CartSettle, built for local shoppers and powered by PayPal Dynamic Settlement. As we browse Dairy and Eggs and click Ask AI, the storefront opens a side-by-side smart shopping assistant.
+
+Instead of typing items one by one, a local shopper can simply upload a photo of their handwritten family grocery list. Watch as the vision scanner reads the handwriting, matches Britannia Good Day, Amul Butter, and Fortune Sunflower Oil against live store stock, and adds all three items to the bag in one click.
+
+Inside the bag, shoppers can bargain just like at a local counter—locking in thirty-one rupees in store savings. At checkout, instead of overcharging the shopper upfront, CartSettle places a PayPal Orders v2 SafeHold authorization for five hundred sixty-six rupees.
+
+Now we switch to the Local Store Owner Dashboard. When order O-R-D-2026-00003 arrives for five hundred sixty-six rupees across four items, the store owner packs the bag at the counter and uploads one photo into the AI Packing and Settlement scanner.
+
+Before a single rupee is captured, our vision audit verifies three of the four items are packed and flags Amul Cheese Slices as out of stock. Clicking Capture via PayPal dynamically settles only four hundred rupees for the packed items, instantly releases one hundred sixty-six rupees back to the local shopper's PayPal wallet, and sends an itemized PayPal v2 invoice.
+```
