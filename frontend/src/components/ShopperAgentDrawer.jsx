@@ -1230,8 +1230,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
               navigate("/checkout");
             }}
             busy={loading}
-            cartItems={liveItems}
-            cartTotal={cartTotal}
+            cartItems={paymentReview?.items || liveItems}
+            cartTotal={paymentReview?.total || cartTotal}
             onPlaceInlineOrder={handlePlaceInlineOrder}
           />
         )}
@@ -1274,8 +1274,8 @@ export default function ShopperAgentDrawer({ isOpen, onClose, initialMode = "voi
                 navigate("/checkout");
               }}
               busy={loading}
-              cartItems={liveItems}
-              cartTotal={cartTotal}
+              cartItems={paymentReview?.items || liveItems}
+              cartTotal={paymentReview?.total || cartTotal}
               onPlaceInlineOrder={handlePlaceInlineOrder}
             />
             <ActionCards

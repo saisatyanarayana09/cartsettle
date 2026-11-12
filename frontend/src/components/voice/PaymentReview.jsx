@@ -40,10 +40,13 @@ export function PaymentReview({
 
   const ready = validPaymentDetails(review) && typeof onConfirm === "function";
   const hasInlineCheckout = typeof onPlaceInlineOrder === "function";
-  const itemCount = Array.isArray(cartItems)
-    ? cartItems.reduce((sum, ci) => sum + Number(ci.quantity || 1), 0)
-    : 0;
-  const effectiveTotal = Number(cartTotal || review.amount || 0);
+  const effectiveItems = Array.isArray(review?.items) && review.items.length > 0
+    ? review.items
+    : Array.isArray(cartItems)
+      ? cartItems
+      : [];
+  const itemCount = effectiveItems.reduce((sum, ci) => sum + Number(ci.quantity || 1), 0);
+  const effectiveTotal = Number(review?.total || cartTotal || review?.amount || 0);
 
   if (placedOrder) {
     return (
@@ -114,6 +117,38 @@ export function PaymentReview({
 
       {hasInlineCheckout ? (
         <div className="mt-3 space-y-2.5">
+          {/* Brief Checkout Items List */}
+          {effectiveItems.length > 0 && (
+            <div className="rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-slate-900/40 p-2.5 space-y-1.5 max-h-44 overflow-y-auto">
+              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center justify-between pb-1 border-b border-slate-200/50 dark:border-white/10">
+                <span>Items in Order ({itemCount})</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">15-25 min express</span>
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-white/5">
+                {effectiveItems.map((ci, idx) => {
+                  const qty = Number(ci.quantity || 1);
+                  const price = Number(ci.price ?? ci.unit_price ?? 0);
+                  const name = ci.name || ci.product_name || ci.product?.name || "Item";
+                  return (
+                    <div key={idx} className="py-1.5 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          {name}
+                        </span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+                          {qty}x
+                        </span>
+                      </div>
+                      <span className="font-mono font-bold text-slate-700 dark:text-slate-200 shrink-0">
+                        ₹{(price * qty).toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Minimal Payment Selector with Highlighted PayPal */}
           <div className="grid grid-cols-3 gap-1.5">
             <button

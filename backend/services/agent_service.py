@@ -319,6 +319,19 @@ class AgentTools:
                     },
                     "required": ["product_id", "requested_discount_pct"]
                 }
+            },
+            {
+                "name": "initiate_checkout_and_order_review",
+                "description": "Prepares an instant brief checkout review card inside the assistant drawer with all current cart items, quantities, prices, delivery time, and payment method options (PayPal, COD, Wallet) so the customer can review and place their order.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "payment_method": {
+                            "type": "STRING",
+                            "description": "Optional customer preferred payment method: 'PAYPAL', 'COD', or 'WALLET'."
+                        }
+                    }
+                }
             }
         ]
 
@@ -734,6 +747,34 @@ class AgentTools:
                 "total": tot,
                 "count": cnt,
                 "status": "ready" if c_items else "empty"
+            }
+
+        if name == "initiate_checkout_and_order_review":
+            c_items = []
+            shopper_mem = _SESSION_MEMORY.get(f"shopper:{session_id}", {})
+            if shopper_mem.get("cart_items"):
+                c_items = shopper_mem["cart_items"]
+            if not c_items:
+                full_mem = _SESSION_MEMORY.get(f"cartsettle_agent_mem_shopper_{session_id}", {})
+                if full_mem.get("cart_items"):
+                    c_items = full_mem["cart_items"]
+            if not c_items:
+                c_items = cache.get(f"cartsettle_cart_{session_id}") or []
+
+            tot = sum(float(ci.get("price", 0)) * int(ci.get("quantity", 1)) for ci in c_items)
+            cnt = sum(int(ci.get("quantity", 1)) for ci in c_items)
+            pay_method = (args.get("payment_method") or "PAYPAL").upper()
+            if pay_method not in ("PAYPAL", "COD", "WALLET"):
+                pay_method = "PAYPAL"
+
+            return {
+                "status": "ready" if c_items else "empty",
+                "items": c_items,
+                "count": cnt,
+                "total": tot,
+                "payment_method": pay_method,
+                "delivery_eta": "15-25 mins",
+                "message": f"Checkout ready for {cnt} items (₹{tot:.2f})." if c_items else "Your cart is empty."
             }
 
         if name == "search_products_and_stock":
@@ -2549,6 +2590,37 @@ class AgentService:
             "prompt": resolved_prompt,
             "persona": persona
         })
+
+        # Instant Brief Checkout Interceptor for Shopper ("place order", "checkout", "buy now", "order now")
+        is_checkout_phrase = (
+            persona == "shopper"
+            and any(k in lower_p for k in [
+                "place order", "place my order", "checkout now", "checkout", "buy my cart",
+                "order my cart", "order now", "buy now", "complete order", "complete checkout",
+                "proceed to checkout", "proceed to payment", "ready to order", "ready to checkout",
+                "instant checkout", "pay and order", "confirm order"
+            ])
+            and not any(k in lower_p for k in ["how to", "cancel", "status", "why", "can i", "where is"])
+        )
+        if is_checkout_phrase:
+            pay_m = "WALLET" if "wallet" in lower_p else ("COD" if any(w in lower_p for w in ["cod", "cash"]) else "PAYPAL")
+            chk_res = AgentTools.execute_tool("initiate_checkout_and_order_review", {"payment_method": pay_m}, session_id)
+            chk_actions = self._extract_frontend_actions("initiate_checkout_and_order_review", chk_res, persona=persona)
+            chk_reply = self._synthesize_tool_response("initiate_checkout_and_order_review", chk_res, persona)
+            clean_rep, voice_rep = self._to_concise_human_reply(chk_reply, mode=mode)
+            chk_obj = {
+                "reply": clean_rep,
+                "voice_reply": voice_rep,
+                "tools_used": [{"name": "initiate_checkout_and_order_review", "args": {"payment_method": pay_m}}],
+                "actions": chk_actions,
+                "tool_result": chk_res,
+                "model_badge": "Gemini Core",
+                "provider": "Gemini Core",
+                "latency_ms": max(1, int((time.perf_counter() - t0) * 1000)),
+            }
+            chk_obj["follow_ups"] = self._build_follow_ups(persona, chk_actions, mem)
+            self._save_session_turn(session_id, persona, prompt, chk_obj)
+            return chk_obj
 
         # Offline / fallback mode if no API keys are configured at all
         if not self.api_key and not self.groq_api_key:
@@ -6448,6 +6520,13 @@ class AgentService:
         elif fn_name == "get_sales_and_analytics":
             return f"Total store revenue is ₹{float(res.get('total_revenue', 0)):.2f} across {res.get('total_orders', 0)} orders."
 
+        elif fn_name == "initiate_checkout_and_order_review":
+            cnt = res.get("count", 0)
+            tot = float(res.get("total", 0))
+            if cnt > 0:
+                return f"Here is your brief checkout review for {cnt} items totaling ₹{tot:.2f}. Select your payment method and tap Place Order."
+            return "Your cart is currently empty. Please add items before checking out."
+
         elif fn_name == "get_active_cart":
             cnt = res.get("count", 0)
             tot = float(res.get("total", 0))
@@ -6466,7 +6545,20 @@ class AgentService:
     def _extract_frontend_actions(self, fn_name: str, res: dict, persona: str = "owner") -> list:
         """Extracts actionable triggers for the React UI to execute in real-time."""
         actions = []
-        if fn_name == "get_active_cart":
+        if fn_name == "initiate_checkout_and_order_review":
+            if res.get("status") == "ready" and res.get("items"):
+                actions.append({
+                    "type": "PAYMENT_REVIEW",
+                    "items": res.get("items", []),
+                    "count": res.get("count", 0),
+                    "total": float(res.get("total", 0.0)),
+                    "amount": float(res.get("total", 0.0)),
+                    "payment_method": res.get("payment_method", "PAYPAL"),
+                    "delivery_eta": res.get("delivery_eta", "15-25 mins"),
+                    "currency": "INR",
+                    "message": "Review checkout before placing your order."
+                })
+        elif fn_name == "get_active_cart":
             actions.append({
                 "type": "CART_ITEMS_CARD",
                 "items": res.get("items", []),
