@@ -61,12 +61,27 @@ class BackendHealthView(View):
         svc = AgentService()
         gemini_probe = {}
         try:
+            import os
             import requests
-            k = svc.api_key
-            m = "gemini-flash-lite-latest"
-            u = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={k}"
-            r = requests.post(u, json={"contents": [{"parts": [{"text": "hi"}]}]}, timeout=4.0)
-            gemini_probe = {"status": r.status_code, "body": r.text[:200]}
+            from django.conf import settings as dj_settings
+            
+            raw_env_key = os.environ.get('GEMINI_API_KEY', '')
+            def_k1 = getattr(dj_settings, '_DEFAULT_GEMINI_1', '')
+            def_k2 = getattr(dj_settings, '_DEFAULT_GEMINI_2', '')
+
+            def test_key(k_val):
+                if not k_val:
+                    return {'status': 'empty'}
+                u = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={k_val.strip()}"
+                r = requests.post(u, json={"contents": [{"parts": [{"text": "hi"}]}]}, timeout=4.0)
+                return {'status': r.status_code, 'body': r.text[:120]}
+
+            gemini_probe = {
+                'env_gemini_present': bool(raw_env_key),
+                'env_gemini_len': len(raw_env_key),
+                'k1_test': test_key(def_k1),
+                'k2_test': test_key(def_k2),
+            }
         except Exception as ex:
             gemini_probe = {"error": str(ex)}
 
