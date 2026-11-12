@@ -6677,7 +6677,7 @@ class AgentService:
                     "response_mime_type": "application/json"
                 }
             }
-            candidate_models = [GEMINI_MODEL, "gemini-2.5-flash", "gemini-2.5-flash-lite"]
+            candidate_models = [GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
             res = None
             for cand_m in candidate_models:
                 key_pairs = self.get_active_gemini_keys() or [(i, k) for i, k in enumerate(self.api_keys)]
@@ -6897,7 +6897,7 @@ class AgentService:
             }
         }
 
-        candidate_models = [GEMINI_MODEL, "gemini-2.0-flash", "gemini-1.5-flash"]
+        candidate_models = [GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
         res = None
         for cand_m in candidate_models:
             key_attempts = max(1, len(self.api_keys))

@@ -57,9 +57,13 @@ class BackendHealthView(View):
 
         latency_ms = round((time.perf_counter() - started) * 1000, 1)
         is_healthy = database_status == 'connected'
+        from services.agent_service import AgentService
+        svc = AgentService()
         return JsonResponse({
             'status': 'operational' if is_healthy else 'degraded',
             'database': database_status,
+            'gemini_keys_count': len(svc.api_keys),
+            'agent_active_key': (svc.api_key[:8] + '...') if svc.api_key else 'none',
             'latency_ms': latency_ms,
             'timestamp': timezone.now().isoformat(),
             'api_base': '/api/v1/',
