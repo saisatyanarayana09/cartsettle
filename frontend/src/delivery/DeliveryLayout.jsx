@@ -41,13 +41,23 @@ export default function DeliveryLayout() {
     localStorage.removeItem('smart-kirana-delivery-token');
     localStorage.removeItem('smart-kirana-delivery-refresh');
     localStorage.removeItem('smart-kirana-delivery-user');
-    navigate('/login');
+    const isDeliveryDomain = typeof window !== 'undefined' && (
+      window.location.hostname.includes('delivery') ||
+      window.location.hostname.startsWith('delivery.')
+    );
+    navigate(isDeliveryDomain ? '/login' : '/delivery/login');
   };
 
+  const isDeliveryDomain = typeof window !== 'undefined' && (
+    window.location.hostname.includes('delivery') ||
+    window.location.hostname.startsWith('delivery.')
+  );
+  const prefix = isDeliveryDomain ? '' : '/delivery';
+
   const navItems = [
-    { label: 'Active Trips', path: '/', icon: Truck, badge: activeCount > 0 ? activeCount : null },
-    { label: 'History', path: '/history', icon: CheckCircle2 },
-    { label: 'Profile', path: '/profile', icon: User },
+    { label: 'Active Trips', path: prefix || '/', icon: Truck, badge: activeCount > 0 ? activeCount : null },
+    { label: 'History', path: `${prefix}/history`, icon: CheckCircle2 },
+    { label: 'Profile', path: `${prefix}/profile`, icon: User },
   ];
 
   const riderName = partnerUser?.first_name
@@ -62,7 +72,7 @@ export default function DeliveryLayout() {
         <div className="w-full flex items-center justify-between gap-4">
 
           {/* Rider identity */}
-          <Link to="/profile" className="flex items-center gap-3 group min-w-0">
+          <Link to={`${prefix}/profile`} className="flex items-center gap-3 group min-w-0">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-black text-white truncate group-hover:text-emerald-400 transition-colors">

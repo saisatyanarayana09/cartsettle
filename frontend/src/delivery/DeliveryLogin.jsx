@@ -57,7 +57,11 @@ export default function DeliveryLogin() {
         localStorage.setItem('smart-kirana-delivery-user', JSON.stringify(user));
         localStorage.setItem('smart-kirana-token', res.data.access);
         localStorage.setItem('smart-kirana-refresh', res.data.refresh);
-        navigate('/');
+        const isDeliveryDomain = typeof window !== 'undefined' && (
+          window.location.hostname.includes('delivery') ||
+          window.location.hostname.startsWith('delivery.')
+        );
+        navigate(isDeliveryDomain ? '/' : '/delivery');
       } catch (err) {
         const msg = err.response?.data?.detail || err.response?.data?.message || 'Unable to sign in with Google.';
         setError(msg);
@@ -100,7 +104,11 @@ export default function DeliveryLogin() {
       localStorage.setItem('smart-kirana-delivery-user', JSON.stringify(user));
       localStorage.setItem('smart-kirana-token', res.data.access);
       localStorage.setItem('smart-kirana-refresh', res.data.refresh);
-      navigate('/');
+      const isDeliveryDomain = typeof window !== 'undefined' && (
+        window.location.hostname.includes('delivery') ||
+        window.location.hostname.startsWith('delivery.')
+      );
+      navigate(isDeliveryDomain ? '/' : '/delivery');
     } catch (err) {
       const msg = err.response?.data?.detail || err.response?.data?.message || 'Invalid username or password.';
       setError(msg);

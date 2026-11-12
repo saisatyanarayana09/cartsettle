@@ -8,7 +8,7 @@ export default function DeliveryGuard({ children }) {
     window.location.hostname.includes('delivery') ||
     window.location.hostname.startsWith('delivery.')
   );
-  const loginPath = '/login';
+  const loginPath = isDeliveryDomain ? '/login' : '/delivery/login';
 
   const token = localStorage.getItem('smart-kirana-delivery-token') || localStorage.getItem('smart-kirana-token');
   const userStr = localStorage.getItem('smart-kirana-delivery-user') || localStorage.getItem('smart-kirana-user');

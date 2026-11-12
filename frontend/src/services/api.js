@@ -257,7 +257,7 @@ api.interceptors.response.use(
         if (prefix === 'smart-kirana-owner') {
           window.location.href = (window.location.hostname.includes('owner') || window.location.hostname.includes('admin')) ? '/login' : '/owner/login';
         } else if (prefix === 'smart-kirana-delivery') {
-          window.location.href = window.location.hostname.includes('delivery') ? '/login' : 'https://narendra-kirana-delivery.vercel.app/login';
+          window.location.href = window.location.hostname.includes('delivery') ? '/login' : '/delivery/login';
         }
         return Promise.reject(error);
       }
@@ -288,7 +288,7 @@ api.interceptors.response.use(
         if (prefix === 'smart-kirana-owner') {
           window.location.href = (window.location.hostname.includes('owner') || window.location.hostname.includes('admin')) ? '/login' : '/owner/login';
         } else if (prefix === 'smart-kirana-delivery') {
-          window.location.href = window.location.hostname.includes('delivery') ? '/login' : 'https://narendra-kirana-delivery.vercel.app/login';
+          window.location.href = window.location.hostname.includes('delivery') ? '/login' : '/delivery/login';
         }
         return Promise.reject(error);
       }
@@ -328,7 +328,7 @@ api.interceptors.response.use(
         if (prefix === 'smart-kirana-owner') {
           window.location.href = '/owner/login';
         } else if (prefix === 'smart-kirana-delivery') {
-          window.location.href = window.location.hostname.includes('delivery') ? '/login' : 'https://narendra-kirana-delivery.vercel.app/login';
+          window.location.href = window.location.hostname.includes('delivery') ? '/login' : '/delivery/login';
         }
         return Promise.reject(refreshErr);
       } finally {
