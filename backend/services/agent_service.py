@@ -2036,7 +2036,7 @@ class AgentService:
         keys = self.get_active_gemini_keys()
         return keys[0][1] if keys else ""
 
-    def get_active_gemini_keys(self, model_name: str = "") -> list:
+    def get_active_gemini_keys(self, model_name: str = "", allow_fallback_to_cooling: bool = False) -> list:
         """Returns Gemini keys ordered with primary first, excluding invalid or temporarily rate-limited keys."""
         now = time.time()
         healthy_keys = []
@@ -2051,7 +2051,12 @@ class AgentService:
             cooldown_until = max(cooldowns.get(cd_key, 0), cooldowns.get(idx, 0))
             if now >= cooldown_until:
                 healthy_keys.append((idx, key))
-        return healthy_keys if healthy_keys else all_valid_keys
+        if healthy_keys:
+            return healthy_keys
+        # Only fallback to cooling keys if explicitly requested and no alternative provider exists
+        if allow_fallback_to_cooling and not self.groq_api_key:
+            return all_valid_keys
+        return []
 
     def mark_key_invalid(self, key_idx: int, reason: str = ""):
         """Permanently disables an invalid, deleted, or unauthenticated API key (400/401) for this session."""
