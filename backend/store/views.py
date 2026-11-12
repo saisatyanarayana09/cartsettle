@@ -59,11 +59,23 @@ class BackendHealthView(View):
         is_healthy = database_status == 'connected'
         from services.agent_service import AgentService
         svc = AgentService()
+        gemini_probe = {}
+        try:
+            import requests
+            k = svc.api_key
+            m = "gemini-flash-lite-latest"
+            u = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={k}"
+            r = requests.post(u, json={"contents": [{"parts": [{"text": "hi"}]}]}, timeout=4.0)
+            gemini_probe = {"status": r.status_code, "body": r.text[:200]}
+        except Exception as ex:
+            gemini_probe = {"error": str(ex)}
+
         return JsonResponse({
             'status': 'operational' if is_healthy else 'degraded',
             'database': database_status,
             'gemini_keys_count': len(svc.api_keys),
             'agent_active_key': (svc.api_key[:8] + '...') if svc.api_key else 'none',
+            'gemini_probe': gemini_probe,
             'latency_ms': latency_ms,
             'timestamp': timezone.now().isoformat(),
             'api_base': '/api/v1/',
