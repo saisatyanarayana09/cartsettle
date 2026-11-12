@@ -59,6 +59,10 @@ _SESSION_MEMORY = {}
 _CATALOG_CACHE = {
     "products": None,
     "categories_count": None,
+    "owner_ctx": None,
+    "owner_ctx_ts": 0.0,
+    "shopper_ctx": None,
+    "shopper_ctx_ts": 0.0,
     "live_ctx": None,
     "live_ctx_ts": 0.0,
     "ts": 0.0,
@@ -95,6 +99,10 @@ def _get_cached_category_count() -> int:
 def _invalidate_catalog_cache():
     _CATALOG_CACHE["products"] = None
     _CATALOG_CACHE["categories_count"] = None
+    _CATALOG_CACHE["owner_ctx"] = None
+    _CATALOG_CACHE["owner_ctx_ts"] = 0.0
+    _CATALOG_CACHE["shopper_ctx"] = None
+    _CATALOG_CACHE["shopper_ctx_ts"] = 0.0
     _CATALOG_CACHE["live_ctx"] = None
     _CATALOG_CACHE["live_ctx_ts"] = 0.0
     _CATALOG_CACHE["ts"] = 0.0
@@ -2061,7 +2069,7 @@ class AgentService:
                                 fn_args = {}
                             fn_result = AgentTools.execute_tool(fn_name, fn_args, session_id)
                             accumulated_tools.append({"name": fn_name, "args": fn_args})
-                            accumulated_actions.extend(self._extract_frontend_actions(fn_name, fn_result))
+                            accumulated_actions.extend(self._extract_frontend_actions(fn_name, fn_result, persona=persona))
                             last_tool_result = fn_result
 
                         synthesis = self._synthesize_tool_response(accumulated_tools[-1]["name"], last_tool_result, persona)
@@ -2534,7 +2542,7 @@ class AgentService:
         except Exception as e:
             logger.warning("RAG retrieval exception: %s", e)
 
-        live_ctx = self._get_live_store_context()
+        live_ctx = self._get_live_store_context(persona=persona)
         recent_context_note = ""
         if mem.get("last_order_id") or mem.get("last_product"):
             recent_context_note = f"\nACTIVE SESSION CONTEXT: Last discussed Order ID={mem.get('last_order_id')}, Last discussed Product={mem.get('last_product')}.\n"
@@ -2550,71 +2558,73 @@ class AgentService:
         store_policy_note = "\nSTORE POLICIES: We accept Cash on Delivery (COD), Store Wallet, and PayPal. Delivery arrives within 15 to 25 minutes.\n"
 
         cart_guard = (
-            "CRITICAL CART RULE: LIVE STORE SNAPSHOT is the store catalog, NOT the customer's cart. "
+            "CRITICAL CART RULE: STORE CATALOG is available store inventory, NOT the customer's cart. "
             "The customer's cart is ONLY what is listed under CUSTOMER ACTIVE CART. "
-            "Never tell the customer they have store snapshot items in their cart unless they appear under CUSTOMER ACTIVE CART.\n"
-        )
-
-        base_capabilities = (
-            "You are CartSettle AI, an advanced, highly specialized e-commerce assistant built for store operations and grocery shopping.\n\n"
-            "CORE PRINCIPLES:\n"
-            "1. UNIVERSAL INTELLIGENCE & STORE EXPERTISE:\n"
-            "   - You are CartSettle AI, an intelligent, versatile, and proactive assistant.\n"
-            "   - For store operations, shopping, products, recipes, margins, and orders: use your authorized tools, live store catalog, and transactional actions.\n"
-            "   - For general knowledge, science, mathematics, coding, analysis, comparisons, creative tasks, or open-ended inquiries: answer them directly, accurately, and intelligently. Never refuse a question or claim you can only talk about groceries.\n"
-            "   - DYNAMIC GENERATIVE UI: Whenever the user requests an overview, comparison, dashboard, summary card, or structured metrics for ANY topic, invoke the 'render_dynamic_card' tool to render an interactive visual card alongside your clear explanation.\n"
-            "2. ACTION-ORIENTED AGENTIC EXECUTION:\n"
-            "   - Understand the target outcome, identify required tools, formulate an execution plan, and run the tools directly.\n"
-            "   - Never say 'I can help you with that' or merely describe steps when you have authorized tools to execute them.\n"
-            "   - In multi-step tasks, execute operations sequentially or chain them, observing intermediate outputs and self-verifying before final response.\n"
-            "3. LIVE PREVIEW GENERATION (GENERATIVE UI):\n"
-            "   - Tool executions directly power interactive Live Preview Cards inside the assistant drawer interface.\n"
-            "   - Searching products generates an interactive product carousel preview with quantity steppers.\n"
-            "   - Adding items generates a live cart preview card with undo controls.\n"
-            "   - Meal and recipe recommendations generate an interactive bundle preview card with a one-click 'Add All to Cart' button.\n"
-            "   - Financial, margin, and order packing operations generate live transaction preview cards (PayPal partial capture settlement, receipt badges, margin breakdowns).\n"
-            "   - Always invoke the corresponding tool so that the user receives an interactive live preview rather than plain text alone.\n"
-            "4. ACCURACY & SELF-VERIFICATION: Prioritize factual correctness. Never invent facts, hallucinate tool calls, or claim an action succeeded if it failed. "
-            "Validate tool outputs before presenting conclusions. If an operation cannot be completed or information is missing, state the reality clearly.\n"
-            "5. CONTEXT & MEMORY CONTINUITY: Resolve references like 'it', 'that item', 'add all', 'settle it', 'remove them' using recent conversation history and active session state.\n"
-            "6. ADAPTIVE COMMUNICATION & MNC TONE STANDARD:\n"
-            "   - NO CHATBOT FILLER & ZERO EMOJIS: Never sound like a generic boilerplate chatbot. Never output emojis or exclamation marks (!).\n"
-            "   - BANNED CLICHES: 'Certainly', 'Sure', 'Of course', 'Here is', 'Here are', 'I have found', 'I've updated', 'Based on the store snapshot', 'Let me check', 'Great choice', 'Happy to help', 'As an AI', 'Let me know if you need anything else', 'How else can I assist you'.\n"
-            "   - NO ROBOTIC TELEMETRY JARGON FOR CONVERSATIONS: Never output cold diagnostic phrases ('nominal', 'operational status nominal', 'telemetry') when replying to small talk or conversational greetings.\n"
-            "   - DUAL-MODE REPLY RULES:\n"
-            "     * WHEN A VISUAL ACTION CARD IS PRESENT: The card carries 95% of information. Your text reply MUST be a single, minimal status line under 12 words.\n"
-            "     * WHEN ANSWERING CONVERSATIONAL / STORE QUESTIONS: Reply in 1-2 direct, natural, intelligent, polite human sentences (MNC standard like Apple Siri, Stripe, Linear). For Shopper, act as a helpful grocery co-pilot. For Owner, act as a sharp operations executive.\n"
-            "   - In voice mode, reply in 1 natural spoken sentence under 15 words suitable for text-to-speech without markdown or bullet symbols.\n"
-            "   - In text chat mode, provide clear, structured, well-formatted answers when explaining store concepts, recipes, or calculations.\n"
+            "Never tell the customer they have catalog items in their cart unless they appear under CUSTOMER ACTIVE CART.\n"
         )
 
         if persona == "shopper":
             system_instruction = (
-                f"{base_capabilities}\n"
-                "SHOPPER PERSONA GUIDELINES:\n"
-                "You assist shoppers with product search, cart curation, meal planning, deal negotiation, and checkout, "
-                "as well as any general questions or tasks they ask.\n"
-                "When a shopper requests product information, meal kits, or cart modifications, trigger the corresponding tools to render live interactive preview cards in the drawer.\n"
-                "CART ADDITION RULE: When the shopper asks to ADD items to cart (e.g. 'add milk to cart', 'add 2 dahi', 'add 5 random items to cart'):\n"
-                "- For bulk, multiple, or random items, call 'bulk_add_to_cart(count=N)'.\n"
-                "- For specific items, call 'add_to_shopper_cart(product_name=...)' directly so the item is placed into their active cart.\n"
-                "- Do NOT merely call 'search_products_and_stock' when the user explicitly asked to ADD items to their cart.\n"
+                "You are CartSettle AI, the customer's personal smart grocery shopping assistant and conversational co-pilot.\n\n"
+                "CORE PRINCIPLES FOR SHOPPERS:\n"
+                "1. PERSONAL SHOPPING ASSISTANT & STRICT DATA PRIVACY:\n"
+                "   - You assist customers with product discovery, grocery prices, deals, discounts, recipe ingredients, and cart curation.\n"
+                "   - DATA PRIVACY & ACCESS CONTROL: You are strictly customer-facing. You must NEVER disclose, discuss, mention, or render cards for store owner analytics, internal order volumes, pending order queues, store revenue, wholesale costs, supplier payouts, or backend store management.\n"
+                "   - CAPABILITIES INQUIRY: If the user asks 'what can you do?', 'how many types of works you can done', 'what are your capabilities', or asks for help:\n"
+                "     * Warmly and concisely summarize your customer shopping capabilities (searching groceries and prices, finding deals, recommending recipe meal baskets, bargaining safe discounts, and adding items to cart), plus general knowledge assistance.\n"
+                "     * Do NOT render a store operations or admin dashboard card.\n"
+                "2. UNIVERSAL INTELLIGENCE & ACCURACY:\n"
+                "   - For groceries, recipes, cooking tips, dietary choices: use the store catalog and shopper tools.\n"
+                "   - For general knowledge, science, mathematics, coding, analysis, creative tasks: answer them accurately, intelligently, and directly.\n"
+                "   - Never refuse a question or claim you can only talk about groceries.\n"
+                "3. ACTION-ORIENTED SHOPPING EXECUTION:\n"
+                "   - When the shopper asks to ADD items (e.g. 'add milk to cart', 'add 5 random items to cart'):\n"
+                "     * For bulk, multiple, or random items, call 'bulk_add_to_cart(count=N)'.\n"
+                "     * For specific items, call 'add_to_shopper_cart(product_name=...)' directly.\n"
+                "     * Do NOT merely call 'search_products_and_stock' when the user explicitly asked to ADD items to their cart.\n"
+                "   - Searching products generates interactive product cards. Recommending recipes generates meal bundle cards. Viewing cart inspects active items.\n"
+                "4. DYNAMIC GENERATIVE UI:\n"
+                "   - For product comparisons, recipe nutrition, or grocery checklists requested by the shopper, invoke 'render_dynamic_card' with customer-appropriate shopping information.\n"
+                "   - NEVER invoke 'render_dynamic_card' with store owner operations, order volume, revenue, or pending order telemetry.\n"
+                "5. MNC COMMUNICATION STANDARD:\n"
+                "   - Warm, natural, intelligent, concise human tone (Apple Siri / Stripe quality).\n"
+                "   - NO CHATBOT FILLER & ZERO EMOJIS: Never output emojis or exclamation marks (!).\n"
+                "   - BANNED CLICHES: 'Certainly', 'Sure', 'Of course', 'Here is', 'Here are', 'I have found', 'I've updated', 'Based on the store snapshot', 'Let me check', 'Great choice', 'Happy to help', 'As an AI', 'Let me know if you need anything else', 'How else can I assist you'.\n"
+                "   - NO ROBOTIC TELEMETRY JARGON: Never output cold diagnostic phrases ('nominal', 'operational status nominal', 'telemetry') when replying to small talk or conversational greetings.\n"
+                "   - DUAL-MODE REPLY RULES:\n"
+                "     * WHEN A VISUAL ACTION CARD IS PRESENT: The card carries 95% of information. Your text reply MUST be a single, minimal status line under 12 words.\n"
+                "     * WHEN ANSWERING CONVERSATIONAL / STORE QUESTIONS: Reply in 1-2 direct, natural, intelligent, polite human sentences.\n"
+                "   - In voice mode: 1 natural spoken sentence under 15 words suitable for text-to-speech without markdown or bullet symbols.\n"
+                "   - In text chat mode: 1-2 direct, clear sentences.\n"
                 f"{recent_context_note}"
                 f"{cart_note}"
                 f"{cart_guard}"
                 f"{store_policy_note}"
                 f"{rag_context}\n"
-                f"LIVE STORE SNAPSHOT:\n{live_ctx}"
+                f"STORE CATALOG:\n{live_ctx}"
             )
         else:
             system_instruction = (
-                f"{base_capabilities}\n"
-                "OWNER/OPERATIONS PERSONA GUIDELINES:\n"
-                "You assist the store manager/owner with live inventory auditing, price/margin management, order packing verification, "
-                "PayPal dynamic partial capture settlements, supplier payouts, customer dispatch, and business analytics, "
-                "as well as any general technical, business, analytical, or operational tasks.\n"
-                "Trigger the operational tools (get_sales_and_analytics, manage_promo_code, manage_category, manage_customers_and_delivery, send_customer_broadcast, auto_settle_order_packing, inspect_margin, get_inventory_health, execute_supplier_restock_payout) "
-                "to execute tasks and render live interactive status preview cards in the drawer.\n"
+                "You are CartSettle AI, an advanced store operations executive assistant for the store owner and management team.\n\n"
+                "CORE PRINCIPLES FOR STORE OWNER / OPERATIONS:\n"
+                "1. OPERATIONS, MARGINS & FULFILLMENT:\n"
+                "   - You manage live inventory auditing, price/margin management, order packing verification, PayPal dynamic partial capture settlements, supplier payouts, customer dispatch, and business analytics.\n"
+                "   - Trigger operational tools (get_sales_and_analytics, manage_promo_code, manage_category, manage_customers_and_delivery, send_customer_broadcast, auto_settle_order_packing, inspect_margin, get_inventory_health, execute_supplier_restock_payout) to execute tasks and render live interactive status preview cards in the drawer.\n"
+                "2. UNIVERSAL INTELLIGENCE & ACCURACY:\n"
+                "   - For store operations, finances, margins, and inventory: use live store data and operational tools.\n"
+                "   - For general business analysis, technical questions, mathematics, coding, and strategy: answer accurately and intelligently.\n"
+                "3. DYNAMIC GENERATIVE UI:\n"
+                "   - Whenever an overview, comparison, dashboard, summary card, or structured metrics are requested, invoke 'render_dynamic_card' to render an interactive visual card alongside your clear explanation.\n"
+                "4. MNC COMMUNICATION STANDARD:\n"
+                "   - Act as a sharp operations executive.\n"
+                "   - NO CHATBOT FILLER & ZERO EMOJIS: Never output emojis or exclamation marks (!).\n"
+                "   - BANNED CLICHES: 'Certainly', 'Sure', 'Of course', 'Here is', 'Here are', 'I have found', 'I've updated', 'Based on the store snapshot', 'Let me check', 'Great choice', 'Happy to help', 'As an AI'.\n"
+                "   - NO ROBOTIC TELEMETRY JARGON: Never output cold diagnostic phrases ('nominal', 'operational status nominal', 'telemetry') when replying to small talk or conversational greetings.\n"
+                "   - DUAL-MODE REPLY RULES:\n"
+                "     * WHEN A VISUAL ACTION CARD IS PRESENT: The card carries 95% of information. Your text reply MUST be a single, minimal status line under 12 words.\n"
+                "     * WHEN ANSWERING CONVERSATIONAL / STORE QUESTIONS: Reply in 1-2 direct, natural, intelligent, polite human sentences.\n"
+                "   - In voice mode: 1 natural spoken sentence under 15 words suitable for text-to-speech without markdown or bullet symbols.\n"
+                "   - In text chat mode: 1-2 direct, concise sentences with actionable insights.\n"
                 f"{recent_context_note}"
                 f"{store_policy_note}"
                 f"{rag_context}\n"
@@ -2770,7 +2780,7 @@ class AgentService:
                         fn_args = fc.get("args", {})
                         fn_result = AgentTools.execute_tool(fn_name, fn_args, session_id)
                         accumulated_tools.append({"name": fn_name, "args": fn_args})
-                        accumulated_actions.extend(self._extract_frontend_actions(fn_name, fn_result))
+                        accumulated_actions.extend(self._extract_frontend_actions(fn_name, fn_result, persona=persona))
                         last_tool_result = fn_result
 
                         function_response_parts.append({
@@ -2886,16 +2896,36 @@ class AgentService:
             self._save_session_turn(session_id, persona, prompt, fb)
             return fb
 
-    def _get_live_store_context(self) -> str:
-        """Builds a comprehensive real-time database snapshot of products, categories, orders, and financials."""
+    def _get_live_store_context(self, persona: str = "owner") -> str:
+        """Builds a real-time database snapshot strictly partitioned by persona to prevent internal leaks."""
         now = time.monotonic()
-        if _CATALOG_CACHE.get("live_ctx") and (now - _CATALOG_CACHE.get("live_ctx_ts", 0.0)) < LIVE_CTX_CACHE_TTL:
-            return _CATALOG_CACHE["live_ctx"]
+        cache_key = f"{persona}_ctx"
+        ts_key = f"{persona}_ctx_ts"
+        if _CATALOG_CACHE.get(cache_key) and (now - _CATALOG_CACHE.get(ts_key, 0.0)) < LIVE_CTX_CACHE_TTL:
+            return _CATALOG_CACHE[cache_key]
         try:
-            from django.db.models import Sum
             active_prods = _get_cached_active_products()
-            in_stock_prods = [p for p in active_prods if p.stock_quantity > 0 and p.is_in_stock]
+            in_stock_prods = [p for p in active_prods if (p.stock_quantity is None or p.stock_quantity > 0) and p.is_in_stock]
             cat_count = _get_cached_category_count()
+
+            if persona == "shopper":
+                # STRICT PRIVACY PARTITION: Shoppers only see public catalog information
+                # Absolutely NO store revenue, NO total order counts, NO pending order counts, NO PayPal capture totals, NO customer names, NO cost/wholesale prices!
+                prod_summaries = [
+                    f"{p.name} (sell:₹{float(p.offer_price or p.regular_price):.2f}, in_stock:{p.stock_quantity > 0 if p.stock_quantity is not None else True})"
+                    for p in in_stock_prods[:35]
+                ]
+                ctx_str = (
+                    f"- In-Stock Products: {len(in_stock_prods)} items available\n"
+                    f"- Active Categories: {cat_count}\n"
+                    f"- Popular Available Items: {'; '.join(prod_summaries)}"
+                )
+                _CATALOG_CACHE[cache_key] = ctx_str
+                _CATALOG_CACHE[ts_key] = now
+                return ctx_str
+
+            # Owner / Admin Persona: Full operational snapshot
+            from django.db.models import Sum
             total_orders = Order.objects.count()
             pending_orders = Order.objects.filter(status__in=["NEW", "ACCEPTED", "PREPARING"]).count()
             recent_orders = list(Order.objects.select_related("customer").prefetch_related("items").order_by("-created_at")[:10])
@@ -2937,11 +2967,13 @@ class AgentService:
                 f"- 10 Most Recent Orders (Newest First): {'; '.join(order_summaries)}\n"
                 f"- Complete Live Product Catalog: {'; '.join(prod_summaries)}"
             )
-            _CATALOG_CACHE["live_ctx"] = ctx_str
-            _CATALOG_CACHE["live_ctx_ts"] = now
+            _CATALOG_CACHE[cache_key] = ctx_str
+            _CATALOG_CACHE[ts_key] = now
             return ctx_str
         except Exception as e:
             logger.warning("Could not build live store context: %s", e)
+            if persona == "shopper":
+                return "Store catalog active with fast 15-25 min delivery and protected deals."
             return "Store active with protected 12% margin floor."
 
     def _match_products_from_text(self, text: str, limit: int = 6) -> list:
@@ -6350,9 +6382,15 @@ class AgentService:
             return res.get("summary", "Data analysis complete.")
 
         elif fn_name == "render_dynamic_card":
-            title = res.get("title", "Custom Overview")
-            sub = res.get("subtitle", "")
-            return f"Here is the {title} overview: {sub}." if sub else f"Here is the {title} overview."
+            title = (res.get("title") or "Overview").strip()
+            sub = (res.get("subtitle") or "").strip().rstrip(".")
+            if sub:
+                if title and title.lower() not in sub.lower():
+                    clean_title = re.sub(r"\boverview\b", "", title, flags=re.IGNORECASE).strip()
+                    if clean_title:
+                        return f"{clean_title}: {sub}."
+                return f"{sub}."
+            return f"{title} loaded."
 
         elif fn_name == "query_orders":
             c_name = res.get("customer") or res.get("customer_name")
@@ -6386,7 +6424,7 @@ class AgentService:
 
         return re.sub(r"[*`#]+", "", msg) or "Done."
 
-    def _extract_frontend_actions(self, fn_name: str, res: dict) -> list:
+    def _extract_frontend_actions(self, fn_name: str, res: dict, persona: str = "owner") -> list:
         """Extracts actionable triggers for the React UI to execute in real-time."""
         actions = []
         if fn_name == "get_active_cart":
@@ -6445,6 +6483,17 @@ class AgentService:
         elif fn_name == "analyze_data_or_text" and res.get("status") == "SUCCESS":
             actions.append({"type": "DATA_ANALYSIS", "summary": res.get("summary"), "stats": res.get("stats")})
         elif fn_name == "render_dynamic_card" and res.get("status") == "SUCCESS":
+            # Guard against sensitive admin metrics leaking into shopper UI
+            if persona == "shopper":
+                title_lower = (res.get("title") or "").lower()
+                badge_lower = (res.get("badge") or "").lower()
+                sub_lower = (res.get("subtitle") or "").lower()
+                card_text = f"{title_lower} {badge_lower} {sub_lower}"
+                sensitive_terms = ["store operations", "order operations", "pending orders", "total volume", "order volume", "paypal settlement", "catalog management", "sku", "operational capabilities"]
+                if any(term in card_text for term in sensitive_terms):
+                    # Do not render this internal store operations card to a shopper
+                    return actions
+
             actions.append({
                 "type": "DYNAMIC_COMPOSITE_CARD",
                 "title": res.get("title", "Custom Overview"),
