@@ -64,8 +64,8 @@ All files are located in `C:\Users\SAI SATYANARAYANA\OneDrive\Desktop\DemoVideo\
    - Always reference paths as `assets/final_compressed.mp4` and `assets/voiceover.mp3` (no leading `/`).
 3. **Build Root `index.html` (`1920x1080`, `30fps`, `data-duration="124.13"`)**:
    - Mount Scene 1 sub-composition (`compositions/problem-intro.html`) with `class="clip" data-start="0" data-duration="20" data-track-kind="graphics"`.
-   - Mount the main video `<video class="clip" id="demo-video" src="assets/final_compressed.mp4" data-start="20" data-duration="104.13" muted></video>`.
-   - Mount the 5 lower-third glassmorphic badge clips (`class="clip"`, `data-track-kind="graphics"`, inside the 80% title-safe bottom-left area, `z-index: 10`) at:
+   - Mount the main video `<video class="clip" id="demo-video" src="assets/final_compressed.mp4" data-start="20" data-duration="104.13" muted></video>` framed at `left: 112px; top: 18px; width: 1696px; height: 954px; border-radius: 14px;` (88.3% scale, 16:9 ratio, ending at `y=972px`) so the bottom `108px` strip (`y=972px..1080px`) is dedicated space OUTSIDE the video for the chapter title bar.
+   - Mount the 5 chapter title badge clips (`class="clip"`, `data-track-kind="graphics"`, centered at `bottom: 16px` completely outside/below the video frame, `z-index: 10`) at:
      - `id="badge-1" data-start="20" data-duration="22"`
      - `id="badge-2" data-start="42" data-duration="26"`
      - `id="badge-3" data-start="68" data-duration="19"`
