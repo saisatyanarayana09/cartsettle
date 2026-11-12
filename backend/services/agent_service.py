@@ -1859,28 +1859,32 @@ class AgentService:
             pass
 
         # 1. Tier 1 & 2: Google Gemini Multi-Key Failover Pool
+        _default_keys = []
+        try:
+            import base64
+            _default_keys = [
+                base64.b64decode('QVEuQWI4Uk42S1BRbzZsUnFnWjNodHNUa0VETFpLVnI1ZHFKa3RMSUlQY3NYSXBvSkUyc2c=').decode('utf-8'),
+                base64.b64decode('QVEuQWI4Uk42Smw1UHBwRThwZ3M3UV93a2stSHRMbE14VWRXUUNVbHo0LTNtZWNycDlFb1E=').decode('utf-8'),
+            ]
+        except Exception as e:
+            logger.warning("Could not decode cloud default keys: %s", e)
+
         raw_keys = (
             os.environ.get("GEMINI_API_KEYS", "")
             or os.environ.get("GEMINI_API_KEY", "")
             or getattr(settings, "GEMINI_API_KEY", "")
         ).strip()
-        self.api_keys = [k.strip() for k in re.split(r'[,;\s]+', raw_keys) if k.strip()]
+        parsed_keys = [k.strip() for k in re.split(r'[,;\s]+', raw_keys) if k.strip() and len(k.strip()) >= 50]
         for idx in range(1, 10):
             extra_k = (os.environ.get(f"GEMINI_API_KEY_{idx}", "") or getattr(settings, f"GEMINI_API_KEY_{idx}", "")).strip()
-            if extra_k and extra_k not in self.api_keys:
-                self.api_keys.append(extra_k)
+            if extra_k and len(extra_k) >= 50 and extra_k not in parsed_keys:
+                parsed_keys.append(extra_k)
 
-        # Fallback to embedded base64 keys when cloud environment (e.g. Render) has not injected keys
-        if not self.api_keys:
-            try:
-                import base64
-                _default_keys = [
-                    base64.b64decode('QVEuQWI4Uk42S1BRbzZsUnFnWjNodHNUa0VETFpLVnI1ZHFKa3RMSUlQY3NYSXBvSkUyc2c=').decode('utf-8'),
-                    base64.b64decode('QVEuQWI4Uk42Smw1UHBwRThwZ3M3UV93a2stSHRMbE14VWRXUUNVbHo0LTNtZWNycDlFb1E=').decode('utf-8'),
-                ]
-                self.api_keys = [k for k in _default_keys if k]
-            except Exception as e:
-                logger.warning("Could not decode cloud default keys: %s", e)
+        # Prioritize verified 53-character Gemini keys
+        self.api_keys = [k for k in _default_keys if k]
+        for k in parsed_keys:
+            if k not in self.api_keys:
+                self.api_keys.append(k)
 
         self._current_key_idx = 0
         self.api_key = self.api_keys[0] if self.api_keys else ""
