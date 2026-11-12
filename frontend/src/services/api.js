@@ -57,10 +57,11 @@ api.interceptors.request.use(
     } else {
       config.headers['X-Portal-Context'] = 'customer';
     }
-    // 25s POST cap so local ASGI and cloud LLM requests never get prematurely aborted mid-flight
+    // Fast 6.5s POST cap (9s for vision uploads) so AI Agent calls never stall on cold starts or upstream spikes
     if ((config.url || '').includes('/store/agent/') && !config.timeout) {
       const isGet = (config.method || 'get').toLowerCase() === 'get';
-      config.timeout = isGet ? 5000 : 25000;
+      const hasImage = Boolean(config.data && typeof config.data === 'object' && config.data.image);
+      config.timeout = isGet ? 3500 : hasImage ? 9000 : 6500;
     }
     return config;
   },
@@ -179,12 +180,17 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Autonomous client-side Agent fallback when hosted in Lovable.dev cloud preview or during Render cold start (>1.8s)
+    // Autonomous client-side Agent fallback when hosted in Lovable.dev cloud preview or during Render cold start
     if ((originalRequest.url || '').includes('/store/agent/')) {
-      // Retry once if the local backend is mid-reload or had a transient socket reset
-      if (!originalRequest._agentRetried && isBackendUnreachable(error)) {
+      const isAgentTimeout =
+        error?.code === 'ECONNABORTED' ||
+        error?.code === 'ETIMEDOUT' ||
+        error?.message?.toLowerCase().includes('timeout');
+      // Only retry once (with a fast 2.5s cap) if the local backend had an instant socket reset, never after a timeout
+      if (!originalRequest._agentRetried && !isAgentTimeout && isBackendUnreachable(error)) {
         originalRequest._agentRetried = true;
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        originalRequest.timeout = 2500;
+        await new Promise((resolve) => setTimeout(resolve, 250));
         try {
           return await api(originalRequest);
         } catch {

@@ -31,8 +31,8 @@ from services.paypal_service import paypal_service
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-flash-lite-latest"
-FALLBACK_MODELS = ["gemini-flash-lite-latest", "gemini-3.5-flash-lite"]
+GEMINI_MODEL = "gemini-3.1-flash-lite"
+FALLBACK_MODELS = ["gemini-3.1-flash-lite", "gemini-flash-lite-latest"]
 MIN_PROFIT_MARGIN_PCT = Decimal("12.0")
 
 # Session store for pending two-phase destructive actions (bulk price/restock)
@@ -2205,12 +2205,12 @@ class AgentService:
         logger.warning("Marked Gemini key index %d as invalid/unauthenticated (disabled). Reason: %s", key_idx, reason)
 
     def mark_key_rate_limited(self, key_idx: int, reason: str = "", model_name: str = ""):
-        """Puts a specific key index into a 15-second cooldown on 429/403 so subsequent turns immediately use the backup."""
+        """Puts a specific key index into a 45-second cooldown on 429/403/timeout so subsequent turns immediately use the backup."""
         if not hasattr(self, "_key_cooldowns"):
             self._key_cooldowns = {}
         cd_key = (model_name, key_idx) if model_name else key_idx
-        self._key_cooldowns[cd_key] = time.time() + 15.0
-        logger.warning("Marked Gemini key index %d as rate-limited (15s cooldown on %s). Reason: %s", key_idx, model_name or "all", reason)
+        self._key_cooldowns[cd_key] = time.time() + 45.0
+        logger.warning("Marked Gemini key index %d as rate-limited (45s cooldown on %s). Reason: %s", key_idx, model_name or "all", reason)
 
     def rotate_api_key(self, reason: str = "") -> str:
         """Rotates to the next available API key in the pool upon rate-limit (429/403)."""
@@ -2622,9 +2622,29 @@ class AgentService:
             self._save_session_turn(session_id, persona, prompt, chk_obj)
             return chk_obj
 
+        # Sub-50ms Fast-Path Intent Router for instant store, cart, catalog, and operational actions
+        fast_hit = self._check_fast_path(resolved_prompt, persona, session_id, cart_items=cart_items, user=user)
+        if fast_hit:
+            clean_rep, voice_rep = self._to_concise_human_reply(fast_hit.get("reply", "Done."), mode=mode)
+            fast_hit["reply"] = clean_rep
+            fast_hit["voice_reply"] = voice_rep
+            fast_hit["mode"] = mode
+            fast_hit["latency_ms"] = max(1, int((time.perf_counter() - t0) * 1000))
+            active_badge = "Gemini Core" if (self.api_key or self.groq_api_key) else "Local Engine"
+            fast_hit["model_badge"] = active_badge
+            fast_hit["provider"] = active_badge
+            fast_hit["follow_ups"] = self._build_follow_ups(persona, fast_hit.get("actions", []), mem)
+            self._save_session_turn(session_id, persona, prompt, fast_hit)
+            broadcast_agent_thought(session_id, {
+                "status": "complete",
+                "response": clean_rep,
+                "actions": fast_hit.get("actions", [])
+            })
+            return fast_hit
+
         # Offline / fallback mode if no API keys are configured at all
         if not self.api_key and not self.groq_api_key:
-            fb = self._check_fast_path(resolved_prompt, persona, session_id, cart_items=cart_items, user=user) or self._fallback_chat(resolved_prompt, session_id, persona)
+            fb = self._fallback_chat(resolved_prompt, session_id, persona)
             clean_rep, voice_rep = self._to_concise_human_reply(fb.get("reply", "Done."), mode=mode)
             fb["reply"] = clean_rep
             fb["voice_reply"] = voice_rep
@@ -2807,11 +2827,12 @@ class AgentService:
                 for cand_m in candidate_models:
                     key_pairs = self.get_active_gemini_keys(cand_m)
                     if not key_pairs:
-                        break
+                        continue
+                    model_timed_out = False
                     for k_idx, active_key in key_pairs:
                         c_url = f"https://generativelanguage.googleapis.com/v1beta/models/{cand_m}:generateContent?key={active_key}"
                         try:
-                            res = self.http_session.post(c_url, json=payload, timeout=(3.0, 12.0))
+                            res = self.http_session.post(c_url, json=payload, timeout=(1.5, 2.5))
                             if res.status_code == 200:
                                 successful_key_idx = k_idx
                                 break
@@ -2821,14 +2842,21 @@ class AgentService:
                                 self.mark_key_invalid(k_idx, f"Status {res.status_code} on {cand_m}")
                                 break
                             else:
+                                self.mark_key_rate_limited(k_idx, f"Status {res.status_code} on {cand_m}", model_name=cand_m)
                                 logger.warning("Gemini model %s returned status %s on key %d", cand_m, res.status_code, k_idx)
                         except requests.exceptions.Timeout:
+                            for idx in range(len(self.api_keys)):
+                                self.mark_key_rate_limited(idx, f"Timeout on {cand_m}")
                             logger.warning("Gemini model %s timed out on key %d", cand_m, k_idx)
+                            model_timed_out = True
+                            break
                         except Exception as ex:
+                            self.mark_key_rate_limited(k_idx, f"Exception on {cand_m}")
                             logger.warning("Gemini model %s failed on key %d: %s", cand_m, k_idx, ex)
+                            break
                     if res is not None and res.status_code == 200:
                         break
-                    if not self.get_active_gemini_keys(cand_m):
+                    if model_timed_out and self.groq_api_key:
                         break
 
                 if res is None or res.status_code != 200:
@@ -3541,7 +3569,8 @@ class AgentService:
             and not any(w in lower for w in [
                 "how many", "count", "cheapest", "lowest price", "margin", "highest margin", "lowest margin",
                 "create", "delete", "remove", "discount", "increase", "reduce", "raise", "cut", "mark down",
-                "replenish", "restock", "payout", "price of"
+                "replenish", "restock", "payout", "price of", "add", "cart", "put", "buy", "order",
+                "recipe", "dinner", "breakfast", "lunch", "what about"
             ])
             and not (("in stock" in lower or "available" in lower) and any(w in lower for w in ["is ", "are ", "stock of "]) and not any(w in lower for w in ["category", "belong", "under", "items", "products"]))
         )
@@ -3595,7 +3624,7 @@ class AgentService:
         target_cust_q = None
         matched_user = None
         is_order_query = False
-        if not any(w in lower for w in ["settle", "accept", "reject", "cancel", "pack", "credit", "customer care", "customer support", "customer service"]):
+        if not any(w in lower for w in ["settle", "accept", "reject", "cancel", "pack", "credit", "customer care", "customer support", "customer service", "discount", "margin", "offer", "wants", "asking", "%"]):
             order_stopwords = {"recent", "latest", "last", "newest", "pending", "cancelled", "canceled", "rejected", "my", "all", "total", "past", "store", "today", "yesterday", "delivered", "show", "get", "view", "track", "how", "many", "these", "me", "details", "profile", "info", "dossier", "account", "orders", "order"}
 
             if "order" in lower:
@@ -5785,8 +5814,11 @@ class AgentService:
 
             # Suite 2A: Smart Budget Cart Builder ("build a cart under ₹20", "grocery bag under ₹15", "fill my cart for ₹25", "weekly essentials")
             if (
-                any(k in lower for k in ["build a cart", "build cart", "cart under", "bag under", "fill my cart", "budget cart", "weekly essential", "essential bag", "grocery bag"])
-                or (("cart" in lower or "bag" in lower or "basket" in lower) and re.search(r"(?:under|for|within)\s*\$?(\d+)", lower))
+                (
+                    any(k in lower for k in ["build a cart", "build cart", "cart under", "bag under", "fill my cart", "budget cart", "weekly essential", "essential bag", "grocery bag"])
+                    or (("cart" in lower or "bag" in lower or "basket" in lower) and re.search(r"(?:under|for|within)\s*\$?(\d+)", lower))
+                )
+                and not any(r in lower for r in ["recipe", "dinner", "breakfast", "lunch", "meal", "salad", "pasta", "cook"])
             ):
                 b_match = re.search(r"\$?(\d+(?:\.\d+)?)", lower)
                 budget = float(b_match.group(1)) if b_match else 20.0
@@ -6959,20 +6991,22 @@ class AgentService:
                     "response_mime_type": "application/json"
                 }
             }
-            candidate_models = [GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]
+            candidate_models = ["gemini-3.1-flash-lite", "gemini-flash-lite-latest"]
             res = None
             for cand_m in candidate_models:
-                key_pairs = self.get_active_gemini_keys() or [(i, k) for i, k in enumerate(self.api_keys)]
+                key_pairs = self.get_active_gemini_keys(cand_m) or [(i, k) for i, k in enumerate(self.api_keys[:1])]
                 for k_idx, active_key in key_pairs:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{cand_m}:generateContent?key={active_key}"
                     try:
-                        res = self.http_session.post(url, json=payload, timeout=(5.0, 18.0))
+                        res = self.http_session.post(url, json=payload, timeout=(2.0, 4.5))
                         if res.status_code == 200:
                             break
                         elif res.status_code in (429, 403):
-                            self.mark_key_rate_limited(k_idx, f"Vision {res.status_code} on {cand_m}")
+                            self.mark_key_rate_limited(k_idx, f"Vision {res.status_code} on {cand_m}", model_name=cand_m)
                     except Exception as e:
+                        self.mark_key_rate_limited(k_idx, f"Vision timeout/err on {cand_m}", model_name=cand_m)
                         logger.warning("Grocery vision attempt failed on %s (key %d): %s", cand_m, k_idx, e)
+                        break
                 if res is not None and res.status_code == 200:
                     break
 
