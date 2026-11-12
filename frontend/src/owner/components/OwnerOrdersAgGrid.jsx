@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
@@ -12,11 +12,16 @@ import {
   RefreshCw,
   Clock,
   CheckCircle,
-  AlertTriangle,
   FileText,
   ExternalLink,
   Truck,
-  Send
+  Send,
+  Copy,
+  TrendingUp,
+  Layers,
+  Banknote,
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -36,7 +41,53 @@ export default function OwnerOrdersAgGrid({
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
-  // Filter rows based on quick filter and status dropdown
+  // Compute Live Operational KPIs
+  const stats = useMemo(() => {
+    let totalVolume = 0;
+    let holdVolume = 0;
+    let pendingPackCount = 0;
+    let activeQueueCount = 0;
+    let completedCount = 0;
+    let newCount = 0;
+    let prepCount = 0;
+    let readyCount = 0;
+    let invoicedCount = 0;
+    let dispatchedCount = 0;
+
+    orders.forEach((o) => {
+      const amt = parseFloat(o.total_amount || 0);
+      totalVolume += amt;
+      if (o.paypal_authorization_id && !o.paypal_capture_id && o.status !== 'REJECTED') {
+        holdVolume += parseFloat(o.authorized_amount || o.total_amount || 0);
+        pendingPackCount += 1;
+      }
+      if (['NEW', 'ACCEPTED', 'PREPARING', 'READY'].includes(o.status)) {
+        activeQueueCount += 1;
+      }
+      if (o.status === 'NEW') newCount += 1;
+      if (o.status === 'PREPARING') prepCount += 1;
+      if (o.status === 'READY') readyCount += 1;
+      if (o.status === 'COMPLETED') completedCount += 1;
+      if (o.paypal_invoice_url || o.paypal_invoice_id) invoicedCount += 1;
+      if (o.paypal_tracking_number) dispatchedCount += 1;
+    });
+
+    return {
+      totalVolume,
+      totalOrders: orders.length,
+      holdVolume,
+      pendingPackCount,
+      activeQueueCount,
+      completedCount,
+      newCount,
+      prepCount,
+      readyCount,
+      invoicedCount,
+      dispatchedCount
+    };
+  }, [orders]);
+
+  // Filter rows based on quick filter and status selection
   const filteredData = useMemo(() => {
     if (!orders) return [];
     if (statusFilter === 'ALL') return orders;
@@ -58,7 +109,7 @@ export default function OwnerOrdersAgGrid({
       setActionLoadingId(orderId);
       const res = await api.post(`/orders/${orderId}/generate_invoice/`, {});
 
-      toast.success(`PayPal Invoicing v2 invoice created!`);
+      toast.success('PayPal Invoicing v2 invoice created!');
       if (gridRef.current && gridRef.current.api) {
         gridRef.current.api.applyTransaction({ update: [res.data.order] });
         gridRef.current.api.flashCells({
@@ -100,13 +151,13 @@ export default function OwnerOrdersAgGrid({
   const StatusCellRenderer = useCallback((params) => {
     const status = params.value;
     const styles = {
-      NEW: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
-      ACCEPTED: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
-      PREPARING: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
-      READY: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
-      OUT_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
-      COMPLETED: 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-      REJECTED: 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
+      NEW: 'bg-[#FAF5EF] text-[#56323E] border-[#E7DBCF] dark:bg-[#432634] dark:text-[#FAF5EF] dark:border-white/10',
+      ACCEPTED: 'bg-[#F2E6DA] text-[#56323E] border-[#E7DBCF] dark:bg-[#3F2231] dark:text-[#EFDFD2] dark:border-white/10',
+      PREPARING: 'bg-[#FDF2EC] text-[#8C4A2B] border-[#F2DACD] dark:bg-[#4D2E24]/50 dark:text-[#E8B5A2] dark:border-[#6D4336]/60',
+      READY: 'bg-[#EAF2EC] text-[#2F5238] border-[#CFDFD3] dark:bg-[#2D4536]/40 dark:text-[#A8D5B5] dark:border-[#3F634D]/50',
+      OUT_FOR_DELIVERY: 'bg-[#F5ECE1] text-[#56323E] border-[#E7DBCF] dark:bg-[#3F2231] dark:text-[#EFDFD2] dark:border-white/10',
+      COMPLETED: 'bg-[#FAF5EF] text-[#7D6671] border-[#E7DBCF] dark:bg-[#351D28] dark:text-[#C5B0BA] dark:border-white/10',
+      REJECTED: 'bg-[#FDF0F2] text-[#8E283E] border-[#F6D0D8] dark:bg-[#4A1A26]/40 dark:text-[#EFA3B2] dark:border-[#6B2838]/50',
     };
 
     return (
@@ -116,16 +167,16 @@ export default function OwnerOrdersAgGrid({
     );
   }, []);
 
-  // PayPal Settlement Status Renderer
+  // PayPal Settlement Status Renderer (INR ₹)
   const PayPalSettlementRenderer = useCallback((params) => {
     const order = params.data;
     if (!order) return null;
 
-    if (order.paypal_capture_id) {
+    if (order.paypal_capture_id || ['READY', 'OUT_FOR_DELIVERY', 'COMPLETED'].includes(order.status)) {
       return (
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
           <CheckCircle className="w-3.5 h-3.5" />
-          Captured (${parseFloat(order.captured_amount || order.total_amount).toFixed(2)})
+          Captured (₹{parseFloat(order.captured_amount || order.total_amount).toFixed(2)})
         </span>
       );
     }
@@ -133,28 +184,28 @@ export default function OwnerOrdersAgGrid({
       return (
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
           <Clock className="w-3.5 h-3.5 animate-pulse" />
-          Hold: ${parseFloat(order.authorized_amount || order.total_amount).toFixed(2)}
+          Hold: ₹{parseFloat(order.authorized_amount || order.total_amount).toFixed(2)}
         </span>
       );
     }
     return (
-      <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">
-        {order.payment_method || 'COD'}
+      <span className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 dark:text-sky-400">
+        PayPal
       </span>
     );
   }, []);
 
-  // Auto-Released Refund Renderer
+  // Auto-Released Refund Renderer (INR ₹)
   const ReleasedRefundRenderer = useCallback((params) => {
     const released = parseFloat(params.value || 0);
     if (released > 0) {
       return (
         <span className="inline-flex items-center text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-          -${released.toFixed(2)} Released
+          -₹{released.toFixed(2)} Released
         </span>
       );
     }
-    return <span className="text-xs text-slate-400 dark:text-slate-600">-</span>;
+    return <span className="text-xs text-[#A68B98] dark:text-[#A68B98]">-</span>;
   }, []);
 
   // PayPal Invoicing v2 Cell Renderer
@@ -168,7 +219,7 @@ export default function OwnerOrdersAgGrid({
           href={order.paypal_invoice_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 rounded border border-indigo-200 dark:border-indigo-800 transition-all"
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-[#56323E] dark:text-[#EFDFD2] bg-[#56323E]/10 dark:bg-[#EFDFD2]/10 rounded border border-[#56323E]/20 dark:border-white/10 transition-all hover:opacity-85"
           title="Open Official PayPal Invoice in new tab"
         >
           <FileText className="w-3.5 h-3.5" />
@@ -184,7 +235,7 @@ export default function OwnerOrdersAgGrid({
         <button
           onClick={() => handleGenerateInvoice(order.id)}
           disabled={isGenerating}
-          className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:text-indigo-600 bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded border border-slate-200 dark:border-slate-700 transition-all cursor-pointer disabled:opacity-50"
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-[#56323E] dark:text-[#EFDFD2] bg-[#FAF5EF] hover:bg-[#EFDFD2] dark:bg-[#3F2231] dark:hover:bg-[#432634] rounded border border-[#E7DBCF] dark:border-white/10 transition-all cursor-pointer disabled:opacity-50"
         >
           {isGenerating ? <RefreshCw className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
           <span>Send Inv v2</span>
@@ -192,7 +243,7 @@ export default function OwnerOrdersAgGrid({
       );
     }
 
-    return <span className="text-xs text-slate-400 font-mono">-</span>;
+    return <span className="text-xs text-[#A68B98] font-mono">-</span>;
   }, [actionLoadingId]);
 
   // Shipping Tracking Cell Renderer
@@ -202,8 +253,8 @@ export default function OwnerOrdersAgGrid({
 
     if (order.paypal_tracking_number) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-mono font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 truncate max-w-[140px]" title={order.paypal_tracking_number}>
-          <Truck className="w-3 h-3 text-indigo-500 shrink-0" />
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-mono font-medium text-[#5E4752] dark:text-[#C5B0BA] bg-[#F2E9E0] dark:bg-[#3F2231] rounded border border-[#E7DBCF] dark:border-white/[0.08] truncate max-w-[140px]" title={order.paypal_tracking_number}>
+          <Truck className="w-3 h-3 text-[#56323E] dark:text-[#EFDFD2] shrink-0" />
           <span className="truncate">{order.paypal_tracking_number}</span>
         </span>
       );
@@ -223,7 +274,7 @@ export default function OwnerOrdersAgGrid({
       );
     }
 
-    return <span className="text-xs text-slate-400">-</span>;
+    return <span className="text-xs text-[#A68B98]">-</span>;
   }, [actionLoadingId]);
 
   // Actions Cell Renderer
@@ -238,7 +289,7 @@ export default function OwnerOrdersAgGrid({
         {needsSettlement ? (
           <button
             onClick={() => onOpenSettlement && onOpenSettlement(order)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-white bg-linear-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 rounded-lg shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#FAF5EF] bg-[#56323E] hover:bg-[#432634] dark:bg-[#EFDFD2] dark:hover:bg-[#E7DBCF] dark:text-[#2D1822] rounded-lg shadow-xs transition-all cursor-pointer"
             title="Open Packing Table for Dynamic Settlement"
           >
             <PackageCheck className="w-3.5 h-3.5" />
@@ -247,7 +298,7 @@ export default function OwnerOrdersAgGrid({
         ) : (
           <button
             onClick={() => onViewDetails && onViewDetails(order)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-all cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[#56323E] dark:text-[#EFDFD2] bg-[#FAF5EF] hover:bg-[#EFDFD2] dark:bg-[#3F2231] dark:hover:bg-[#432634] border border-[#E7DBCF] dark:border-white/10 rounded-lg transition-all cursor-pointer"
           >
             View <ArrowRight className="w-3 h-3" />
           </button>
@@ -261,30 +312,63 @@ export default function OwnerOrdersAgGrid({
     {
       headerName: 'Order #',
       field: 'id',
-      width: 140,
+      width: 150,
       pinned: 'left',
-      cellRenderer: (p) => (
-        <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-xs">
-          #{p.value}
-        </span>
-      ),
+      cellRenderer: (p) => {
+        const orderId = String(p.value || '');
+        return (
+          <div className="flex items-center gap-1.5 group py-1">
+            <span className="font-mono font-bold text-[#56323E] dark:text-[#EFDFD2] text-xs">
+              #{orderId}
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(orderId);
+                toast.success(`Order #${orderId} copied!`);
+              }}
+              className="opacity-0 group-hover:opacity-100 p-1 text-[#A68B98] hover:text-[#56323E] dark:hover:text-[#EFDFD2] transition-opacity cursor-pointer"
+              title="Copy Order ID"
+            >
+              <Copy className="w-3 h-3" />
+            </button>
+          </div>
+        );
+      },
       sortable: true,
       filter: true
     },
     {
       headerName: 'Customer',
       field: 'customer_name',
-      width: 160,
-      cellRenderer: (p) => (
-        <div className="leading-tight py-1">
-          <div className="font-medium text-slate-900 dark:text-slate-100 text-xs truncate">
-            {p.value || 'Shopper'}
+      width: 180,
+      cellRenderer: (p) => {
+        const name = p.value || 'Shopper';
+        const initials = name
+          .split(' ')
+          .map(n => n[0])
+          .filter(Boolean)
+          .slice(0, 2)
+          .join('')
+          .toUpperCase() || 'S';
+
+        return (
+          <div className="flex items-center gap-2.5 py-1">
+            <div className="w-7 h-7 rounded-full bg-[#EFDFD2] dark:bg-[#432634] text-[#56323E] dark:text-[#EFDFD2] font-bold text-[11px] flex items-center justify-center shrink-0">
+              {initials}
+            </div>
+            <div className="leading-tight truncate">
+              <div className="font-semibold text-[#2D1822] dark:text-[#FAF5EF] text-xs truncate">
+                {name}
+              </div>
+              <div className="text-[11px] text-[#7D6671] dark:text-[#C5B0BA] font-mono truncate">
+                {p.data?.customer_phone || p.data?.customer_email || 'Direct Order'}
+              </div>
+            </div>
           </div>
-          <div className="text-[11px] text-slate-500 font-mono">
-            {p.data?.customer_phone || p.data?.customer_email || ''}
-          </div>
-        </div>
-      ),
+        );
+      },
       sortable: true,
       filter: true
     },
@@ -299,17 +383,17 @@ export default function OwnerOrdersAgGrid({
     {
       headerName: 'PayPal Settlement',
       field: 'paypal_authorization_id',
-      width: 175,
+      width: 180,
       cellRenderer: PayPalSettlementRenderer,
       sortable: true
     },
     {
-      headerName: 'Total ($)',
+      headerName: 'Total (₹)',
       field: 'total_amount',
-      width: 105,
+      width: 110,
       cellRenderer: (p) => (
-        <span className="font-semibold text-xs text-slate-900 dark:text-slate-100">
-          ${parseFloat(p.value || 0).toFixed(2)}
+        <span className="font-semibold text-xs text-[#2D1822] dark:text-[#FAF5EF]">
+          ₹{parseFloat(p.value || 0).toFixed(2)}
         </span>
       ),
       sortable: true
@@ -338,9 +422,9 @@ export default function OwnerOrdersAgGrid({
     {
       headerName: 'Margin Guard',
       field: 'margin_guarded',
-      width: 130,
-      cellRenderer: (p) => (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+      width: 135,
+      cellRenderer: () => (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-[#56323E] dark:text-[#EFDFD2]">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
           Protected (12%)
         </span>
@@ -354,7 +438,7 @@ export default function OwnerOrdersAgGrid({
         if (!p.value) return '';
         const d = new Date(p.value);
         return (
-          <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">
+          <span className="text-xs text-[#5E4752] dark:text-[#C5B0BA] font-mono">
             {d.toLocaleDateString()} {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
         );
@@ -385,84 +469,177 @@ export default function OwnerOrdersAgGrid({
     }
   }, []);
 
-  return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-      {/* Table Toolbar */}
-      <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search orders, customers, IDs..."
-              value={quickFilterText}
-              onChange={(e) => setQuickFilterText(e.target.value)}
-              className="pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-64 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-slate-100"
-            />
-          </div>
+  // Filter Pill Definitions
+  const filterPills = [
+    { id: 'ALL', label: 'All Orders', count: stats.totalOrders },
+    { id: 'PAYPAL_PENDING', label: '⚡ Settle Pack', count: stats.pendingPackCount, highlight: true },
+    { id: 'NEW', label: 'New', count: stats.newCount },
+    { id: 'PREPARING', label: 'Preparing', count: stats.prepCount },
+    { id: 'READY', label: 'Ready', count: stats.readyCount },
+    { id: 'COMPLETED', label: 'Completed', count: stats.completedCount },
+    { id: 'INVOICED', label: 'Invoiced v2', count: stats.invoicedCount },
+    { id: 'DISPATCHED', label: 'Dispatched', count: stats.dispatchedCount },
+  ];
 
-          {/* Status Segment Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="ALL">All Orders ({orders.length})</option>
-            <option value="PAYPAL_PENDING">⚡ Ready for Packing Settlement</option>
-            <option value="INVOICED">📄 PayPal Invoiced v2</option>
-            <option value="DISPATCHED">🚚 Dispatched & Tracked</option>
-            <option value="NEW">New</option>
-            <option value="ACCEPTED">Accepted</option>
-            <option value="PREPARING">Preparing</option>
-            <option value="READY">Ready</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
+  return (
+    <div className="space-y-4">
+      {/* 1. Operational KPI Metrics Ribbon */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Metric 1: Total Volume */}
+        <div className="bg-white dark:bg-[#351D28] p-4 rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] shadow-2xs">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#A68B98] mb-1">
+            <span>Total Volume</span>
+            <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="text-xl font-bold text-[#2D1822] dark:text-white">
+            ₹{stats.totalVolume.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="text-[11px] text-[#7D6671] dark:text-[#C5B0BA] mt-1 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+            <span>Across {stats.totalOrders} total orders</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
-              title="Refresh Orders"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          )}
+        {/* Metric 2: Total Orders */}
+        <div className="bg-white dark:bg-[#351D28] p-4 rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] shadow-2xs">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#A68B98] mb-1">
+            <span>Orders Logged</span>
+            <Layers className="w-4 h-4 text-[#56323E] dark:text-[#EFDFD2]" />
+          </div>
+          <div className="text-xl font-bold text-[#2D1822] dark:text-white">
+            {stats.totalOrders}
+          </div>
+          <div className="text-[11px] text-[#7D6671] dark:text-[#C5B0BA] mt-1">
+            {stats.completedCount} fulfilled & completed
+          </div>
+        </div>
 
-          <button
-            onClick={onExportCsv}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-2xs cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            Export CSV
-          </button>
+        {/* Metric 3: Hold for Settlement */}
+        <div className="bg-white dark:bg-[#351D28] p-4 rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] shadow-2xs">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#A68B98] mb-1">
+            <span>Hold For Settlement</span>
+            <Clock className="w-4 h-4 text-amber-500" />
+          </div>
+          <div className="text-xl font-bold text-amber-600 dark:text-amber-400">
+            ₹{stats.holdVolume.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="text-[11px] text-[#7D6671] dark:text-[#C5B0BA] mt-1 font-medium">
+            {stats.pendingPackCount} orders awaiting dynamic capture
+          </div>
+        </div>
+
+        {/* Metric 4: In-Store Prep Queue */}
+        <div className="bg-white dark:bg-[#351D28] p-4 rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] shadow-2xs">
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#A68B98] mb-1">
+            <span>Active Queue</span>
+            <Sparkles className="w-4 h-4 text-sky-500" />
+          </div>
+          <div className="text-xl font-bold text-[#2D1822] dark:text-white">
+            {stats.activeQueueCount}
+          </div>
+          <div className="text-[11px] text-[#7D6671] dark:text-[#C5B0BA] mt-1">
+            Preparing ({stats.prepCount}) & Ready ({stats.readyCount})
+          </div>
         </div>
       </div>
 
-      {/* AG Grid Container */}
-      <div className="ag-theme-quartz w-full flex-1" style={{ height: '560px' }}>
-        <AgGridReact
-          ref={gridRef}
-          rowData={filteredData}
-          getRowId={(params) => String(params.data?.id || '')}
-          columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          quickFilterText={quickFilterText}
-          pagination={true}
-          paginationPageSize={15}
-          paginationPageSizeSelector={[10, 15, 25, 50]}
-          rowHeight={48}
-          headerHeight={42}
-          animateRows={true}
-          loading={loading}
-          noRowsOverlayComponent={() => (
-            <div className="text-center p-6 text-slate-400">
-              No matching orders found.
+      {/* 2. AG Grid Enterprise Container */}
+      <div className="flex flex-col w-full bg-white dark:bg-[#351D28] rounded-2xl border border-[#E7DBCF] dark:border-white/[0.08] shadow-sm overflow-hidden">
+        {/* Modern Filter Pill Bar */}
+        <div className="px-4 py-3 border-b border-[#E7DBCF]/80 dark:border-white/[0.08] flex items-center gap-1.5 overflow-x-auto scrollbar-none bg-[#FAF5EF]/40 dark:bg-[#2D1822]/40">
+          {filterPills.map((pill) => {
+            const isActive = statusFilter === pill.id;
+            return (
+              <button
+                key={pill.id}
+                type="button"
+                onClick={() => setStatusFilter(pill.id)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-[#56323E] text-[#FAF5EF] dark:bg-[#EFDFD2] dark:text-[#2D1822] shadow-xs'
+                    : 'text-[#7D6671] dark:text-[#C5B0BA] hover:bg-[#EFDFD2]/60 dark:hover:bg-white/5'
+                }`}
+              >
+                <span>{pill.label}</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    isActive
+                      ? 'bg-[#FAF5EF]/20 text-[#FAF5EF] dark:bg-[#2D1822]/20 dark:text-[#2D1822]'
+                      : pill.highlight && pill.count > 0
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                      : 'bg-[#EFDFD2] text-[#7D6671] dark:bg-white/10 dark:text-[#C5B0BA]'
+                  }`}
+                >
+                  {pill.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Table Toolbar */}
+        <div className="p-3.5 border-b border-[#E7DBCF] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3 bg-[#FAF5EF]/60 dark:bg-[#2D1822]/60">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#A68B98]" />
+              <input
+                type="text"
+                placeholder="Search orders, customers, IDs..."
+                value={quickFilterText}
+                onChange={(e) => setQuickFilterText(e.target.value)}
+                className="pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-[#3F2231] border border-[#E7DBCF] dark:border-white/10 rounded-xl w-64 focus:outline-hidden focus:ring-2 focus:ring-[#56323E]/20 dark:focus:ring-[#EFDFD2]/20 text-[#2D1822] dark:text-[#FAF5EF]"
+              />
             </div>
-          )}
-        />
+
+            <span className="text-xs text-[#7D6671] dark:text-[#C5B0BA] hidden sm:inline">
+              Showing <strong>{filteredData.length}</strong> of {orders.length} orders
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                className="p-1.5 text-[#5E4752] dark:text-[#C5B0BA] hover:bg-[#EFDFD2] dark:hover:bg-[#3F2231] rounded-xl transition-all cursor-pointer"
+                title="Refresh Orders"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+
+            <button
+              onClick={onExportCsv}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#FAF5EF] dark:text-[#2D1822] bg-[#56323E] dark:bg-[#EFDFD2] hover:bg-[#432634] dark:hover:bg-[#E7DBCF] rounded-xl transition-all shadow-2xs cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        {/* AG Grid Container */}
+        <div className="ag-theme-quartz dark:ag-theme-quartz-dark w-full" style={{ height: '620px', minHeight: '520px' }}>
+          <AgGridReact
+            ref={gridRef}
+            rowData={filteredData}
+            getRowId={(params) => String(params.data?.id || '')}
+            columnDefs={columnDefs}
+            defaultColDef={defaultColDef}
+            quickFilterText={quickFilterText}
+            pagination={true}
+            paginationPageSize={15}
+            paginationPageSizeSelector={[10, 15, 25, 50]}
+            rowHeight={48}
+            headerHeight={42}
+            animateRows={true}
+            loading={loading}
+            noRowsOverlayComponent={() => (
+              <div className="text-center p-6 text-[#A68B98]">
+                No matching orders found.
+              </div>
+            )}
+          />
+        </div>
       </div>
     </div>
   );

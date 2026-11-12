@@ -80,7 +80,7 @@ it.each([
   await waitFor(() => expect(api.post).toHaveBeenCalledOnce());
   expect(api.post).toHaveBeenCalledWith("/store/agent/chat/", {
     prompt: "Two bags of rice",
-    session_id,
+    session_id: expect.stringMatching(new RegExp(`^${session_id}`)),
     persona,
     mode: "voice",
     history: [

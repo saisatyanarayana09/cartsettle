@@ -49,14 +49,14 @@ export default function OwnerResetPassword() {
   const handleSubmit = submit;
 
   return (
-    <main className="min-h-screen flex bg-white dark:bg-slate-950">
+    <main className="min-h-screen flex bg-white dark:bg-[#351D28]">
       {/* Left Column: Form */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12">
         <div className="w-full max-w-md">
           {/* Back to Login link */}
           <Link
             to="/owner/login"
-            className="inline-flex items-center gap-0 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors mb-8"
+            className="inline-flex items-center gap-0 text-sm font-bold text-[#7D6671] hover:text-[#56323E] transition-colors mb-8"
           >
             <ArrowLeft size={16} /> Back to Owner Sign In
           </Link>
@@ -64,12 +64,12 @@ export default function OwnerResetPassword() {
           <div className="mb-6">
             <p className="text-sm font-black tracking-normal drop-shadow-sm mb-3 flex items-center gap-0">
               <span className="text-emerald-900 dark:text-emerald-400">Cart</span>
-              <span className="text-indigo-600 dark:text-indigo-400">Settle</span>
+              <span className="text-[#56323E] dark:text-[#EFDFD2]">Settle</span>
             </p>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#2D1822] dark:text-white tracking-tight">
               {mode === 'otp' && otpStep === 'verify' ? 'Verify Code' : 'Create New Password'}
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">
+            <p className="text-sm text-[#7D6671] dark:text-[#C5B0BA] mt-2 font-medium">
               {mode === 'otp' && otpStep === 'verify'
                 ? 'Enter the 6-digit code sent to your owner email to verify your identity.'
                 : 'Choose a strong password (minimum 8 characters) for your owner account.'}
@@ -77,14 +77,14 @@ export default function OwnerResetPassword() {
           </div>
 
           {/* Mode Switcher Tabs */}
-          <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl mb-6 border border-slate-200 dark:border-slate-800">
+          <div className="flex bg-[#F2E9E0] dark:bg-[#351D28] p-1 rounded-xl mb-6 border border-[#E7DBCF] dark:border-white/[0.08]">
             <button
               type="button"
               onClick={() => { setMode('link'); setStatus('idle'); setMessage(''); }}
               className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                 mode === 'link'
-                  ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-[#3F2231] text-[#56323E] dark:text-[#EFDFD2] shadow-sm'
+                  : 'text-[#7D6671] hover:text-[#5E4752] dark:hover:text-[#C5B0BA]'
               }`}
             >
               <Mail size={14} /> Email Reset Link
@@ -94,8 +94,8 @@ export default function OwnerResetPassword() {
               onClick={() => { setMode('otp'); setStatus('idle'); setMessage(''); }}
               className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                 mode === 'otp'
-                  ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-[#3F2231] text-[#56323E] dark:text-[#EFDFD2] shadow-sm'
+                  : 'text-[#7D6671] hover:text-[#5E4752] dark:hover:text-[#C5B0BA]'
               }`}
             >
               <KeyRound size={14} /> 6-Digit OTP Code
@@ -117,13 +117,13 @@ export default function OwnerResetPassword() {
                 <button
                   type="button"
                   onClick={() => setMode('otp')}
-                  className="block w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition shadow-sm cursor-pointer"
+                  className="block w-full py-2.5 px-4 rounded-xl bg-[#56323E] hover:bg-[#432634] text-white font-bold text-sm transition shadow-sm cursor-pointer"
                 >
                   Use 6-Digit OTP Instead
                 </button>
                 <Link
                   to="/owner/forgot-password"
-                  className="block w-full py-2 px-4 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:underline"
+                  className="block w-full py-2 px-4 rounded-xl text-xs font-semibold text-[#5E4752] dark:text-[#C5B0BA] hover:underline"
                 >
                   Request New Reset Link
                 </Link>
@@ -147,7 +147,7 @@ export default function OwnerResetPassword() {
                 >
                   Sign In with New Password
                 </Link>
-                <p className="text-xs text-slate-400 dark:text-slate-500">
+                <p className="text-xs text-[#A68B98] dark:text-[#A68B98]">
                   Redirecting to Owner Sign In in a few seconds...
                 </p>
               </div>
@@ -172,25 +172,25 @@ export default function OwnerResetPassword() {
 
                   {/* Email Destination Display */}
                   {email && !isEditingEmail ? (
-                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
+                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#FAF5EF] dark:bg-[#351D28] border border-[#E7DBCF] dark:border-white/[0.08] text-xs">
                       <div className="flex items-center gap-0.5 overflow-hidden">
-                        <Mail className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                        <Mail className="w-4 h-4 text-[#56323E] dark:text-[#EFDFD2] shrink-0" />
                         <div className="truncate">
-                          <span className="text-[11px] text-slate-400 block font-semibold">Code sent to:</span>
-                          <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate block">{email}</span>
+                          <span className="text-[11px] text-[#A68B98] block font-semibold">Code sent to:</span>
+                          <span className="font-bold text-[#2D1822] dark:text-[#FAF5EF] text-xs truncate block">{email}</span>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setIsEditingEmail(true)}
-                        className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-2 shrink-0 text-xs cursor-pointer"
+                        className="text-[#56323E] dark:text-[#EFDFD2] font-bold hover:underline ml-2 shrink-0 text-xs cursor-pointer"
                       >
                         Change
                       </button>
                     </div>
                   ) : (
                     <div>
-                      <label htmlFor="owner-email" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                      <label htmlFor="owner-email" className="block text-sm font-bold text-[#5E4752] dark:text-[#FAF5EF] mb-1.5">
                         Owner Email Address
                       </label>
                       <div className="flex gap-2">
@@ -202,15 +202,15 @@ export default function OwnerResetPassword() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="owner@example.com"
-                            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 pl-10 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                            className="w-full rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] px-4 py-3 pl-10 bg-[#FAF5EF] dark:bg-[#351D28] text-[#2D1822] dark:text-white outline-none focus:bg-white dark:focus:bg-[#351D28] focus:ring-2 focus:ring-[#56323E]/20 transition-all text-sm"
                           />
-                          <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A68B98]" />
                         </div>
                         <button
                           type="button"
                           onClick={handleSendOtp}
                           disabled={isResending || !email.trim()}
-                          className="px-4 py-3 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition disabled:opacity-50 shrink-0 cursor-pointer"
+                          className="px-4 py-3 bg-[#56323E] text-white rounded-xl text-xs font-bold hover:bg-[#432634] transition disabled:opacity-50 shrink-0 cursor-pointer"
                         >
                           {isResending ? 'Sending...' : 'Send Code'}
                         </button>
@@ -220,7 +220,7 @@ export default function OwnerResetPassword() {
 
                   {/* 6-Digit OTP Code Input */}
                   <div>
-                    <label htmlFor="owner-otp" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                    <label htmlFor="owner-otp" className="block text-sm font-bold text-[#5E4752] dark:text-[#FAF5EF] mb-1.5">
                       6-Digit Security OTP
                     </label>
                     <input
@@ -233,18 +233,18 @@ export default function OwnerResetPassword() {
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
                       placeholder="123456"
-                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 transition-all text-center tracking-[0.5em] font-mono text-2xl font-extrabold"
+                      className="w-full rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] px-4 py-3 bg-[#FAF5EF] dark:bg-[#351D28] text-[#2D1822] dark:text-white outline-none focus:bg-white dark:focus:bg-[#351D28] focus:ring-2 focus:ring-[#56323E]/20 transition-all text-center tracking-[0.5em] font-mono text-2xl font-extrabold"
                     />
-                    <div className="flex items-center justify-between mt-2 text-[11px] text-slate-500">
+                    <div className="flex items-center justify-between mt-2 text-[11px] text-[#7D6671]">
                       <span>Expires in 15 minutes.</span>
                       {resendCooldown > 0 ? (
-                        <span className="font-semibold text-slate-400">Resend in {resendCooldown}s</span>
+                        <span className="font-semibold text-[#A68B98]">Resend in {resendCooldown}s</span>
                       ) : (
                         <button
                           type="button"
                           onClick={handleSendOtp}
                           disabled={isResending || !email.trim()}
-                          className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[#56323E] dark:text-[#EFDFD2] font-bold hover:underline cursor-pointer"
                         >
                           <RefreshCw size={11} className={isResending ? 'animate-spin' : ''} />
                           <span>{isResending ? 'Sending...' : 'Resend Code'}</span>
@@ -256,7 +256,7 @@ export default function OwnerResetPassword() {
                   <button
                     type="submit"
                     disabled={isVerifyingOtp || !email.trim() || otp.trim().length !== 6}
-                    className="w-full rounded-xl bg-indigo-600 px-4 py-3.5 font-bold text-white hover:bg-indigo-700 transition-all shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:shadow-none disabled:transform-none flex items-center justify-center gap-2 cursor-pointer text-sm"
+                    className="w-full rounded-xl bg-[#56323E] px-4 py-3.5 font-bold text-white hover:bg-[#432634] transition-all shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:shadow-none disabled:transform-none flex items-center justify-center gap-2 cursor-pointer text-sm"
                   >
                     {isVerifyingOtp ? (
                       <>
@@ -292,7 +292,7 @@ export default function OwnerResetPassword() {
 
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="new-password" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                      <label htmlFor="new-password" className="block text-sm font-bold text-[#5E4752] dark:text-[#FAF5EF] mb-1.5">
                         New Password
                       </label>
                       <div className="relative">
@@ -303,13 +303,13 @@ export default function OwnerResetPassword() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Minimum 8 characters"
-                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 pl-11 pr-12 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                          className="w-full rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] px-4 py-3 pl-11 pr-12 bg-[#FAF5EF] dark:bg-[#351D28] text-[#2D1822] dark:text-white outline-none focus:bg-white dark:focus:bg-[#351D28] focus:ring-2 focus:ring-[#56323E]/20 transition-all text-sm"
                         />
-                        <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A68B98]" />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[#A68B98] hover:text-[#5E4752] dark:hover:text-[#FAF5EF] transition-colors cursor-pointer"
                           title={showPassword ? 'Hide password' : 'Show password'}
                         >
                           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -318,7 +318,7 @@ export default function OwnerResetPassword() {
                     </div>
 
                     <div>
-                      <label htmlFor="confirm-password" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                      <label htmlFor="confirm-password" className="block text-sm font-bold text-[#5E4752] dark:text-[#FAF5EF] mb-1.5">
                         Confirm New Password
                       </label>
                       <div className="relative">
@@ -329,13 +329,13 @@ export default function OwnerResetPassword() {
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="Re-enter new password"
-                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 pl-11 pr-12 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                          className="w-full rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] px-4 py-3 pl-11 pr-12 bg-[#FAF5EF] dark:bg-[#351D28] text-[#2D1822] dark:text-white outline-none focus:bg-white dark:focus:bg-[#351D28] focus:ring-2 focus:ring-[#56323E]/20 transition-all text-sm"
                         />
-                        <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A68B98]" />
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[#A68B98] hover:text-[#5E4752] dark:hover:text-[#FAF5EF] transition-colors cursor-pointer"
                           title={showConfirmPassword ? 'Hide password' : 'Show password'}
                         >
                           {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -357,7 +357,7 @@ export default function OwnerResetPassword() {
                   <button
                     type="submit"
                     disabled={status === 'loading' || (mode === 'link' && isLinkInvalid) || password.length < 8 || password !== confirmPassword}
-                    className="w-full rounded-xl bg-indigo-600 px-4 py-3.5 font-bold text-white hover:bg-indigo-700 transition-all shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:shadow-none disabled:transform-none flex items-center justify-center gap-2 cursor-pointer text-sm"
+                    className="w-full rounded-xl bg-[#56323E] px-4 py-3.5 font-bold text-white hover:bg-[#432634] transition-all shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:shadow-none disabled:transform-none flex items-center justify-center gap-2 cursor-pointer text-sm"
                   >
                     {status === 'loading' ? (
                       <>
@@ -377,8 +377,8 @@ export default function OwnerResetPassword() {
 
 
       {/* Right Column: Hero Showcase */}
-      <div className="hidden lg:block lg:flex-1 relative overflow-hidden bg-slate-900">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/40 to-slate-900/80 z-10 mix-blend-multiply" />
+      <div className="hidden lg:block lg:flex-1 relative overflow-hidden bg-[#56323E]">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#56323E] to-slate-900/80 z-10 mix-blend-multiply" />
         <img
           src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1920"
           alt="Grocery store interior"
@@ -387,13 +387,13 @@ export default function OwnerResetPassword() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent z-10" />
 
         <div className="absolute bottom-0 left-0 p-16 z-20 w-full max-w-2xl">
-          <div className="inline-flex items-center gap-0 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-indigo-200 mb-4">
+          <div className="inline-flex items-center gap-0 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-[#EFDFD2] mb-4">
             <span>🛡️ Owner Account Security</span>
           </div>
           <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight leading-tight">
             Security you can count on.
           </h2>
-          <p className="text-indigo-100/80 text-lg leading-relaxed font-medium max-w-lg">
+          <p className="text-[#EFDFD2] text-lg leading-relaxed font-medium max-w-lg">
             Once updated, all previous login sessions for this account will be securely refreshed.
           </p>
         </div>

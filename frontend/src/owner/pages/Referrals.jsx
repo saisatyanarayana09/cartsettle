@@ -132,33 +132,33 @@ export default function Referrals() {
       )}
 
       {scannedReferralId && scannedReferral && scannedReferral.status === 'AWAITING_APPROVAL' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md px-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-8 relative overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#56323E]/80 backdrop-blur-md px-4">
+          <div className="owner-theme bg-white dark:bg-[#351D28] rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden border border-[#E7DBCF] dark:border-white/10 text-[#2D1822] dark:text-[#FAF5EF]">
             <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
               <Award size={32} />
             </div>
-            <h2 className="text-2xl font-black text-center text-slate-900 mb-2">Approve Reward</h2>
-            <p className="text-slate-500 text-center text-sm mb-8">
+            <h2 className="text-2xl font-black text-center text-[#2D1822] mb-2">Approve Reward</h2>
+            <p className="text-[#7D6671] text-center text-sm mb-8">
               Please verify the referral details below before finalizing the approval.
             </p>
             
-            <div className="bg-slate-50 rounded-2xl p-5 mb-8 border border-slate-100 space-y-4">
-              <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                <span className="text-slate-500 text-sm font-medium">Customer (Referrer)</span>
-                <span className="text-slate-900 font-bold">{scannedReferral.referrer_name || 'Unknown'}</span>
+            <div className="bg-[#FAF5EF] rounded-2xl p-5 mb-8 border border-[#E7DBCF] space-y-4">
+              <div className="flex justify-between items-center border-b border-[#E7DBCF] pb-3">
+                <span className="text-[#7D6671] text-sm font-medium">Customer (Referrer)</span>
+                <span className="text-[#2D1822] font-bold">{scannedReferral.referrer_name || 'Unknown'}</span>
               </div>
-              <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                <span className="text-slate-500 text-sm font-medium">Referred Friend</span>
-                <span className="text-slate-900 font-bold">{scannedReferral.referred_name || 'Unknown'}</span>
+              <div className="flex justify-between items-center border-b border-[#E7DBCF] pb-3">
+                <span className="text-[#7D6671] text-sm font-medium">Referred Friend</span>
+                <span className="text-[#2D1822] font-bold">{scannedReferral.referred_name || 'Unknown'}</span>
               </div>
-              <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                <span className="text-slate-500 text-sm font-medium">Date Referred</span>
-                <span className="text-slate-900 font-bold">
+              <div className="flex justify-between items-center border-b border-[#E7DBCF] pb-3">
+                <span className="text-[#7D6671] text-sm font-medium">Date Referred</span>
+                <span className="text-[#2D1822] font-bold">
                   {new Date(scannedReferral.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 text-sm font-medium">Reward Value</span>
+                <span className="text-[#7D6671] text-sm font-medium">Reward Value</span>
                 <span className="text-emerald-600 font-black text-lg">
                   {settings?.referrer_reward_product 
                     ? `1x ${settings.referrer_reward_product_name}` 
@@ -170,7 +170,7 @@ export default function Referrals() {
             <div className="flex gap-4">
               <button 
                 onClick={() => setScannedReferralId(null)}
-                className="flex-1 py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                className="flex-1 py-3.5 px-4 bg-[#F2E9E0] hover:bg-[#EFDFD2] text-[#5E4752] font-bold rounded-xl transition-colors"
               >
                 Cancel
               </button>
@@ -186,31 +186,31 @@ export default function Referrals() {
       , document.body)}
 
       {scannedReferralId && scannedReferral && scannedReferral.status !== 'AWAITING_APPROVAL' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md px-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center relative overflow-hidden border-t-8 border-red-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#56323E]/80 backdrop-blur-md px-4">
+          <div className="owner-theme bg-white dark:bg-[#351D28] rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center relative overflow-hidden border border-[#E7DBCF] dark:border-white/10 text-[#2D1822] dark:text-[#FAF5EF]">
             <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
               <XCircle size={32} />
             </div>
-            <h2 className="text-2xl font-black text-slate-900 mb-2">Already Claimed!</h2>
-            <p className="text-slate-500 text-sm mb-6">
+            <h2 className="text-2xl font-black text-[#2D1822] mb-2">Already Claimed!</h2>
+            <p className="text-[#7D6671] text-sm mb-6">
               This QR code is invalid because the reward has already been claimed and processed by the system.
             </p>
-            <div className="bg-slate-50 rounded-2xl p-4 mb-8 border border-slate-100 text-left">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Claim Details</div>
+            <div className="bg-[#FAF5EF] rounded-2xl p-4 mb-8 border border-[#E7DBCF] text-left">
+              <div className="text-xs font-bold text-[#7D6671] uppercase tracking-wider mb-2">Claim Details</div>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-slate-600 text-sm">Customer:</span>
-                <span className="text-slate-900 font-bold text-sm">{scannedReferral.referrer_name || 'Unknown'}</span>
+                <span className="text-[#5E4752] text-sm">Customer:</span>
+                <span className="text-[#2D1822] font-bold text-sm">{scannedReferral.referrer_name || 'Unknown'}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-600 text-sm">Claimed On:</span>
-                <span className="text-slate-900 font-bold text-sm">
+                <span className="text-[#5E4752] text-sm">Claimed On:</span>
+                <span className="text-[#2D1822] font-bold text-sm">
                   {scannedReferral.completed_at ? new Date(scannedReferral.completed_at).toLocaleString() : 'Unknown'}
                 </span>
               </div>
             </div>
             <button 
               onClick={() => setScannedReferralId(null)}
-              className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors"
+              className="w-full py-3.5 px-4 bg-[#56323E] hover:bg-[#432634] text-white font-bold rounded-xl transition-colors"
             >
               Dismiss
             </button>
@@ -219,110 +219,110 @@ export default function Referrals() {
       , document.body)}
 
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Referral Program</h1>
+        <h1 className="text-2xl font-bold text-[#2D1822]">Referral Program</h1>
         <button 
           onClick={() => setShowScanner(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 transition-colors"
+          className="bg-[#56323E] hover:bg-[#432634] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 transition-colors"
         >
           <QrCode size={18} />
           Scan Customer QR
         </button>
       </div>
 
-      <div className="flex space-x-1 bg-white p-1 rounded-xl shadow-sm border border-gray-100">
+      <div className="flex space-x-1 bg-white p-1 rounded-xl shadow-sm border border-[#E7DBCF]">
         <button
           onClick={() => setActiveTab('settings')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'settings' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'settings' ? 'bg-[#FAF5EF] text-[#56323E]' : 'text-[#7D6671] hover:text-[#5E4752] hover:bg-[#FAF5EF]'}`}
         >
           <Settings size={18} /> Configuration
         </button>
         <button
           onClick={() => setActiveTab('milestones')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'milestones' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'milestones' ? 'bg-[#FAF5EF] text-[#56323E]' : 'text-[#7D6671] hover:text-[#5E4752] hover:bg-[#FAF5EF]'}`}
         >
           <Award size={18} /> Bonus Milestones
         </button>
         <button
           onClick={() => setActiveTab('history')}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'history' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-colors ${activeTab === 'history' ? 'bg-[#FAF5EF] text-[#56323E]' : 'text-[#7D6671] hover:text-[#5E4752] hover:bg-[#FAF5EF]'}`}
         >
           <Users size={18} /> History & Monitor
         </button>
       </div>
 
       {activeTab === 'settings' && (
-        <form onSubmit={handleSettingsSave} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
+        <form onSubmit={handleSettingsSave} className="bg-white rounded-xl shadow-sm border border-[#E7DBCF] p-6 space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">Program Status</h2>
-              <p className="text-sm text-gray-500">Enable or disable the referral program entirely.</p>
+              <p className="text-sm text-[#7D6671]">Enable or disable the referral program entirely.</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" className="sr-only peer" checked={settings.is_active} onChange={e => setSettings({...settings, is_active: e.target.checked})} />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              <div className="w-11 h-6 bg-[#EFDFD2] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#D9C6B8] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#56323E]"></div>
             </label>
           </div>
 
-          <div className="pt-4 border-t border-gray-100">
+          <div className="pt-4 border-t border-[#E7DBCF]">
             <h3 className="text-md font-semibold mb-3">Referrer Reward Type</h3>
             <div className="flex space-x-6 mb-4">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input type="radio" checked={rewardType === 'money'} onChange={() => {
                   setRewardType('money');
                   setSettings({...settings, referrer_reward_product: null});
-                }} className="text-indigo-600 focus:ring-indigo-500" />
-                <span className="font-medium text-gray-700">Cash Wallet Reward</span>
+                }} className="text-[#56323E] focus:ring-[#56323E]/20" />
+                <span className="font-medium text-[#5E4752]">Cash Wallet Reward</span>
               </label>
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input type="radio" checked={rewardType === 'product'} onChange={() => {
                   setRewardType('product');
                   setSettings({...settings, referrer_reward: 0});
-                }} className="text-indigo-600 focus:ring-indigo-500" />
-                <span className="font-medium text-gray-700">Free Product Reward</span>
+                }} className="text-[#56323E] focus:ring-[#56323E]/20" />
+                <span className="font-medium text-[#5E4752]">Free Product Reward</span>
               </label>
             </div>
             
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div className="bg-[#FAF5EF] p-4 rounded-xl border border-[#E7DBCF]">
               {rewardType === 'money' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Referrer Reward (₹)</label>
-                  <input type="number" step="0.01" value={settings.referrer_reward} onChange={e => setSettings({...settings, referrer_reward: e.target.value})} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border bg-white" />
-                  <p className="text-xs text-gray-500 mt-1">Amount added to wallet when their friend completes first order.</p>
+                  <label className="block text-sm font-medium text-[#5E4752] mb-1">Referrer Reward (₹)</label>
+                  <input type="number" step="0.01" value={settings.referrer_reward} onChange={e => setSettings({...settings, referrer_reward: e.target.value})} className="w-full rounded-lg border-[#D9C6B8] shadow-sm focus:border-[#56323E] focus:ring-[#56323E]/20 p-2 border bg-white" />
+                  <p className="text-xs text-[#7D6671] mt-1">Amount added to wallet when their friend completes first order.</p>
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Free Product</label>
-                  <select value={settings.referrer_reward_product || ''} onChange={e => setSettings({...settings, referrer_reward_product: e.target.value || null})} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border bg-white">
+                  <label className="block text-sm font-medium text-[#5E4752] mb-1">Select Free Product</label>
+                  <select value={settings.referrer_reward_product || ''} onChange={e => setSettings({...settings, referrer_reward_product: e.target.value || null})} className="w-full rounded-lg border-[#D9C6B8] shadow-sm focus:border-[#56323E] focus:ring-[#56323E]/20 p-2 border bg-white">
                     <option value="">-- Select a product --</option>
                     {products.map(p => <option key={p.id} value={p.id}>{p.name} (₹{p.price})</option>)}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">A free order containing this product will be automatically created for the referrer.</p>
+                  <p className="text-xs text-[#7D6671] mt-1">A free order containing this product will be automatically created for the referrer.</p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="pt-4 border-t border-gray-100 space-y-4">
+          <div className="pt-4 border-t border-[#E7DBCF] space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-md font-semibold">Minimum Spend Requirement</h3>
-                <p className="text-sm text-gray-500">Require the referrer to spend a certain amount before they can earn referral rewards.</p>
+                <p className="text-sm text-[#7D6671]">Require the referrer to spend a certain amount before they can earn referral rewards.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" checked={settings.require_min_spend} onChange={e => setSettings({...settings, require_min_spend: e.target.checked})} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <div className="w-11 h-6 bg-[#EFDFD2] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#D9C6B8] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#56323E]"></div>
               </label>
             </div>
             
             {settings.require_min_spend && (
-              <div className="grid grid-cols-2 gap-6 bg-indigo-50 p-4 rounded-xl">
+              <div className="grid grid-cols-2 gap-6 bg-[#FAF5EF] p-4 rounded-xl">
                 <div>
-                  <label className="block text-sm font-medium text-indigo-900 mb-1">Minimum Spend Amount (₹)</label>
-                  <input type="number" step="0.01" value={settings.min_spend_amount} onChange={e => setSettings({...settings, min_spend_amount: e.target.value})} className="w-full rounded-lg border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" />
+                  <label className="block text-sm font-medium text-[#2D1822] mb-1">Minimum Spend Amount (₹)</label>
+                  <input type="number" step="0.01" value={settings.min_spend_amount} onChange={e => setSettings({...settings, min_spend_amount: e.target.value})} className="w-full rounded-lg border-[#E7DBCF] shadow-sm focus:border-[#56323E] focus:ring-[#56323E]/20 p-2 border" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-indigo-900 mb-1">Time Period</label>
-                  <select value={settings.min_spend_period} onChange={e => setSettings({...settings, min_spend_period: e.target.value})} className="w-full rounded-lg border-indigo-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                  <label className="block text-sm font-medium text-[#2D1822] mb-1">Time Period</label>
+                  <select value={settings.min_spend_period} onChange={e => setSettings({...settings, min_spend_period: e.target.value})} className="w-full rounded-lg border-[#E7DBCF] shadow-sm focus:border-[#56323E] focus:ring-[#56323E]/20 p-2 border">
                     <option value="WEEK">Past 7 Days</option>
                     <option value="MONTH">Past 30 Days</option>
                     <option value="YEAR">Past 365 Days</option>
@@ -332,14 +332,14 @@ export default function Referrals() {
             )}
           </div>
 
-          <div className="pt-4 border-t border-gray-100">
-            <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Share Message Template</label>
-            <textarea value={settings.share_text_template} onChange={e => setSettings({...settings, share_text_template: e.target.value})} className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border h-24 resize-none" />
-            <p className="text-xs text-gray-500 mt-1">Use {'{code}'} and {'{link}'} as placeholders.</p>
+          <div className="pt-4 border-t border-[#E7DBCF]">
+            <label className="block text-sm font-medium text-[#5E4752] mb-1">WhatsApp Share Message Template</label>
+            <textarea value={settings.share_text_template} onChange={e => setSettings({...settings, share_text_template: e.target.value})} className="w-full rounded-lg border-[#D9C6B8] shadow-sm focus:border-[#56323E] focus:ring-[#56323E]/20 p-2 border h-24 resize-none" />
+            <p className="text-xs text-[#7D6671] mt-1">Use {'{code}'} and {'{link}'} as placeholders.</p>
           </div>
 
           <div className="flex justify-end pt-4">
-            <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+            <button type="submit" className="bg-[#56323E] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#432634] transition-colors">
               Save Configuration
             </button>
           </div>
@@ -349,38 +349,38 @@ export default function Referrals() {
       {activeTab === 'milestones' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-1">
-            <form onSubmit={handleAddMilestone} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <form onSubmit={handleAddMilestone} className="bg-white rounded-xl shadow-sm border border-[#E7DBCF] p-6 space-y-4">
               <h2 className="text-lg font-semibold mb-4">Add New Milestone</h2>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Required Referrals</label>
-                <input type="number" name="required_referrals" required min="1" className="w-full rounded-lg border-gray-300 shadow-sm p-2 border" />
+                <label className="block text-sm font-medium text-[#5E4752] mb-1">Required Referrals</label>
+                <input type="number" name="required_referrals" required min="1" className="w-full rounded-lg border-[#D9C6B8] shadow-sm p-2 border" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bonus Reward (₹)</label>
-                <input type="number" name="bonus_reward" step="0.01" required min="1" className="w-full rounded-lg border-gray-300 shadow-sm p-2 border" />
+                <label className="block text-sm font-medium text-[#5E4752] mb-1">Bonus Reward (₹)</label>
+                <input type="number" name="bonus_reward" step="0.01" required min="1" className="w-full rounded-lg border-[#D9C6B8] shadow-sm p-2 border" />
               </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+              <button type="submit" className="w-full bg-[#56323E] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#432634] transition-colors">
                 Add Milestone
               </button>
             </form>
           </div>
           <div className="md:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-xl shadow-sm border border-[#E7DBCF] overflow-hidden">
               <div className="overflow-x-auto">
-<table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+<table className="min-w-full divide-y divide-[#E7DBCF]">
+                <thead className="bg-[#FAF5EF]">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referrals Needed</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bonus Reward</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#7D6671] uppercase">Referrals Needed</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-[#7D6671] uppercase">Bonus Reward</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-[#7D6671] uppercase">Action</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-[#E7DBCF]">
                   {milestones.length === 0 ? (
-                    <tr><td colSpan="3" className="px-6 py-4 text-center text-gray-500">No milestones configured</td></tr>
+                    <tr><td colSpan="3" className="px-6 py-4 text-center text-[#7D6671]">No milestones configured</td></tr>
                   ) : milestones.map(m => (
                     <tr key={m.id}>
-                      <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{m.required_referrals} friends</td>
+                      <td className="px-6 py-4 whitespace-nowrap font-medium text-[#2D1822]">{m.required_referrals} friends</td>
                       <td className="px-6 py-4 whitespace-nowrap text-emerald-600 font-bold">₹{m.bonus_reward}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <button onClick={() => handleDeleteMilestone(m.id)} className="text-red-600 hover:text-red-900 font-medium text-sm">Delete</button>
@@ -398,82 +398,82 @@ export default function Referrals() {
       {activeTab === 'history' && (
         <div className="space-y-6">
           <div className="grid grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <div className="bg-white p-6 rounded-xl border border-[#E7DBCF] shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-[#FAF5EF] flex items-center justify-center text-[#56323E]">
                 <Users size={24} />
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900">{history.length}</div>
-                <div className="text-sm text-gray-500 font-medium">Total Initiated</div>
+                <div className="text-3xl font-bold text-[#2D1822]">{history.length}</div>
+                <div className="text-sm text-[#7D6671] font-medium">Total Initiated</div>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div className="bg-white p-6 rounded-xl border border-[#E7DBCF] shadow-sm flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
                 <Award size={24} />
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900">{history.filter(h => h.status === 'COMPLETED').length}</div>
-                <div className="text-sm text-gray-500 font-medium">Rewarded</div>
+                <div className="text-3xl font-bold text-[#2D1822]">{history.filter(h => h.status === 'COMPLETED').length}</div>
+                <div className="text-sm text-[#7D6671] font-medium">Rewarded</div>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+            <div className="bg-white p-6 rounded-xl border border-[#E7DBCF] shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-[#FAF5EF] flex items-center justify-center text-[#56323E]">
                 <Award size={24} />
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900">{history.filter(h => h.status === 'AWAITING_APPROVAL').length}</div>
-                <div className="text-sm text-gray-500 font-medium">Needs Approval</div>
+                <div className="text-3xl font-bold text-[#2D1822]">{history.filter(h => h.status === 'AWAITING_APPROVAL').length}</div>
+                <div className="text-sm text-[#7D6671] font-medium">Needs Approval</div>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div className="bg-white p-6 rounded-xl border border-[#E7DBCF] shadow-sm flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
                 <Settings size={24} />
               </div>
               <div>
-                <div className="text-3xl font-bold text-gray-900">{history.filter(h => h.status === 'PENDING').length}</div>
-                <div className="text-sm text-gray-500 font-medium">Pending</div>
+                <div className="text-3xl font-bold text-[#2D1822]">{history.filter(h => h.status === 'PENDING').length}</div>
+                <div className="text-sm text-[#7D6671] font-medium">Pending</div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-              <h3 className="font-semibold text-gray-900">Referral Ledger</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-[#E7DBCF] overflow-hidden">
+            <div className="p-4 border-b border-[#E7DBCF] bg-[#FAF5EF]/50">
+              <h3 className="font-semibold text-[#2D1822]">Referral Ledger</h3>
             </div>
             <div className="overflow-x-auto">
-<table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+<table className="min-w-full divide-y divide-[#E7DBCF]">
+              <thead className="bg-[#FAF5EF]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date Initiated</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referrer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referred User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#7D6671] uppercase">Date Initiated</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#7D6671] uppercase">Referrer</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#7D6671] uppercase">Referred User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#7D6671] uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#7D6671] uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#E7DBCF]">
                 {history.length === 0 ? (
-                  <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-500">No referrals have been made yet across the platform.</td></tr>
+                  <tr><td colSpan="5" className="px-6 py-8 text-center text-[#7D6671]">No referrals have been made yet across the platform.</td></tr>
                 ) : history.map(ref => (
-                  <tr key={ref.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
+                  <tr key={ref.id} className="hover:bg-[#FAF5EF] transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#7D6671] font-medium">
                       {new Date(ref.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-bold text-gray-900">{ref.referrer_name}</div>
+                      <div className="font-bold text-[#2D1822]">{ref.referrer_name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-bold text-gray-900">{ref.referred_name}</div>
+                      <div className="font-bold text-[#2D1822]">{ref.referred_name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {ref.status === 'COMPLETED' && <span className="px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-800">Completed</span>}
-                      {ref.status === 'AWAITING_APPROVAL' && <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">Needs Approval</span>}
-                      {ref.status === 'READY_TO_CLAIM' && <span className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">Ready to Claim</span>}
+                      {ref.status === 'AWAITING_APPROVAL' && <span className="px-2 py-1 text-xs rounded-full bg-[#EFDFD2] text-[#2D1822]">Needs Approval</span>}
+                      {ref.status === 'READY_TO_CLAIM' && <span className="px-2 py-1 text-xs rounded-full bg-[#EFDFD2] text-[#2D1822]">Ready to Claim</span>}
                       {ref.status === 'PENDING' && <span className="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-800">Pending</span>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {ref.status === 'AWAITING_APPROVAL' && (
-                        <button onClick={() => handleApprove(ref.id)} className="text-indigo-600 hover:text-indigo-900 font-bold text-sm">Approve</button>
+                        <button onClick={() => handleApprove(ref.id)} className="text-[#56323E] hover:text-[#2D1822] font-bold text-sm">Approve</button>
                       )}
                     </td>
                   </tr>

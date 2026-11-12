@@ -211,7 +211,7 @@ export default function ImageCropper({
     if (!modalOpen) return null;
     return createPortal(
       <div 
-        className="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 pointer-events-auto"
+        className="fixed inset-0 z-[999999] flex items-center justify-center bg-[#56323E]/90 backdrop-blur-sm p-4 pointer-events-auto"
         onClick={(e) => {
           if (e.target === e.currentTarget && !isCompressing) {
             handleClose();
@@ -223,24 +223,24 @@ export default function ImageCropper({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-100">
-            <div className="flex items-center gap-2 text-slate-800 font-bold">
-              <Crop className="w-5 h-5 text-indigo-600" />
+          <div className="flex items-center justify-between p-4 border-b border-[#E7DBCF]">
+            <div className="flex items-center gap-2 text-[#2D1822] font-bold">
+              <Crop className="w-5 h-5 text-[#56323E]" />
               <h2>Crop & Compress Image</h2>
             </div>
             <button 
               type="button"
               onClick={handleClose}
               disabled={isCompressing}
-              className="p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-colors disabled:opacity-50"
+              className="p-1 text-[#A68B98] hover:bg-[#F2E9E0] hover:text-[#5E4752] rounded-lg transition-colors disabled:opacity-50"
             >
               <X size={20} />
             </button>
           </div>
 
           {/* Aspect Ratio Toolbar */}
-          <div className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-50 border-b border-slate-100 overflow-x-auto">
-            <span className="text-xs font-semibold text-slate-500 mr-1 shrink-0">Ratio:</span>
+          <div className="flex items-center gap-1.5 px-4 py-2.5 bg-[#FAF5EF] border-b border-[#E7DBCF] overflow-x-auto">
+            <span className="text-xs font-semibold text-[#7D6671] mr-1 shrink-0">Ratio:</span>
             {aspectOptions.map((opt, idx) => {
               const isActive = (selectedAspect === undefined && opt.val === undefined) ||
                 (selectedAspect !== undefined && opt.val !== undefined && Math.abs(selectedAspect - opt.val) < 0.01);
@@ -251,8 +251,8 @@ export default function ImageCropper({
                   onClick={() => handleAspectChange(opt.val)}
                   className={`px-3 py-1 text-xs rounded-lg font-bold shrink-0 transition-all ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                      ? 'bg-[#56323E] text-white shadow-sm'
+                      : 'bg-white text-[#5E4752] hover:bg-[#F2E9E0] border border-[#E7DBCF]'
                   }`}
                 >
                   {opt.label}
@@ -262,7 +262,7 @@ export default function ImageCropper({
           </div>
           
           {/* Canvas Area */}
-          <div className="p-4 bg-slate-900 flex-1 overflow-auto flex items-center justify-center min-h-[300px]">
+          <div className="p-4 bg-[#56323E] flex-1 overflow-auto flex items-center justify-center min-h-[300px]">
             {imgSrc && (
               <ReactCrop
                 crop={crop}
@@ -283,12 +283,12 @@ export default function ImageCropper({
           </div>
 
           {/* Footer Actions */}
-          <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3">
+          <div className="p-4 border-t border-[#E7DBCF] bg-white flex justify-end gap-3">
             <button
               type="button"
               onClick={handleClose}
               disabled={isCompressing}
-              className="px-4 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-100 transition-colors disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-[#5E4752] font-bold hover:bg-[#F2E9E0] transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -296,7 +296,7 @@ export default function ImageCropper({
               type="button"
               onClick={handleApplyCrop}
               disabled={isCompressing || !completedCrop?.width || !completedCrop?.height}
-              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-6 py-2 bg-[#56323E] hover:bg-[#432634] text-[#FAF5EF] dark:bg-[#EFDFD2] dark:hover:bg-[#E7DBCF] dark:text-[#2D1822] rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCompressing ? (
                 <>Compressing...</>
@@ -330,8 +330,8 @@ export default function ImageCropper({
       <div className="flex flex-col sm:flex-row items-center gap-4">
         {/* Preview Bubble */}
         <div 
-          className={`shrink-0 rounded-xl overflow-hidden border-2 border-dashed flex items-center justify-center bg-slate-50 transition-colors
-            ${previewUrl ? 'border-indigo-200' : 'border-slate-300'}`}
+          className={`shrink-0 rounded-xl overflow-hidden border-2 border-dashed flex items-center justify-center bg-[#FAF5EF] dark:bg-[#2D1822] transition-colors
+            ${previewUrl ? 'border-[#56323E]/30 dark:border-white/20' : 'border-[#E7DBCF] dark:border-white/10'}`}
           style={{ 
             width: defaultAspect >= 1 ? '120px' : '80px', 
             height: defaultAspect >= 1 ? `${120 / defaultAspect}px` : '120px',
@@ -341,7 +341,7 @@ export default function ImageCropper({
           {previewUrl ? (
             <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
           ) : (
-            <ImageIcon className="text-slate-400 w-6 h-6" />
+            <ImageIcon className="text-[#A68B98] w-6 h-6" />
           )}
         </div>
 
@@ -350,12 +350,12 @@ export default function ImageCropper({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl font-bold text-sm transition-colors w-fit"
+            className="flex items-center gap-2 px-4 py-2 bg-[#56323E]/10 dark:bg-[#EFDFD2]/10 text-[#56323E] dark:text-[#EFDFD2] border border-[#56323E]/20 dark:border-white/10 hover:bg-[#56323E]/20 rounded-xl font-bold text-sm transition-colors w-fit"
           >
             <Upload size={16} />
             {previewUrl ? "Replace Image" : label}
           </button>
-          <p className="text-xs text-slate-500 font-medium">All image types (JPG, PNG, WebP, HEIC) auto-compressed</p>
+          <p className="text-xs text-[#7D6671] font-medium">All image types (JPG, PNG, WebP, HEIC) auto-compressed</p>
         </div>
       </div>
 

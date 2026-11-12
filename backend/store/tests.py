@@ -113,3 +113,123 @@ class StoreThemeTests(TestCase):
         self.assertEqual(data['palette_mode'], 3)
         self.assertEqual(data['custom_primary_color'], '#f59e0b')
         self.assertTrue(data['apply_theme_to_owner_app'])
+
+
+class AgentFastPathTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.owner = User.objects.create_user(
+            username='owner_agent_test',
+            password='Password123!',
+            is_owner=True
+        )
+        self.customer = User.objects.create_user(
+            username='customer_agent_test',
+            first_name='Rahul',
+            last_name='Sharma',
+            email='rahul@cartsettle.shop',
+            password='Password123!',
+            is_customer=True
+        )
+        from orders.models import Order
+        from decimal import Decimal
+        # Create test orders
+        self.o1 = Order.objects.create(
+            id='ORD2026TEST01',
+            customer=self.customer,
+            status='ACCEPTED',
+            total_amount=Decimal('45.00'),
+            authorized_amount=Decimal('45.00'),
+            captured_amount=Decimal('45.00')
+        )
+        self.o2 = Order.objects.create(
+            id='ORD2026TEST02',
+            customer=self.customer,
+            status='READY',
+            total_amount=Decimal('85.50'),
+            authorized_amount=Decimal('85.50'),
+            captured_amount=Decimal('85.50')
+        )
+        self.o3 = Order.objects.create(
+            id='ORD2026TEST03',
+            customer=self.customer,
+            status='DELIVERED',
+            total_amount=Decimal('120.00'),
+            authorized_amount=Decimal('120.00'),
+            captured_amount=Decimal('120.00')
+        )
+
+    def test_multi_order_fast_path(self):
+        """Dynamic multi-order ledger returned when asking for last 3 orders."""
+        res = self.client.post('/api/v1/store/agent/chat/', {
+            'prompt': 'show last 3 orders',
+            'persona': 'owner',
+            'session_id': 'test_owner_multi_orders'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        actions = data.get('actions', [])
+        action_types = [a.get('type') for a in actions]
+        self.assertIn('ORDERS_LIST_CARD', action_types)
+        orders_card = next(a for a in actions if a.get('type') == 'ORDERS_LIST_CARD')
+        self.assertGreaterEqual(len(orders_card.get('orders', [])), 1)
+
+    def test_top_customers_fast_path(self):
+        """Top customers leaderboard returned when asking for highest buying customers."""
+        res = self.client.post('/api/v1/store/agent/chat/', {
+            'prompt': 'highest buying customers',
+            'persona': 'owner',
+            'session_id': 'test_owner_top_cust'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        actions = data.get('actions', [])
+        action_types = [a.get('type') for a in actions]
+        self.assertIn('TOP_CUSTOMERS_CARD', action_types)
+        top_card = next(a for a in actions if a.get('type') == 'TOP_CUSTOMERS_CARD')
+        self.assertGreaterEqual(len(top_card.get('customers', [])), 1)
+
+    def test_customer_profile_fast_path(self):
+        """In-depth customer profile dossier returned when asking for customer details."""
+        res = self.client.post('/api/v1/store/agent/chat/', {
+            'prompt': 'customer details Rahul',
+            'persona': 'owner',
+            'session_id': 'test_owner_profile'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        actions = data.get('actions', [])
+        action_types = [a.get('type') for a in actions]
+        self.assertIn('CUSTOMER_PROFILE_CARD', action_types)
+        prof_card = next(a for a in actions if a.get('type') == 'CUSTOMER_PROFILE_CARD')
+        self.assertEqual(prof_card.get('customer', {}).get('name'), 'Rahul Sharma')
+
+    def test_wallet_credit_fast_path(self):
+        """Dynamic wallet crediting updates balance and returns confirmation."""
+        res = self.client.post('/api/v1/store/agent/chat/', {
+            'prompt': 'credit $10 to customer Rahul',
+            'persona': 'owner',
+            'session_id': 'test_owner_credit'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        actions = data.get('actions', [])
+        action_types = [a.get('type') for a in actions]
+        self.assertIn('CUSTOMER_PROFILE_CARD', action_types)
+        from accounts.models import Wallet
+        w = Wallet.objects.get(user=self.customer)
+        self.assertGreaterEqual(float(w.balance), 10.0)
+
+    def test_shopper_account_dossier_fast_path(self):
+        """Shopper account dossier returned when asking my account."""
+        res = self.client.post('/api/v1/store/agent/chat/', {
+            'prompt': 'my account',
+            'persona': 'shopper',
+            'session_id': 'test_shopper_account'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        actions = data.get('actions', [])
+        action_types = [a.get('type') for a in actions]
+        self.assertIn('CUSTOMER_PROFILE_CARD', action_types)
+

@@ -20,7 +20,7 @@ import BargainModal from '../../components/BargainModal';
 export function CartPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { cart, isCustomer, storeSettings, update, flushCartSync, refresh } = useCart();
+  const { cart, isCustomer, storeSettings, update, flushCartSync, refresh, applyDeal } = useCart();
   const [error, setError] = useState('');
   const [removingIds, setRemovingIds] = useState(new Set());
   const [showBillDrawer, setShowBillDrawer] = useState(false);
@@ -596,8 +596,12 @@ export function CartPage() {
           isOpen={Boolean(bargainProduct)}
           onClose={() => setBargainProduct(null)}
           product={bargainProduct}
-          onDiscountApplied={() => {
-            if (refresh) refresh();
+          onDiscountApplied={async (info) => {
+            if (info?.dealToken && applyDeal) {
+              await applyDeal(info.dealToken);
+            } else if (refresh) {
+              await refresh();
+            }
           }}
         />
       </div>

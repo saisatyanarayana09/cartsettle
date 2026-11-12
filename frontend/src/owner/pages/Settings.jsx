@@ -126,20 +126,20 @@ const Settings = () => {
     }
   };
 
-  if (loading) return <div className="p-12 text-center text-gray-500 font-medium">Loading settings...</div>;
+  if (loading) return <div className="p-12 text-center text-[#7D6671] font-medium">Loading settings...</div>;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-16">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E7DBCF] dark:border-white/[0.08] pb-5">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">Store Settings</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your store, orders, delivery zones, and banners.</p>
+          <h1 className="text-2xl font-semibold text-[#2D1822] dark:text-white tracking-tight">Store Settings</h1>
+          <p className="text-sm text-[#7D6671] dark:text-[#C5B0BA] mt-1">Manage your store, orders, delivery zones, and banners.</p>
         </div>
         <div className="flex items-center gap-3">
           <Link
             to="/owner/advanced-settings"
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium transition-colors shadow-sm"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#56323E] hover:bg-[#432634] text-white text-sm font-medium transition-colors shadow-sm"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span>Advanced Settings</span>
@@ -147,17 +147,17 @@ const Settings = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8 divide-y divide-slate-100 dark:divide-slate-800">
+      <form onSubmit={handleSubmit} className="space-y-8 divide-y divide-[#E7DBCF] dark:divide-white/[0.08]">
 
         {/* Section 1: Store Identity & Operations */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
           <div className="md:col-span-1">
-            <h2 className="text-base font-medium text-slate-900 dark:text-white">Store Info</h2>
-            <p className="text-sm text-slate-500 mt-1">Basic information about your store and its location.</p>
+            <h2 className="text-base font-medium text-[#2D1822] dark:text-white">Store Info</h2>
+            <p className="text-sm text-[#7D6671] mt-1">Basic information about your store and its location.</p>
           </div>
-          <div className="md:col-span-2 space-y-5 bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="md:col-span-2 space-y-5 bg-white dark:bg-[#351D28] p-6 rounded-lg border border-[#E7DBCF] dark:border-white/[0.08] shadow-sm">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Store Name</label>
+              <label className="block text-sm font-medium text-[#5E4752] dark:text-[#C5B0BA] mb-1.5">Store Name</label>
               <input 
                 type="text" 
                 name="store_name" 
@@ -165,55 +165,55 @@ const Settings = () => {
                 readOnly 
                 onChange={handleChange} 
                 required 
-                className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900"
+                className="w-full rounded-md border border-[#E7DBCF] dark:border-white/[0.08] bg-white dark:bg-[#3F2231] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Store Address</label>
+              <label className="block text-sm font-medium text-[#5E4752] dark:text-[#C5B0BA] mb-1.5">Store Address</label>
               <textarea 
                 name="store_address" 
                 value={settings.store_address || ''} 
                 onChange={handleChange} 
                 rows="2"
-                className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900"
+                className="w-full rounded-md border border-[#E7DBCF] dark:border-white/[0.08] bg-white dark:bg-[#3F2231] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900"
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Store Phone</label>
-                <input type="tel" name="store_phone" value={settings.store_phone} onChange={handleChange} className="w-full rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm" />
+                <label className="block text-sm font-medium text-[#5E4752] dark:text-[#C5B0BA] mb-1.5">Store Phone</label>
+                <input type="tel" name="store_phone" value={settings.store_phone} onChange={handleChange} className="w-full rounded-md border border-[#E7DBCF] dark:border-white/[0.08] px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Store Email</label>
-                <input type="email" name="store_email" value={settings.store_email} onChange={handleChange} className="w-full rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm" />
+                <label className="block text-sm font-medium text-[#5E4752] dark:text-[#C5B0BA] mb-1.5">Store Email</label>
+                <input type="email" name="store_email" value={settings.store_email} onChange={handleChange} className="w-full rounded-md border border-[#E7DBCF] dark:border-white/[0.08] px-3 py-2 text-sm" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Latitude</label>
+                <label className="block text-sm font-medium text-[#5E4752] dark:text-[#C5B0BA] mb-1.5">Latitude</label>
                 <input 
                   type="number" step="0.000001" name="store_latitude" 
                   value={settings.store_latitude || ''} onChange={handleChange} 
-                  className="w-full rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full rounded-md border border-[#E7DBCF] dark:border-white/[0.08] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Longitude</label>
+                <label className="block text-sm font-medium text-[#5E4752] dark:text-[#C5B0BA] mb-1.5">Longitude</label>
                 <input 
                   type="number" step="0.000001" name="store_longitude" 
                   value={settings.store_longitude || ''} onChange={handleChange} 
-                  className="w-full rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full rounded-md border border-[#E7DBCF] dark:border-white/[0.08] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
             </div>
             <div className="flex items-center justify-between pt-2">
               <div>
-                <span className="text-sm font-medium text-slate-900 dark:text-white">Store is Open</span>
-                <p className="text-sm text-slate-500">Toggle to pause incoming orders.</p>
+                <span className="text-sm font-medium text-[#2D1822] dark:text-white">Store is Open</span>
+                <p className="text-sm text-[#7D6671]">Toggle to pause incoming orders.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" name="is_open" checked={settings.is_open} onChange={handleChange} className="sr-only peer"/>
-                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-900"></div>
+                <div className="w-9 h-5 bg-[#EFDFD2] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#D9C6B8] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#56323E]"></div>
               </label>
             </div>
           </div>
@@ -222,26 +222,26 @@ const Settings = () => {
         {/* Section 2: Order Constraints & Fees */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
           <div className="md:col-span-1">
-            <h2 className="text-base font-medium text-slate-900 dark:text-white">Order Constraints</h2>
-            <p className="text-sm text-slate-500 mt-1">Configure minimum amounts and standard fees.</p>
+            <h2 className="text-base font-medium text-[#2D1822] dark:text-white">Order Constraints</h2>
+            <p className="text-sm text-[#7D6671] mt-1">Configure minimum amounts and standard fees.</p>
           </div>
-          <div className="md:col-span-2 grid grid-cols-2 gap-5 bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="md:col-span-2 grid grid-cols-2 gap-5 bg-white dark:bg-[#351D28] p-6 rounded-lg border border-[#E7DBCF] dark:border-white/[0.08] shadow-sm">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Min Order Amount (₹)</label>
-              <input type="number" step="0.01" name="min_order_amount" value={settings.min_order_amount} onChange={handleChange} required className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
+              <label className="block text-sm font-medium text-[#5E4752] dark:text-[#C5B0BA] mb-1.5">Min Order Amount (₹)</label>
+              <input type="number" step="0.01" name="min_order_amount" value={settings.min_order_amount} onChange={handleChange} required className="w-full rounded-md border border-[#E7DBCF] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Packaging Fee (₹)</label>
-              <input type="number" step="0.01" name="packaging_fee" value={settings.packaging_fee} onChange={handleChange} required className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
+              <label className="block text-sm font-medium text-[#5E4752] dark:text-[#C5B0BA] mb-1.5">Packaging Fee (₹)</label>
+              <input type="number" step="0.01" name="packaging_fee" value={settings.packaging_fee} onChange={handleChange} required className="w-full rounded-md border border-[#E7DBCF] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
             </div>
             <div className="col-span-2 flex items-center justify-between pt-2">
               <div>
-                <span className="text-sm font-medium text-slate-900 dark:text-white">Auto-Accept Orders</span>
-                <p className="text-sm text-slate-500">Automatically move orders to 'ACCEPTED' state.</p>
+                <span className="text-sm font-medium text-[#2D1822] dark:text-white">Auto-Accept Orders</span>
+                <p className="text-sm text-[#7D6671]">Automatically move orders to 'ACCEPTED' state.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" name="auto_accept_orders" checked={settings.auto_accept_orders} onChange={handleChange} className="sr-only peer"/>
-                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-900"></div>
+                <div className="w-9 h-5 bg-[#EFDFD2] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#D9C6B8] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#56323E]"></div>
               </label>
             </div>
           </div>
@@ -250,40 +250,40 @@ const Settings = () => {
         {/* Section 3: Delivery Rules */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
           <div className="md:col-span-1">
-            <h2 className="text-base font-medium text-slate-900 dark:text-white">Delivery Zones</h2>
-            <p className="text-sm text-slate-500 mt-1">Manage delivery areas, fees, and constraints.</p>
+            <h2 className="text-base font-medium text-[#2D1822] dark:text-white">Delivery Zones</h2>
+            <p className="text-sm text-[#7D6671] mt-1">Manage delivery areas, fees, and constraints.</p>
           </div>
-          <div className="md:col-span-2 space-y-6 bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="md:col-span-2 space-y-6 bg-white dark:bg-[#351D28] p-6 rounded-lg border border-[#E7DBCF] dark:border-white/[0.08] shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm font-medium text-slate-900 dark:text-white">Enable Home Delivery</span>
-                <p className="text-sm text-slate-500">Allow customers to choose home delivery.</p>
+                <span className="text-sm font-medium text-[#2D1822] dark:text-white">Enable Home Delivery</span>
+                <p className="text-sm text-[#7D6671]">Allow customers to choose home delivery.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" name="is_home_delivery_active" checked={settings.is_home_delivery_active} onChange={handleChange} className="sr-only peer"/>
-                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-900"></div>
+                <div className="w-9 h-5 bg-[#EFDFD2] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#D9C6B8] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#56323E]"></div>
               </label>
             </div>
 
             {settings.is_home_delivery_active && (
-              <div className="space-y-5 pt-4 border-t border-slate-100">
+              <div className="space-y-5 pt-4 border-t border-[#E7DBCF]">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Delivery Fee (₹)</label>
-                    <input type="number" step="0.01" name="delivery_fee" value={settings.delivery_fee} onChange={handleChange} className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
+                    <label className="block text-sm font-medium text-[#5E4752] mb-1.5">Delivery Fee (₹)</label>
+                    <input type="number" step="0.01" name="delivery_fee" value={settings.delivery_fee} onChange={handleChange} className="w-full rounded-md border border-[#E7DBCF] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Free Above (₹)</label>
-                    <input type="number" step="0.01" name="free_delivery_threshold" value={settings.free_delivery_threshold} onChange={handleChange} className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
+                    <label className="block text-sm font-medium text-[#5E4752] mb-1.5">Free Above (₹)</label>
+                    <input type="number" step="0.01" name="free_delivery_threshold" value={settings.free_delivery_threshold} onChange={handleChange} className="w-full rounded-md border border-[#E7DBCF] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Min Delivery (₹)</label>
-                    <input type="number" step="0.01" name="min_delivery_order_amount" value={settings.min_delivery_order_amount} onChange={handleChange} className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
+                    <label className="block text-sm font-medium text-[#5E4752] mb-1.5">Min Delivery (₹)</label>
+                    <input type="number" step="0.01" name="min_delivery_order_amount" value={settings.min_delivery_order_amount} onChange={handleChange} className="w-full rounded-md border border-[#E7DBCF] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Allowed Pincodes (Comma separated)</label>
-                  <input type="text" name="allowed_pincodes" value={settings.allowed_pincodes} onChange={handleChange} placeholder="530001, 530002" className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
+                  <label className="block text-sm font-medium text-[#5E4752] mb-1.5">Allowed Pincodes (Comma separated)</label>
+                  <input type="text" name="allowed_pincodes" value={settings.allowed_pincodes} onChange={handleChange} placeholder="530001, 530002" className="w-full rounded-md border border-[#E7DBCF] px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-slate-900" />
                 </div>
                 <div className="pt-2">
                   <StoreRadiusMapPicker
@@ -304,7 +304,7 @@ const Settings = () => {
         <BannerVisibility />
 
         <div className="pt-6 flex justify-end">
-          <button type="submit" disabled={saving} className="px-5 py-2 bg-slate-900 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition shadow-sm disabled:opacity-50">
+          <button type="submit" disabled={saving} className="px-5 py-2 bg-[#56323E] text-white rounded-md text-sm font-medium hover:bg-[#432634] transition shadow-sm disabled:opacity-50">
             {saving ? 'Saving...' : 'Save All Settings'}
           </button>
         </div>

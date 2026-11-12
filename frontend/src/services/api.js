@@ -6,7 +6,7 @@ export const getBaseURL = () => {
   if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
     return '/api/v1';
   }
-  return 'https://narendra-kirana.onrender.com/api/v1';
+  return 'https://cartsettle-api.onrender.com/api/v1';
 };
 
 const api = axios.create({
@@ -51,10 +51,10 @@ api.interceptors.request.use(
     } else {
       config.headers['X-Portal-Context'] = 'customer';
     }
-    // 4.5s POST cap (> backend's 2.8s Gemini read timeout) so local ASGI requests never get aborted mid-flight
+    // 25s POST cap so local ASGI and cloud LLM requests never get prematurely aborted mid-flight
     if ((config.url || '').includes('/store/agent/') && !config.timeout) {
       const isGet = (config.method || 'get').toLowerCase() === 'get';
-      config.timeout = isGet ? 2500 : 4500;
+      config.timeout = isGet ? 5000 : 25000;
     }
     return config;
   },

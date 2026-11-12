@@ -21,6 +21,7 @@ describe('normalizeVoiceTranscript', () => {
     expect(normalizeVoiceTranscript('add milk to car')).toBe('add milk to cart');
     expect(normalizeVoiceTranscript('add to court')).toBe('add to cart');
     expect(normalizeVoiceTranscript('court total')).toBe('cart total');
+    expect(normalizeVoiceTranscript('show items in the court')).toBe('show items in the cart');
   });
 
   it('preserves payment cards and does not convert them to cart', () => {

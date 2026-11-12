@@ -61,7 +61,7 @@ const InvoiceModal = ({ orderId, onClose }) => {
       aria-label={`Invoice for Order ${orderId}`}
     >
       <div 
-        className="bg-white dark:bg-[#0d1322] rounded-none sm:rounded-2xl w-full h-full sm:h-[94vh] sm:max-w-5xl sm:max-h-[960px] shadow-2xl border-0 sm:border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden transition-colors"
+        className="bg-white dark:bg-[#351D28] rounded-none sm:rounded-2xl w-full h-full sm:h-[94vh] sm:max-w-5xl sm:max-h-[960px] shadow-2xl border-0 sm:border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}

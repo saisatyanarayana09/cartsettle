@@ -12,7 +12,9 @@ from .views import (
     StoreBackupExportView,
     AgentChatView,
     AgentToolsView,
-    SupplierPayoutView
+    SupplierPayoutView,
+    RAGStatusView,
+    RAGSyncView
 )
 
 router = DefaultRouter()
@@ -32,6 +34,8 @@ urlpatterns = [
     path('agent/tools/', AgentToolsView.as_view(), name='agent-tools'),
     path('agent_tools/', AgentToolsView.as_view(), name='agent-tools-alt'),
     path('payouts/create/', SupplierPayoutView.as_view(), name='supplier-payout'),
+    path('rag/status/', RAGStatusView.as_view(), name='rag-status'),
+    path('rag/sync/', RAGSyncView.as_view(), name='rag-sync'),
 
     path('', include(router.urls)),
 ]

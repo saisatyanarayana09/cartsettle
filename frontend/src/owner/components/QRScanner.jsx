@@ -16,7 +16,6 @@ export default function QRScanner({ onScan, onClose }) {
     const config = {
       fps: 15,
       qrbox: { width: 240, height: 240 },
-      formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
     };
 
     html5QrCode.start(
@@ -57,13 +56,13 @@ export default function QRScanner({ onScan, onClose }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden relative">
-        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-          <h3 className="font-bold text-gray-900 flex items-center gap-2">
-            <Camera size={20} className="text-indigo-600" />
-            Scan Customer QR
+      <div className="owner-theme bg-white dark:bg-[#351D28] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden relative border border-[#E7DBCF] dark:border-white/10 text-[#2D1822] dark:text-[#FAF5EF]">
+        <div className="p-4 border-b border-[#E7DBCF] dark:border-white/10 flex justify-between items-center bg-[#FAF5EF] dark:bg-[#2D1822]">
+          <h3 className="font-bold text-[#2D1822] dark:text-[#FAF5EF] flex items-center gap-2">
+            <Camera size={20} className="text-[#56323E] dark:text-[#EFDFD2]" />
+            Scan QR & Barcodes
           </h3>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer">
+          <button onClick={onClose} className="p-2 text-[#A68B98] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full transition-colors cursor-pointer">
             <X size={20} />
           </button>
         </div>
@@ -79,8 +78,10 @@ export default function QRScanner({ onScan, onClose }) {
           )}
         </div>
         
-        <div className="p-6 bg-gray-50 text-center">
-          <p className="text-sm text-gray-500">Position the QR code within the frame to automatically scan and approve the referral reward.</p>
+        <div className="p-4 bg-[#FAF5EF] dark:bg-[#2D1822] text-center border-t border-[#E7DBCF] dark:border-white/10">
+          <p className="text-xs text-[#7D6671] dark:text-[#EDE4DC]">
+            Position customer pickup QR, order code, referral pass, or product barcode within the camera frame.
+          </p>
         </div>
       </div>
     </div>

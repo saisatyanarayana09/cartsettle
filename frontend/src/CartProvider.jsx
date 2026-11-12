@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import api, { clearAllBrowserCaches } from './services/api'
 
 import { CartContext } from './cart-context';
@@ -12,11 +13,37 @@ const getUser = () => {
   }
 };
 
-const LOCAL_CART_KEY = 'smart-kirana-customer-cart-cache';
+const GUEST_CART_KEY = 'smart-kirana-guest-cart';
+const CUSTOMER_CART_CACHE_KEY = 'smart-kirana-customer-cart-cache';
+
+const getStoredGuestCart = () => {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const clearStoredGuestCart = () => {
+  try {
+    localStorage.removeItem(GUEST_CART_KEY);
+  } catch {}
+};
+
+const getStoredCustomerCart = () => {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_CART_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 const getStoredCart = () => {
   try {
-    const raw = localStorage.getItem(LOCAL_CART_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const isCust = Boolean(getUser()?.is_customer);
+    return isCust ? getStoredCustomerCart() : getStoredGuestCart();
   } catch {
     return null;
   }
@@ -24,7 +51,8 @@ const getStoredCart = () => {
 
 const clearStoredCart = () => {
   try {
-    localStorage.removeItem(LOCAL_CART_KEY);
+    localStorage.removeItem(GUEST_CART_KEY);
+    localStorage.removeItem(CUSTOMER_CART_CACHE_KEY);
   } catch {}
 };
 
@@ -90,6 +118,7 @@ let hasLoadedInitialNotifications = false;
 export function CartProvider({ children }) {
   const [cart, setCart] = useState(() => getStoredCart())
   const [user, setUser] = useState(getUser)
+  const isCustomer = Boolean(user?.is_customer)
   const [storeSettings, setStoreSettings] = useState(null)
   const [favorites, setFavorites] = useState([])
   const [notifications, setNotifications] = useState([])
@@ -113,12 +142,22 @@ export function CartProvider({ children }) {
     setCart(nextCart)
     if (nextCart) {
       try {
-        localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(nextCart));
+        if (!isCustomer) {
+          localStorage.setItem(GUEST_CART_KEY, JSON.stringify(nextCart));
+        } else {
+          localStorage.setItem(CUSTOMER_CART_CACHE_KEY, JSON.stringify(nextCart));
+        }
       } catch {}
     } else {
-      localStorage.removeItem(LOCAL_CART_KEY);
+      try {
+        if (!isCustomer) {
+          localStorage.removeItem(GUEST_CART_KEY);
+        } else {
+          localStorage.removeItem(CUSTOMER_CART_CACHE_KEY);
+        }
+      } catch {}
     }
-  }, [])
+  }, [isCustomer])
 
   // Cart mutation responses contain every line item. Serialize writes and only
   // let the newest response replace optimistic state, preventing late responses
@@ -135,8 +174,6 @@ export function CartProvider({ children }) {
 
     return next
   }, [])
- 
- const isCustomer = Boolean(user?.is_customer)
 
   const handleWsMessage = useCallback((msg) => {
     if (!msg || typeof msg !== 'object') return;
@@ -206,7 +243,7 @@ export function CartProvider({ children }) {
     if (!isCustomer) return;
     try {
       const res = await api.get('/notifications/');
-      const list = res.data.results || res.data || [];
+      const list = Array.isArray(res.data?.results) ? res.data.results : Array.isArray(res.data) ? res.data : [];
       setNotifications(list);
 
       if (!hasLoadedInitialNotifications) {
@@ -236,34 +273,35 @@ export function CartProvider({ children }) {
 
   const refresh = useCallback(async () => {
     if (!isCustomer) {
-      const guestCart = getStoredCart();
+      const guestCart = getStoredGuestCart();
       if (guestCart) replaceCart(guestCart);
       setFavorites([]);
       setNotifications([]);
       return;
     }
-    const stored = getStoredCart();
-    const localItems = stored?.items || [];
-    if (localItems.length > 0 && !isMergingRef.current) {
+    // For logged-in customer: check if there is an unmerged guest cart from before sign-in to merge ONCE
+    const guestCart = getStoredGuestCart();
+    const guestItems = guestCart?.items || [];
+    if (guestItems.length > 0 && !isMergingRef.current) {
       isMergingRef.current = true;
       try {
-        const itemsPayload = localItems
+        const itemsPayload = guestItems
           .map(item => ({ product: getItemProductId(item), quantity: item.quantity }))
           .filter(i => i.product && i.quantity > 0);
         if (itemsPayload.length > 0) {
-          clearStoredCart();
+          clearStoredGuestCart();
           const res = await api.post('/cart/merge/', { items: itemsPayload });
           if (res?.data) {
             replaceCart(res.data);
           }
         }
       } catch (e) {
-        console.warn('Cart merge on refresh warning:', e);
+        console.warn('Guest cart merge warning:', e);
       } finally {
         isMergingRef.current = false;
       }
     }
-    // Run them independently so one slow request doesn't block the others
+    // Authoritative fetch from server
     refreshCart().catch(console.error);
     refreshFavorites().catch(console.error);
     refreshNotifications().catch(console.error);
@@ -337,28 +375,39 @@ export function CartProvider({ children }) {
         delete pendingSyncTimers.current[k];
       });
 
-      if (isCustomer && cartRef.current?.items) {
-        try {
-          const itemsPayload = cartRef.current.items
-            .map(i => ({ product: getItemProductId(i), quantity: i.quantity }))
-            .filter(i => i.product && i.quantity > 0);
-          if (itemsPayload.length > 0) {
+      if (isCustomer) {
+        for (const pIdStr of timerKeys) {
+          const pId = Number(pIdStr);
+          const latestItem = cartRef.current?.items?.find(i => getItemProductId(i) === pId);
+          if (!latestItem || latestItem.quantity <= 0) {
             if (isWsConnected) {
-              sendWsMessage({ type: 'MERGE_GUEST', items: itemsPayload });
-            } else {
-              const res = await api.post('/cart/merge/', { items: itemsPayload });
-              if (res?.data) {
-                replaceCart(res.data);
+              sendWsMessage({ type: 'REMOVE_ITEM', product_id: pId });
+            }
+            continue;
+          }
+          if (isWsConnected) {
+            sendWsMessage({
+              type: 'UPDATE_QUANTITY',
+              item_id: typeof latestItem.id === 'number' && latestItem.id > 0 ? latestItem.id : null,
+              product_id: pId,
+              quantity: latestItem.quantity,
+            });
+          } else {
+            try {
+              if (typeof latestItem.id === 'number' && latestItem.id > 0) {
+                await api.patch(`/cart/items/${latestItem.id}/`, { quantity: latestItem.quantity });
+              } else {
+                await api.post('/cart/items/', { product: pId, quantity: latestItem.quantity });
               }
+            } catch (e) {
+              console.warn('Sync item error during flush:', e);
             }
           }
-        } catch (e) {
-          console.warn('Flush cart sync error:', e);
         }
       }
     }
     await cartMutationQueue.current;
-  }, [isCustomer, isWsConnected, sendWsMessage, replaceCart]);
+  }, [isCustomer, isWsConnected, sendWsMessage]);
 
   const add = useCallback(async (product, quantity = 1) => {
     if (!product) return;
@@ -571,24 +620,57 @@ export function CartProvider({ children }) {
     });
   }, [flushCartSync, enqueueCartMutation, replaceCart]);
 
+  const applyDeal = useCallback(async (dealToken) => {
+    await flushCartSync();
+    return enqueueCartMutation(async (version) => {
+      const response = await api.post('/cart/apply-deal/', { deal_token: dealToken });
+      if (version === cartMutationVersion.current) replaceCart(response.data);
+      return response.data;
+    });
+  }, [flushCartSync, enqueueCartMutation, replaceCart]);
+
   const toggleFavorite = useCallback(async (productId) => {
-    if (!isCustomer) return;
+    if (!isCustomer) {
+      toast('Please sign in to save your favorite products.', { icon: '❤️' });
+      return;
+    }
     const numId = Number(productId);
     const isFav = favorites.find(f => 
       Number(f.product) === numId || 
       Number(f.product?.id) === numId || 
       Number(f.product_details?.id) === numId
     );
-    try {
-      if (isFav?.id) {
-        await api.delete(`/favorites/${isFav.id}/`).catch(() =>
-          api.post('/favorites/toggle/', { product: numId })
+
+    // Optimistic UI update for instant heart toggle feedback
+    setFavorites(prev => {
+      if (isFav) {
+        return prev.filter(f =>
+          Number(f.product) !== numId &&
+          Number(f.product?.id) !== numId &&
+          Number(f.product_details?.id) !== numId
         );
-      } else {
-        await api.post('/favorites/', { product: numId });
+      }
+      return [...prev, { id: `temp-${numId}`, product: numId, product_details: { id: numId } }];
+    });
+
+    try {
+      const res = await api.post('/favorites/toggle/', { product: numId });
+      if (res.data?.is_favorite && res.data?.favorite) {
+        setFavorites(prev => [
+          ...prev.filter(f =>
+            Number(f.product) !== numId &&
+            Number(f.product?.id) !== numId &&
+            Number(f.product_details?.id) !== numId
+          ),
+          res.data.favorite,
+        ]);
+        toast.success('Added to favorites');
+      } else if (res.data?.is_favorite === false) {
+        toast('Removed from favorites', { icon: '🤍' });
       }
     } catch (err) {
       console.error('Error toggling favorite:', err);
+      toast.error('Could not update favorites.');
     }
     refreshFavorites().catch(console.error);
   }, [isCustomer, favorites, refreshFavorites])
@@ -596,10 +678,10 @@ export function CartProvider({ children }) {
  // Memoize the context value to prevent unnecessary re-renders of all consumers
  const value = useMemo(() => ({
    cart, add, update, clearCart, refresh, user, isCustomer, syncUser, logout,
-   applyPromo, storeSettings, favorites, toggleFavorite, notifications,
+   applyPromo, applyDeal, storeSettings, favorites, toggleFavorite, notifications,
    notificationPermission, requestWebPushPermission, flushCartSync, isWsConnected
  }), [cart, add, update, clearCart, refresh, user, isCustomer, syncUser, logout,
-      applyPromo, storeSettings, favorites, toggleFavorite, notifications,
+      applyPromo, applyDeal, storeSettings, favorites, toggleFavorite, notifications,
       notificationPermission, requestWebPushPermission, flushCartSync, isWsConnected])
 
  return (

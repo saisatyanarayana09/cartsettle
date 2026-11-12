@@ -102,9 +102,8 @@ const ProductImage = React.memo(function ProductImage({ product, large = false, 
     }
     
     return (
-       <div className={`w-full flex items-center justify-center relative overflow-hidden ${large ? 'h-64 sm:h-72 md:h-80 bg-white/60 dark:bg-slate-800/40 rounded-2xl' : 'h-32 sm:h-36 bg-gradient-to-b from-transparent to-slate-50/50 dark:to-slate-900/50'}`}>
+       <div className={`w-full flex items-center justify-center relative overflow-hidden ${large ? 'h-64 sm:h-72 md:h-80 bg-white dark:bg-slate-900/60 rounded-2xl' : 'h-40 sm:h-44 bg-white dark:bg-slate-900/50'}`}>
            <div className={`absolute inset-0 bg-slate-100 dark:bg-slate-800 transition-opacity duration-300 ${imageLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100 animate-pulse'}`} />
-           {!large && <div className="absolute inset-0 bg-slate-900/5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 rounded-t-xl z-10 mix-blend-overlay"></div>}
            <img 
              loading={priority ? 'eager' : 'lazy'}
              fetchPriority={priority ? 'high' : undefined}
@@ -118,7 +117,7 @@ const ProductImage = React.memo(function ProductImage({ product, large = false, 
                  e.currentTarget.src = '/media/products/pumpkin_seeds.jpg';
                }
              }}
-             className={large ? `max-h-full max-w-full object-contain drop-shadow-sm p-3 transition-transform duration-300 hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}` : `w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal transition-transform duration-700 group-hover/card:scale-110 transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+             className={`w-full h-full object-contain p-2.5 transition-transform duration-300 group-hover/card:scale-105 transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
            />
        </div>
     );
@@ -145,7 +144,14 @@ export const ProductCard = React.memo(function ProductCard({ product, priority =
   const [added, setAdded] = useState(false);
 
   const price = product.offer_price || product.regular_price
-  const isFav = favorites?.find(f => f.product === product.id || f.product?.id === product.id || f.id === product.id);
+  const isFav = Boolean(
+    favorites?.some(
+      (f) =>
+        Number(f.product) === Number(product.id) ||
+        Number(f.product?.id) === Number(product.id) ||
+        Number(f.product_details?.id) === Number(product.id)
+    )
+  );
 
   const cartItem = cart?.items?.find(item => item.product === product.id);
   const maxAllowed = product.max_order_quantity > 0 ? Math.min(product.stock_quantity, product.max_order_quantity) : product.stock_quantity;
@@ -183,19 +189,22 @@ export const ProductCard = React.memo(function ProductCard({ product, priority =
         </div>
       )}
 
-      {isCustomer && (
-        <button 
-          type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(product.id); }} 
-          aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
-          className="absolute top-2 right-2 z-10 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-md transition-all hover:scale-125 hover:bg-white active:scale-95 cursor-pointer"
-        >
-          <Heart size={18} fill={isFav ? "currentColor" : "none"} className={isFav ? "text-rose-500 drop-shadow-sm" : "text-slate-300"} />
-        </button>
-      )}
+      <button 
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleFavorite(product.id);
+          if (!isCustomer) navigate('/login');
+        }} 
+        aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+        className="absolute top-2 right-2 z-10 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/90 backdrop-blur shadow-md transition-all hover:scale-125 hover:bg-white active:scale-95 cursor-pointer"
+      >
+        <Heart size={18} fill={isFav ? "currentColor" : "none"} className={isFav ? "text-rose-500 drop-shadow-sm" : "text-slate-300 hover:text-rose-400"} />
+      </button>
 
       <Link to={`/product/${product.id}`} className="flex flex-col flex-grow">
-        <div className={`overflow-hidden bg-slate-50 relative rounded-t-2xl ${isOutOfStock ? "grayscale opacity-80" : ""}`}>
+        <div className={`overflow-hidden bg-white dark:bg-slate-900 relative rounded-t-2xl ${isOutOfStock ? "grayscale opacity-80" : ""}`}>
           {isOutOfStock && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-xl tracking-widest whitespace-nowrap border border-white/20">
               OUT OF STOCK
@@ -204,17 +213,9 @@ export const ProductCard = React.memo(function ProductCard({ product, priority =
           <ProductImage product={product} priority={priority} />
         </div>
 
-        <div className="p-3 pb-1 flex flex-col flex-grow bg-white">
+        <div className="p-3 pb-1 flex flex-col flex-grow bg-white dark:bg-slate-900">
           <p className="line-clamp-2 text-sm font-bold leading-tight text-slate-800 dark:text-slate-100 group-hover/card:text-emerald-600 dark:group-hover/card:text-emerald-400 transition-colors">{product.name}</p>
-          <p className="mt-1 text-xs text-slate-500 font-medium">{product.brand && `${product.brand} · `}{product.unit}</p>
-
-          {product.tags && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {product.tags.split(',').map((tag, i) => (
-                <span key={i} className="px-1.5 py-0.5 bg-red-50 text-red-600 border border-red-100 text-[9px] font-extrabold uppercase tracking-widest rounded-md">{tag.trim()}</span>
-              ))}
-            </div>
-          )}
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 font-medium">{product.brand && `${product.brand} · `}{product.unit}</p>
 
           <div className="mt-auto pt-3 flex items-center gap-2 mb-1">
             <span className="text-lg font-black text-slate-900 dark:text-white">₹{price}</span>
@@ -225,7 +226,7 @@ export const ProductCard = React.memo(function ProductCard({ product, priority =
         </div>
       </Link>
 
-      <div className="p-3 pt-0 bg-white">
+      <div className="p-3 pt-0 bg-white dark:bg-slate-900">
         {(!isOutOfStock) ? (
           <button 
             type="button"
@@ -1186,7 +1187,14 @@ export function ProductDetailPage() {
   }
 
   const price = product.offer_price || product.regular_price;
-  const isFav = favorites?.find((f) => f.product === product.id || f.product?.id === product.id || f.id === product.id);
+  const isFav = Boolean(
+    favorites?.some(
+      (f) =>
+        Number(f.product) === Number(product.id) ||
+        Number(f.product?.id) === Number(product.id) ||
+        Number(f.product_details?.id) === Number(product.id)
+    )
+  );
   const regPrice = Number(product.regular_price);
   const offPrice = Number(product.offer_price);
   const discountPercent = product.offer_price && regPrice > offPrice ? Math.round(((regPrice - offPrice) / regPrice) * 100) : 0;
@@ -1245,21 +1253,22 @@ export function ProductDetailPage() {
                   >
                     <Share2 size={20} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300" />
                   </button>
-                  {isCustomer && (
-                    <button
-                      type="button"
-                      onClick={() => toggleFavorite(product.id)}
-                      className="p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-                      title={isFav ? 'Remove from favorites' : 'Add to favorites'}
-                      aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
-                    >
-                      <Heart
-                        size={22}
-                        fill={isFav ? 'currentColor' : 'none'}
-                        className={isFav ? 'text-rose-500' : 'text-slate-300 dark:text-slate-600 hover:text-rose-400'}
-                      />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleFavorite(product.id);
+                      if (!isCustomer) navigate('/login');
+                    }}
+                    className="p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                    title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                    aria-label={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Heart
+                      size={22}
+                      fill={isFav ? 'currentColor' : 'none'}
+                      className={isFav ? 'text-rose-500' : 'text-slate-300 dark:text-slate-600 hover:text-rose-400'}
+                    />
+                  </button>
                 </div>
               </div>
 
@@ -1270,20 +1279,6 @@ export function ProductDetailPage() {
               <p className="mt-1 text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
                 {product.brand && `${product.brand} · `}{product.unit}
               </p>
-
-              {/* Tags */}
-              {product.tags && (
-                <div className="flex flex-wrap gap-1.5 mt-2.5">
-                  {product.tags.split(',').map((tag, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wider rounded-md"
-                    >
-                      {tag.trim()}
-                    </span>
-                  ))}
-                </div>
-              )}
 
               {/* Pricing */}
               <div className="mt-4 flex items-baseline gap-3">

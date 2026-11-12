@@ -109,7 +109,7 @@ export default function Sales() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto py-12 text-slate-500 dark:text-slate-400 text-center font-medium">
+      <div className="max-w-7xl mx-auto py-12 text-[#7D6671] dark:text-[#C5B0BA] text-center font-medium">
         Loading sales data...
       </div>
     );
@@ -117,24 +117,24 @@ export default function Sales() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-white dark:bg-[#0d1322] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 bg-white dark:bg-[#351D28] p-6 rounded-2xl shadow-sm border border-[#E7DBCF] dark:border-white/10 enterprise-card transition-colors">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-3xl font-extrabold text-[#2D1822] dark:text-white tracking-tight flex items-center gap-2">
             <TrendingUp className="text-emerald-600 dark:text-emerald-400" size={32} />
             Sales Analytics
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Track your store's performance and top selling items.</p>
+          <p className="text-[#7D6671] dark:text-[#C5B0BA] mt-1">Track your store's performance and top selling items.</p>
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl inline-flex">
-            <button onClick={() => setTimeframe('7')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${timeframe === '7' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>7 Days</button>
-            <button onClick={() => setTimeframe('30')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${timeframe === '30' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>30 Days</button>
-            <button onClick={() => setTimeframe('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${timeframe === 'all' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>All Time</button>
+          <div className="bg-[#F2E9E0] dark:bg-[#3F2231] p-1 rounded-xl inline-flex">
+            <button onClick={() => setTimeframe('7')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${timeframe === '7' ? 'bg-[#56323E] text-[#FAF5EF] dark:bg-[#EFDFD2] dark:text-[#2D1822] shadow-sm font-bold' : 'text-[#7D6671] dark:text-[#C5B0BA] hover:text-[#5E4752] dark:hover:text-[#FAF5EF]'}`}>7 Days</button>
+            <button onClick={() => setTimeframe('30')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${timeframe === '30' ? 'bg-[#56323E] text-[#FAF5EF] dark:bg-[#EFDFD2] dark:text-[#2D1822] shadow-sm font-bold' : 'text-[#7D6671] dark:text-[#C5B0BA] hover:text-[#5E4752] dark:hover:text-[#FAF5EF]'}`}>30 Days</button>
+            <button onClick={() => setTimeframe('all')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${timeframe === 'all' ? 'bg-[#56323E] text-[#FAF5EF] dark:bg-[#EFDFD2] dark:text-[#2D1822] shadow-sm font-bold' : 'text-[#7D6671] dark:text-[#C5B0BA] hover:text-[#5E4752] dark:hover:text-[#FAF5EF]'}`}>All Time</button>
           </div>
           <button 
             onClick={handleDownloadCSV}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold transition-colors shadow-sm text-sm"
+            className="flex items-center gap-2 bg-[#56323E] hover:bg-[#432634] text-[#FAF5EF] dark:bg-[#EFDFD2] dark:hover:bg-[#E7DBCF] dark:text-[#2D1822] px-4 py-2 rounded-xl font-bold transition-colors shadow-sm text-sm"
           >
             <Download size={16} />
             Export CSV
@@ -143,32 +143,32 @@ export default function Sales() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-[#0d1322] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center gap-4 transition-colors">
+        <div className="bg-white dark:bg-[#351D28] p-6 rounded-2xl shadow-sm border border-[#E7DBCF] dark:border-white/[0.08] flex items-center gap-4 transition-colors">
           <div className="p-4 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl text-emerald-600 dark:text-emerald-400"><IndianRupee size={28} /></div>
           <div>
-            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Gross Revenue</p>
-            <p className="text-3xl font-black text-slate-900 dark:text-white mt-1">₹{totalSales.toLocaleString('en-IN')}</p>
+            <p className="text-sm font-bold text-[#7D6671] dark:text-[#C5B0BA]">Gross Revenue</p>
+            <p className="text-3xl font-black text-[#2D1822] dark:text-white mt-1">₹{totalSales.toLocaleString('en-IN')}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-[#0d1322] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center gap-4 transition-colors">
-          <div className="p-4 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl text-indigo-600 dark:text-indigo-400"><ShoppingCart size={28} /></div>
+        <div className="bg-white dark:bg-[#351D28] p-6 rounded-2xl shadow-sm border border-[#E7DBCF] dark:border-white/[0.08] flex items-center gap-4 transition-colors">
+          <div className="p-4 bg-[#FAF5EF] dark:bg-[#432634] rounded-xl text-[#56323E] dark:text-[#EFDFD2]"><ShoppingCart size={28} /></div>
           <div>
-            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Completed Orders</p>
-            <p className="text-3xl font-black text-slate-900 dark:text-white mt-1">{totalOrders}</p>
+            <p className="text-sm font-bold text-[#7D6671] dark:text-[#C5B0BA]">Completed Orders</p>
+            <p className="text-3xl font-black text-[#2D1822] dark:text-white mt-1">{totalOrders}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-[#0d1322] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center gap-4 transition-colors">
+        <div className="bg-white dark:bg-[#351D28] p-6 rounded-2xl shadow-sm border border-[#E7DBCF] dark:border-white/[0.08] flex items-center gap-4 transition-colors">
           <div className="p-4 bg-amber-50 dark:bg-amber-950/60 rounded-xl text-amber-600 dark:text-amber-400"><Trophy size={28} /></div>
           <div>
-            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">Average Order Value</p>
-            <p className="text-3xl font-black text-slate-900 dark:text-white mt-1">₹{aov.toFixed(0)}</p>
+            <p className="text-sm font-bold text-[#7D6671] dark:text-[#C5B0BA]">Average Order Value</p>
+            <p className="text-3xl font-black text-[#2D1822] dark:text-white mt-1">₹{aov.toFixed(0)}</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-[#0d1322] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 transition-colors">
-          <h2 className="text-lg font-extrabold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+        <div className="lg:col-span-2 bg-white dark:bg-[#351D28] p-6 rounded-2xl shadow-sm border border-[#E7DBCF] dark:border-white/10 enterprise-card transition-colors">
+          <h2 className="text-lg font-extrabold text-[#2D1822] dark:text-white mb-6 flex items-center gap-2">
             <Calendar className="text-emerald-500" size={20} /> Revenue Trend
           </h2>
           <div className="h-72 w-full">
@@ -188,23 +188,23 @@ export default function Sales() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#0d1322] p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col transition-colors">
-          <h2 className="text-lg font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="bg-white dark:bg-[#351D28] p-6 rounded-2xl shadow-sm border border-[#E7DBCF] dark:border-white/[0.08] flex flex-col transition-colors">
+          <h2 className="text-lg font-extrabold text-[#2D1822] dark:text-white mb-4 flex items-center gap-2">
             <Trophy className="text-amber-500" size={20} /> Best Sellers
           </h2>
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
             {topProducts.length === 0 ? (
-              <p className="text-slate-500 dark:text-slate-400 text-sm text-center py-8">No sales data found for this period.</p>
+              <p className="text-[#7D6671] dark:text-[#C5B0BA] text-sm text-center py-8">No sales data found for this period.</p>
             ) : (
               topProducts.map((product, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-xl">
+                <div key={idx} className="flex items-center justify-between p-3 bg-[#FAF5EF] dark:bg-[#3F2231]/60 border border-[#E7DBCF] dark:border-white/[0.08] rounded-xl">
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black flex-shrink-0 ${idx === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' : idx === 1 ? 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300' : idx === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black flex-shrink-0 ${idx === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' : idx === 1 ? 'bg-[#EFDFD2] text-[#5E4752] dark:bg-[#432634] dark:text-[#C5B0BA]' : idx === 2 ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-300'}`}>
                       #{idx + 1}
                     </div>
                     <div className="overflow-hidden">
-                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{product.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{product.quantity} units sold</p>
+                      <p className="text-sm font-bold text-[#2D1822] dark:text-white truncate">{product.name}</p>
+                      <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA]">{product.quantity} units sold</p>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">

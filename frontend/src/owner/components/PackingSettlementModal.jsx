@@ -176,7 +176,7 @@ export default function PackingSettlementModal({
         order: data.order
       });
 
-      toast.success(`Order #${order.id} settled! $${finalTotal.toFixed(2)} captured via PayPal.`);
+      toast.success(`Order #${order.id} settled! ₹${finalTotal.toFixed(2)} captured via PayPal.`);
 
       if (onSettled) {
         onSettled(data.order || data);
@@ -190,31 +190,31 @@ export default function PackingSettlementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#56323E]/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="owner-theme bg-white dark:bg-[#351D28] border border-[#E7DBCF] dark:border-white/10 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-[#2D1822] dark:text-[#FAF5EF]">
         {/* Modal Header */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
+        <div className="p-5 border-b border-[#E7DBCF] dark:border-white/[0.08] flex items-center justify-between bg-[#FAF5EF]/50 dark:bg-[#3F2231]/40">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <Package className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-base font-bold text-[#2D1822] dark:text-[#FAF5EF]">
                   Packing Table Auto-Settlement
                 </h3>
-                <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold">
+                <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-[#56323E]/10 text-[#56323E] dark:bg-[#EFDFD2]/10 dark:text-[#EFDFD2] font-bold">
                   #{order.id}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Customer: <strong className="text-slate-700 dark:text-slate-300">{order.customer_name || 'Shopper'}</strong>
+              <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA]">
+                Customer: <strong className="text-[#5E4752] dark:text-[#C5B0BA]">{order.customer_name || 'Shopper'}</strong>
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer"
+            className="p-1.5 rounded-xl text-[#A68B98] hover:text-[#5E4752] dark:hover:text-[#FAF5EF] hover:bg-[#F2E9E0] dark:hover:bg-[#3F2231] transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -229,30 +229,30 @@ export default function PackingSettlementModal({
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <h4 className="text-lg font-bold text-[#2D1822] dark:text-[#FAF5EF]">
                   PayPal Dynamic Capture Complete!
                 </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA] mt-1">
                   Settled with dynamic partial capture (final_capture=true).
                 </p>
               </div>
 
-              <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 max-w-md mx-auto text-left space-y-2 text-xs">
-                <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
-                  <span className="text-slate-500">PayPal Pre-Authorization:</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200">${authorizedAmount.toFixed(2)}</span>
+              <div className="bg-[#FAF5EF] dark:bg-[#3F2231]/60 rounded-2xl p-4 border border-[#E7DBCF] dark:border-white/[0.08] max-w-md mx-auto text-left space-y-2 text-xs">
+                <div className="flex justify-between py-1 border-b border-[#E7DBCF]/60 dark:border-white/[0.08]">
+                  <span className="text-[#7D6671]">PayPal Pre-Authorization:</span>
+                  <span className="font-bold text-[#2D1822] dark:text-[#FAF5EF]">₹{authorizedAmount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60">
-                  <span className="text-slate-500">Final Captured Amount:</span>
-                  <span className="font-bold text-indigo-600 dark:text-indigo-400">${finalTotal.toFixed(2)}</span>
+                <div className="flex justify-between py-1 border-b border-[#E7DBCF]/60 dark:border-white/[0.08]">
+                  <span className="text-[#7D6671]">Final Captured Amount:</span>
+                  <span className="font-bold text-[#56323E] dark:text-[#EFDFD2]">₹{finalTotal.toFixed(2)}</span>
                 </div>
                 {autoReleasedAmount > 0 && (
-                  <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-700/60 text-emerald-600 dark:text-emerald-400">
+                  <div className="flex justify-between py-1 border-b border-[#E7DBCF]/60 dark:border-white/[0.08] text-emerald-600 dark:text-emerald-400">
                     <span className="font-semibold">Auto-Released to Buyer:</span>
-                    <span className="font-bold">-${autoReleasedAmount.toFixed(2)} (Instant)</span>
+                    <span className="font-bold">-₹{autoReleasedAmount.toFixed(2)} (Instant Return)</span>
                   </div>
                 )}
-                <div className="flex justify-between py-1 text-slate-400 font-mono text-[11px]">
+                <div className="flex justify-between py-1 text-[#A68B98] font-mono text-[11px]">
                   <span>PayPal Capture ID:</span>
                   <span>{settlementReceipt.paypal_capture_id || 'CAP-OK'}</span>
                 </div>
@@ -277,7 +277,7 @@ export default function PackingSettlementModal({
               <div className="pt-2">
                 <button
                   onClick={onClose}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md cursor-pointer"
+                  className="px-6 py-2 bg-[#56323E] text-white rounded-xl text-xs font-bold hover:bg-[#432634] transition-all shadow-md cursor-pointer"
                 >
                   Return to Orders
                 </button>
@@ -287,16 +287,16 @@ export default function PackingSettlementModal({
             /* Items Verification List & AI Scanner */
             <>
               {/* AI Vision Scanner Header Strip */}
-              <div className="p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex flex-wrap items-center justify-between gap-3">
+              <div className="p-3.5 rounded-2xl bg-[#FAF5EF]/70 dark:bg-[#432634] border border-[#E7DBCF] dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <div className="w-8 h-8 rounded-xl bg-[#56323E] text-white flex items-center justify-center shadow-xs">
                     <Camera className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
+                    <div className="text-xs font-bold text-[#2D1822] dark:text-[#EFDFD2]">
                       Gemini 3.5 Flash Multimodal Vision Scanner
                     </div>
-                    <div className="text-[11px] text-indigo-700 dark:text-indigo-300">
+                    <div className="text-[11px] text-[#56323E] dark:text-[#EFDFD2]">
                       Snap photo of packed bag for automated optical checklist
                     </div>
                   </div>
@@ -315,7 +315,7 @@ export default function PackingSettlementModal({
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={visionScanning}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#56323E] hover:bg-[#432634] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
                   >
                     {visionScanning ? (
                       <>
@@ -345,21 +345,34 @@ export default function PackingSettlementModal({
                 </div>
               )}
 
-              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 pt-1">
+              <div className="flex items-center justify-between text-xs text-[#7D6671] dark:text-[#C5B0BA] px-1 pt-1">
                 <span>Items checklist:</span>
-                <span className="font-medium text-indigo-600 dark:text-indigo-400">
+                <span className="font-medium text-[#56323E] dark:text-[#EFDFD2]">
                   {itemsState.filter(i => i.is_accepted).length}/{itemsState.length} Items Packed
                 </span>
               </div>
 
-              <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+              {/* Auto Payment Return Notice if any items are missing / not yet packed */}
+              {autoReleasedAmount > 0 && (
+                <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/30 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                    <ArrowDownCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Unpacked/missing items will be returned to customer via PayPal:</span>
+                  </div>
+                  <span className="font-extrabold text-emerald-700 dark:text-emerald-400 font-mono text-sm">
+                    ₹{autoReleasedAmount.toFixed(2)} Returned
+                  </span>
+                </div>
+              )}
+
+              <div className="divide-y divide-[#E7DBCF] dark:divide-white/[0.08] border border-[#E7DBCF] dark:border-white/[0.08] rounded-2xl overflow-hidden">
                 {itemsState.map((item, index) => (
                   <div
                     key={item.id}
                     className={`p-3.5 flex items-center justify-between gap-3 transition-colors ${
                       item.is_accepted 
-                        ? 'bg-white dark:bg-slate-900' 
-                        : 'bg-rose-50/40 dark:bg-rose-950/20 text-slate-400'
+                        ? 'bg-white dark:bg-[#351D28]' 
+                        : 'bg-rose-50/40 dark:bg-rose-950/20 text-[#A68B98]'
                     }`}
                   >
                     {/* Item Checkbox & Name */}
@@ -370,7 +383,7 @@ export default function PackingSettlementModal({
                         className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
                           item.is_accepted
                             ? 'bg-emerald-500 text-white shadow-xs'
-                            : 'border-2 border-slate-300 dark:border-slate-700 hover:border-emerald-500'
+                            : 'border-2 border-[#D9C6B8] dark:border-white/[0.08] hover:border-emerald-500'
                         }`}
                       >
                         {item.is_accepted && <Check className="w-4 h-4 stroke-[3]" />}
@@ -378,21 +391,26 @@ export default function PackingSettlementModal({
 
                       <div className="truncate">
                         <div className="flex items-center gap-2 truncate">
-                          <span className={`text-xs font-semibold truncate ${item.is_accepted ? 'text-slate-900 dark:text-slate-100' : 'line-through text-slate-400'}`}>
+                          <span className={`text-xs font-semibold truncate ${item.is_accepted ? 'text-[#2D1822] dark:text-[#FAF5EF]' : 'line-through text-[#A68B98]'}`}>
                             {item.name}
                           </span>
-                          {item.ai_verified && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                          {item.ai_verified && item.is_accepted && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#EFDFD2] text-[#56323E] dark:bg-[#432634] dark:text-[#EFDFD2]">
                               AI Checked
                             </span>
                           )}
+                          {!item.is_accepted && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
+                              Missing (Auto-Refund)
+                            </span>
+                          )}
                         </div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                        <div className="text-[11px] text-[#7D6671] flex items-center gap-2">
                           <span>{item.unit}</span>
                           <span>•</span>
-                          <span>${item.price.toFixed(2)}/ea</span>
+                          <span>₹{item.price.toFixed(2)}/ea</span>
                           {item.ai_notes && (
-                            <span className="text-indigo-500 italic truncate max-w-xs">({item.ai_notes})</span>
+                            <span className="text-[#8A6773] italic truncate max-w-xs">({item.ai_notes})</span>
                           )}
                         </div>
                       </div>
@@ -400,12 +418,12 @@ export default function PackingSettlementModal({
 
                     {/* Stepper for Packed Quantity */}
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/60 p-0.5">
+                      <div className="flex items-center border border-[#E7DBCF] dark:border-white/[0.08] rounded-xl bg-[#FAF5EF] dark:bg-[#3F2231]/60 p-0.5">
                         <button
                           type="button"
                           onClick={() => updateQty(index, -1)}
                           disabled={item.packed_qty <= 0}
-                          className="w-6 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 disabled:opacity-30 cursor-pointer"
+                          className="w-6 h-6 flex items-center justify-center text-[#7D6671] hover:text-[#2D1822] dark:hover:text-[#FAF5EF] disabled:opacity-30 cursor-pointer"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
@@ -416,15 +434,15 @@ export default function PackingSettlementModal({
                           type="button"
                           onClick={() => updateQty(index, 1)}
                           disabled={item.packed_qty >= item.ordered_qty}
-                          className="w-6 h-6 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 disabled:opacity-30 cursor-pointer"
+                          className="w-6 h-6 flex items-center justify-center text-[#7D6671] hover:text-[#2D1822] dark:hover:text-[#FAF5EF] disabled:opacity-30 cursor-pointer"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
 
                       {/* Subtotal */}
-                      <div className="w-16 text-right font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                        ${(item.is_accepted ? item.price * item.packed_qty : 0).toFixed(2)}
+                      <div className="w-16 text-right font-mono text-xs font-bold text-[#2D1822] dark:text-[#FAF5EF]">
+                        ₹{(item.is_accepted ? item.price * item.packed_qty : 0).toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -436,26 +454,26 @@ export default function PackingSettlementModal({
 
         {/* Modal Footer: Live Dynamic Capture Calculation */}
         {!settlementReceipt && (
-          <div className="p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-850 space-y-4">
+          <div className="p-5 border-t border-[#E7DBCF] dark:border-white/[0.08] bg-[#FAF5EF]/80 dark:bg-[#351D28] space-y-4">
             <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <div className="text-[11px] text-slate-500">PayPal Authorized</div>
-                <div className="text-sm font-bold text-slate-900 dark:text-slate-100 font-mono">
-                  ${authorizedAmount.toFixed(2)}
+              <div className="p-2.5 rounded-xl bg-white dark:bg-[#3F2231] border border-[#E7DBCF] dark:border-white/[0.08]">
+                <div className="text-[11px] text-[#7D6671]">PayPal Authorized</div>
+                <div className="text-sm font-bold text-[#2D1822] dark:text-[#FAF5EF] font-mono">
+                  ₹{authorizedAmount.toFixed(2)}
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
-                <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">To Capture (Packed)</div>
-                <div className="text-sm font-bold text-indigo-700 dark:text-indigo-300 font-mono">
-                  ${finalTotal.toFixed(2)}
+              <div className="p-2.5 rounded-xl bg-[#FAF5EF] dark:bg-[#432634] border border-[#E7DBCF] dark:border-white/10">
+                <div className="text-[11px] text-[#56323E] dark:text-[#EFDFD2] font-medium">To Capture (Packed)</div>
+                <div className="text-sm font-bold text-[#56323E] dark:text-[#EFDFD2] font-mono">
+                  ₹{finalTotal.toFixed(2)}
                 </div>
               </div>
 
               <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
                 <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Auto-Released</div>
                 <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300 font-mono">
-                  {autoReleasedAmount > 0 ? `-$${autoReleasedAmount.toFixed(2)}` : '$0.00'}
+                  {autoReleasedAmount > 0 ? `-₹${autoReleasedAmount.toFixed(2)}` : '₹0.00'}
                 </div>
               </div>
             </div>
@@ -463,7 +481,7 @@ export default function PackingSettlementModal({
             <button
               onClick={handleSettle}
               disabled={loading || visionScanning}
-              className="w-full py-3 bg-linear-to-r from-amber-500 via-indigo-600 to-indigo-700 hover:from-amber-600 hover:to-indigo-800 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+              className="w-full py-3 bg-linear-to-r from-amber-500 via-[#56323E] to-[#56323E] hover:from-amber-600 hover:to-[#56323E] text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
             >
               {loading ? (
                 <>
@@ -473,7 +491,7 @@ export default function PackingSettlementModal({
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  Capture ${finalTotal.toFixed(2)} & Auto-Release Difference via PayPal
+                  Capture ₹{finalTotal.toFixed(2)} & Auto-Release Difference via PayPal
                 </>
               )}
             </button>

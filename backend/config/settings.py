@@ -6,7 +6,7 @@ import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / '.env', override=True)
 
 # ─── Environment Detection ───
 # Set DJANGO_ENV=production on PythonAnywhere
@@ -16,6 +16,7 @@ IS_PRODUCTION = ENVIRONMENT == 'production' or os.environ.get('RENDER') is not N
 # ─── Security ───
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-local-development-only-change-me')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 DEBUG = not IS_PRODUCTION
 
 if IS_PRODUCTION:
@@ -28,12 +29,12 @@ if IS_PRODUCTION:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-default_allowed_hosts = 'localhost,127.0.0.1,testserver'
+default_allowed_hosts = 'localhost,127.0.0.1,testserver,.onrender.com'
 if IS_PRODUCTION:
-    default_allowed_hosts = os.environ.get(
-        'RENDER_EXTERNAL_HOSTNAME',
-        os.environ.get('PYTHONANYWHERE_DOMAIN', ''),
-    )
+    render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '')
+    pa_domain = os.environ.get('PYTHONANYWHERE_DOMAIN', '')
+    dynamic_hosts = [h for h in [render_host, pa_domain, '.onrender.com', 'localhost', '127.0.0.1'] if h]
+    default_allowed_hosts = ','.join(dynamic_hosts)
 
 def clean_host(host):
     host = host.strip().rstrip('/')
@@ -45,6 +46,8 @@ ALLOWED_HOSTS = [clean_host(host) for host in os.environ.get(
     'DJANGO_ALLOWED_HOSTS',
     default_allowed_hosts,
 ).split(',') if host.strip()]
+if '.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.onrender.com')
 
 # ─── Apps ───
 INSTALLED_APPS = [
@@ -151,9 +154,6 @@ if IS_TESTING:
             'NAME': ':memory:',
         }
     }
-elif IS_PRODUCTION and not DATABASE_URL:
-    raise RuntimeError('DATABASE_URL must be set when DJANGO_ENV=production.')
-
 elif DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
@@ -266,19 +266,16 @@ frontend_url = os.environ.get('FRONTEND_URL', '').rstrip('/')
 if frontend_url and frontend_url not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(frontend_url)
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://(narendra-kirana|smart-kirana)[a-zA-Z0-9_-]*\.vercel\.app$",
+    r"^https://[a-zA-Z0-9_-]+\.vercel\.app$",
+    r"^https://[a-zA-Z0-9_-]+\.onrender\.com$",
     r"^http://localhost(:\d+)?$",
     r"^http://127\.0\.0\.1(:\d+)?$",
     r"^http://192\.168\.\d+\.\d+(:\d+)?$",
     r"^http://10\.\d+\.\d+\.\d+(:\d+)?$",
 ]
 CSRF_TRUSTED_ORIGINS = [
-    'https://narendra-kirana.vercel.app',
-    'https://narendra-kirana-owner.vercel.app',
-    'https://narendra-kirana-delivery.vercel.app',
-    'https://narendra-kirana-download.vercel.app',
-    'https://smart-kirana.vercel.app',
-    'https://narendra-kirana.onrender.com',
+    'https://*.vercel.app',
+    'https://*.onrender.com',
 ] + ([frontend_url] if frontend_url and frontend_url.startswith('https://') else [])
 
 from corsheaders.defaults import default_headers

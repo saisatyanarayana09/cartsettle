@@ -18,8 +18,32 @@ export function useReducedMotion(): boolean {
 }
 
 const MotionDiv = React.forwardRef<HTMLDivElement, any>(
-  ({ initial, animate, transition, style, children, ...props }, ref) => {
+  (
+    {
+      initial,
+      animate,
+      transition,
+      style,
+      children,
+      drag,
+      dragConstraints,
+      dragElastic,
+      onDragEnd,
+      whileHover,
+      whileTap,
+      whileFocus,
+      exit,
+      variants,
+      layout,
+      onAnimationComplete,
+      onTouchStart,
+      onTouchEnd,
+      ...props
+    },
+    ref,
+  ) => {
     const [mounted, setMounted] = React.useState(initial === false);
+    const touchStartX = React.useRef<number | null>(null);
 
     React.useEffect(() => {
       if (initial === false) {
@@ -47,12 +71,34 @@ const MotionDiv = React.forwardRef<HTMLDivElement, any>(
       }
     }
 
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+      if (drag && e.touches[0]) {
+        touchStartX.current = e.touches[0].clientX;
+      }
+      onTouchStart?.(e);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+      if (drag && touchStartX.current !== null && onDragEnd && e.changedTouches[0]) {
+        const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+        onDragEnd(e, { offset: { x: deltaX, y: 0 } });
+      }
+      touchStartX.current = null;
+      onTouchEnd?.(e);
+    };
+
     return (
-      <div ref={ref} style={computedStyle} {...props}>
+      <div
+        ref={ref}
+        style={computedStyle}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        {...props}
+      >
         {children}
       </div>
     );
-  }
+  },
 );
 MotionDiv.displayName = "MotionDiv";
 

@@ -37,47 +37,33 @@ vi.mock("@/components/ai-elements/prompt-input", () => ({
   PromptInputSubmit: () => null,
 }));
 
-const history = [
-  { role: "assistant", content: "Welcome" },
-  { role: "user", content: "I need rice" },
-  { role: "assistant", content: "Let’s find rice" },
-];
-
 describe("Shopper conversation lifecycle", () => {
   beforeEach(() => {
     localStorage.clear();
-    localStorage.setItem(SHOPPER_HISTORY_KEY, JSON.stringify(history));
     vi.clearAllMocks();
     api.get.mockResolvedValue({ data: { messages: [] } });
     api.delete.mockResolvedValue({ data: {} });
   });
   afterEach(cleanup);
 
-  it("preserves the conversation when closed and reopened", () => {
+  it("clears conversation automatically and fires api.delete when closed and reopened", async () => {
     const onClose = vi.fn();
     const { rerender } = render(<ShopperAgentDrawer isOpen onClose={onClose} />);
     fireEvent.click(screen.getByRole("button", { name: "Close concierge" }));
     expect(onClose).toHaveBeenCalledOnce();
-    expect(api.delete).not.toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem(SHOPPER_HISTORY_KEY) || "[]")).toEqual(history);
+    expect(api.delete).toHaveBeenCalled();
+    expect(localStorage.getItem(SHOPPER_HISTORY_KEY)).toBeNull();
+
     rerender(<ShopperAgentDrawer isOpen={false} onClose={onClose} />);
     rerender(<ShopperAgentDrawer isOpen onClose={onClose} />);
     fireEvent.click(screen.getByRole("button", { name: "Type instead" }));
-    expect(screen.getByText("I need rice")).toBeInTheDocument();
+    expect(screen.getByText("What’s on your list?")).toBeInTheDocument();
   });
 
-  it("clears history only through the separate confirmed clear action", async () => {
+  it("does not render a manual clear conversation button in the header", () => {
     render(<ShopperAgentDrawer isOpen onClose={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Type instead" }));
-    fireEvent.keyDown(screen.getByRole("button", { name: "More options" }), { key: "Enter" });
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Clear conversation" }));
-    expect(api.delete).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: /^Clear$/ }));
-    expect(api.delete).toHaveBeenCalledOnce();
-    expect(screen.queryByText("I need rice")).not.toBeInTheDocument();
-    await waitFor(() =>
-      expect(JSON.parse(localStorage.getItem(SHOPPER_HISTORY_KEY) || "[]")).toHaveLength(1),
-    );
+    expect(screen.queryByRole("button", { name: "More options" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Clear conversation")).not.toBeInTheDocument();
   });
 
   it("opens in voice mode", () => {

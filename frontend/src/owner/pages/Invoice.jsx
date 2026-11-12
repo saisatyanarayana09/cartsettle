@@ -110,10 +110,10 @@ const Invoice = () => {
     const rawMethod = (order.payment_method || 'COD').toUpperCase();
 
     let methodText = 'Cash on Delivery (COD)';
-    if (rawMethod === 'UPI') {
-      methodText = order.upi_transaction_id 
-        ? `UPI (Ref: ${order.upi_transaction_id})` 
-        : 'UPI Instant Payment';
+    if (rawMethod === 'PAYPAL' || order.paypal_authorization_id || rawMethod === 'UPI') {
+      methodText = order.paypal_capture_id
+        ? `PayPal Digital Settlement (Ref: ${order.paypal_capture_id})`
+        : 'PayPal Digital Settlement';
     } else if (order.order_type === 'PICKUP' && rawMethod === 'COD') {
       methodText = 'Cash at Store Counter';
     } else if (rawMethod === 'CARD') {
@@ -179,12 +179,6 @@ const Invoice = () => {
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Order
           </Link>
           <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
-            <a
-              href={`smartkirana://orders/${id}/invoice`}
-              className="w-full sm:w-auto justify-center inline-flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white px-4 py-2.5 rounded-xl font-bold shadow-xs transition-colors text-xs"
-            >
-              <Smartphone className="w-4 h-4 mr-1.5" /> Mobile App
-            </a>
             <button
               onClick={handlePrint}
               className="w-full sm:w-auto justify-center inline-flex items-center bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-sm hover:shadow transition-all text-xs cursor-pointer active:scale-95"
@@ -208,8 +202,8 @@ const Invoice = () => {
       >
         {/* Rejected Stamp */}
         {order.status === 'REJECTED' && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none opacity-30 mix-blend-multiply print:opacity-25">
-            <div className="border-8 border-red-600 text-red-600 text-6xl sm:text-8xl font-black tracking-widest uppercase py-4 px-10 rounded-2xl transform -rotate-12 select-none text-center">
+          <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none opacity-25 mix-blend-multiply print:opacity-20">
+            <div className="border-8 border-slate-400 text-slate-400 text-6xl sm:text-8xl font-black tracking-widest uppercase py-4 px-10 rounded-2xl transform -rotate-12 select-none text-center">
               CANCELLED
             </div>
           </div>

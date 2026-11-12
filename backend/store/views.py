@@ -506,11 +506,21 @@ class AgentChatView(views.APIView):
     permission_classes = [AllowAny]
 
     def _resolve_persona(self, request):
-        persona = request.data.get('persona') or request.data.get('role') or request.query_params.get('persona') or request.query_params.get('role')
-        if persona:
-            return str(persona).strip().lower()
+        raw_p = request.data.get('persona') or request.data.get('role') or request.query_params.get('persona') or request.query_params.get('role')
+        if raw_p:
+            p_val = str(raw_p).strip().lower()
+            if p_val in ('shopper', 'customer'):
+                return 'shopper'
+            if p_val in ('owner', 'admin', 'manager'):
+                return 'owner'
+            return p_val
         portal = str(request.headers.get('X-Portal-Context', '')).lower()
-        if portal == 'owner' or getattr(request.user, 'is_owner', False) or getattr(request.user, 'is_staff', False):
+        if portal == 'owner':
+            return 'owner'
+        if portal == 'shopper':
+            return 'shopper'
+        referer = str(request.headers.get('Referer', '')).lower()
+        if '/owner' in referer:
             return 'owner'
         return 'shopper'
 
@@ -553,7 +563,8 @@ class AgentChatView(views.APIView):
             persona=persona,
             mode=mode,
             cart_items=cart_items,
-            image=image
+            image=image,
+            user=request.user if (request.user and request.user.is_authenticated) else None
         )
         return response.Response(result, status=status.HTTP_200_OK)
 
@@ -612,5 +623,50 @@ class SupplierPayoutView(views.APIView):
             return response.Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return res
+
+
+class RAGStatusView(views.APIView):
+    """
+    Returns current health, total vectors, manifest entries, and embedding model for the RAG knowledge index.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from services.rag import get_ingestion_service
+        try:
+            status_data = get_ingestion_service().get_status()
+            return response.Response({
+                'status': 'OPERATIONAL',
+                'rag': status_data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return response.Response({
+                'status': 'ERROR',
+                'detail': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RAGSyncView(views.APIView):
+    """
+    Triggers an on-demand synchronization or full rebuild of the ChromaDB RAG knowledge index.
+    Protected for Store Owner users.
+    """
+    permission_classes = [IsOwnerUser]
+
+    def post(self, request):
+        rebuild = bool(request.data.get('rebuild', False))
+        from services.rag import sync_knowledge_index
+        try:
+            result = sync_knowledge_index(force_rebuild=rebuild)
+            return response.Response({
+                'status': 'SUCCESS',
+                'result': result
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return response.Response({
+                'status': 'ERROR',
+                'detail': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 

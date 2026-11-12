@@ -34,13 +34,12 @@ it('flushes pending cart changes before navigating to checkout', async () => {
  await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith('/checkout'));
  expect(mocks.flush.mock.invocationCallOrder[0]).toBeLessThan(mocks.navigate.mock.invocationCallOrder[0] ?? 0);
 });
-it('submits pickup and cash selections through the existing order endpoint after syncing', async () => {
+it('submits pickup and PayPal selections through the existing order endpoint after syncing', async () => {
  render(<CheckoutPage />);
  await waitFor(() => expect(mocks.get).toHaveBeenCalledWith('/auth/addresses/'));
  fireEvent.click(screen.getByRole('button', { name: 'Pickup' }));
- fireEvent.click(screen.getByRole('button', { name: 'Pay at Store' }));
- clickFirstAction('Place order');
- await waitFor(() => expect(mocks.post).toHaveBeenCalledWith('/orders/', expect.objectContaining({ order_type: 'PICKUP', payment_method: 'COD', delivery_address: 'In-Store Pickup', delivery_pincode: '000000' })));
+ clickFirstAction('Authorize PayPal');
+ await waitFor(() => expect(mocks.post).toHaveBeenCalledWith('/orders/', expect.objectContaining({ order_type: 'PICKUP', payment_method: 'PAYPAL', delivery_address: 'In-Store Pickup', delivery_pincode: '000000' })));
  expect(mocks.flush.mock.invocationCallOrder[0]).toBeLessThan(mocks.post.mock.invocationCallOrder[0] ?? 0);
  expect(mocks.clear).toHaveBeenCalledOnce();
 });
@@ -48,8 +47,7 @@ it('does not clear the cart when ordering fails', async () => {
  mocks.post.mockRejectedValue(new Error('Unavailable')); render(<CheckoutPage />);
  await waitFor(() => expect(mocks.get).toHaveBeenCalledWith('/auth/addresses/'));
  fireEvent.click(screen.getByRole('button', { name: 'Pickup' }));
- fireEvent.click(screen.getByRole('button', { name: 'Pay at Store' }));
- clickFirstAction('Place order');
+ clickFirstAction('Authorize PayPal');
  await waitFor(() => expect(mocks.post).toHaveBeenCalledOnce());
  expect(mocks.clear).not.toHaveBeenCalled();
 });
@@ -79,12 +77,11 @@ it('keeps delivery blocked after deleting the selected address', async () => {
  render(<CheckoutPage />);
  fireEvent.click(screen.getByRole('button', { name: 'Delivery' }));
  await screen.findByRole('radio', { name: 'Home: 12 Market Road' });
- fireEvent.click(screen.getByRole('button', { name: 'Cash' }));
- expect(screen.getAllByRole('button', { name: 'Place order' })[0]).not.toBeDisabled();
+ expect(screen.getAllByRole('button', { name: 'Authorize PayPal' })[0]).not.toBeDisabled();
  const dialog = vi.spyOn(window, 'confirm').mockReturnValue(true);
  fireEvent.click(screen.getByRole('button', { name: 'Delete Home address' }));
  await waitFor(() => expect(screen.queryByRole('radio', { name: 'Home: 12 Market Road' })).not.toBeInTheDocument());
- expect(screen.getAllByRole('button', { name: 'Place order' })[0]).toBeDisabled();
+ expect(screen.getAllByRole('button', { name: 'Authorize PayPal' })[0]).toBeDisabled();
  dialog.mockRestore();
 });
 it('keeps the chosen fulfillment method when settings refresh', async () => {
@@ -102,8 +99,7 @@ it('does not duplicate an order during a pending request', async () => {
  mocks.post.mockImplementation(() => new Promise(resolve => { resolveOrder = resolve; }));
  render(<CheckoutPage />);
  await waitFor(() => expect(mocks.get).toHaveBeenCalledWith('/auth/addresses/'));
- fireEvent.click(screen.getByRole('button', { name: 'Pay at Store' }));
- clickFirstAction('Place order');
+ clickFirstAction('Authorize PayPal');
  await waitFor(() => expect(mocks.post).toHaveBeenCalledOnce());
  expect(screen.getAllByRole('button', { name: 'Placing order…' })[0]).toBeDisabled();
  if (!resolveOrder) throw new Error('Order request was not started');
@@ -114,9 +110,8 @@ it('does not duplicate an order during a pending request', async () => {
 it('moves keyboard focus to confirmation after a successful order', async () => {
  render(<CheckoutPage />);
  await waitFor(() => expect(mocks.get).toHaveBeenCalledWith('/auth/addresses/'));
- fireEvent.click(screen.getByRole('button', { name: 'Pay at Store' }));
- clickFirstAction('Place order');
+ clickFirstAction('Authorize PayPal');
  const confirmation = await screen.findByRole('heading', { name: 'Order placed' });
  await waitFor(() => expect(confirmation).toHaveFocus());
- expect(screen.queryByRole('button', { name: 'Place order' })).not.toBeInTheDocument();
+ expect(screen.queryByRole('button', { name: 'Authorize PayPal' })).not.toBeInTheDocument();
 });

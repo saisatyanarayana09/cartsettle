@@ -214,7 +214,7 @@ function GlobalSearchBar({ settings, onActiveChange, onOpenAssistant, onToggleAs
     }}>
       <form
         onSubmit={handleSubmit}
-        className={`relative flex items-center w-full bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl sm:rounded-2xl border transition-all duration-300 shadow-xs ${
+        className={`relative flex items-center w-full bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-100/95 dark:hover:bg-slate-800/95 backdrop-blur-md rounded-xl sm:rounded-2xl border transition-all duration-300 shadow-xs ${
           isListening
             ? "border-rose-500 ring-4 ring-rose-500/20 bg-rose-50/40 dark:bg-rose-950/20"
             : "border-slate-200/80 dark:border-slate-700/80 focus-within:border-emerald-500 focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:shadow-md"
@@ -260,9 +260,7 @@ function GlobalSearchBar({ settings, onActiveChange, onOpenAssistant, onToggleAs
             isListening ? "Listening... Speak now" : typewriterText || "Search rice, dal, snacks..."
           }
           aria-label="Search products"
-          className={`w-full min-w-0 bg-transparent pl-2.5 sm:pl-3 ${
-            displayValue.trim().length > 0 ? "pr-16 sm:pr-24" : onOpenAssistant ? "pr-10 sm:pr-12 md:pr-24" : "pr-10 sm:pr-12"
-          } py-2 sm:py-2.5 outline-none text-xs sm:text-sm text-slate-900 dark:text-white font-medium ${
+          className={`w-full min-w-0 bg-transparent pl-2.5 sm:pl-3 ${showAskAI ? "pr-24 sm:pr-32" : "pr-14 sm:pr-16"} py-2 sm:py-2.5 outline-none text-xs sm:text-sm text-slate-900 dark:text-white font-medium transition-all ${
             isListening
               ? "placeholder:text-rose-500 placeholder:font-medium"
               : "placeholder:text-slate-400"
@@ -270,7 +268,7 @@ function GlobalSearchBar({ settings, onActiveChange, onOpenAssistant, onToggleAs
         />
 
         {/* Right-Hand Button Controls Group positioned cleanly inside Search Bar */}
-        <div className="absolute right-1.5 sm:right-2 flex items-center gap-0.5 sm:gap-1">
+        <div className="absolute right-1.5 sm:right-2 flex items-center gap-1 sm:gap-1.5">
           {/* Active Search Loading Spinner */}
           {loading && (
             <div className="p-1 text-emerald-600 dark:text-emerald-400 animate-spin">
@@ -314,49 +312,73 @@ function GlobalSearchBar({ settings, onActiveChange, onOpenAssistant, onToggleAs
             </button>
           )}
 
-          {/* Speech-to-Text Microphone Button inside Right Edge */}
+          {/* In-Bar Ask AI Trigger: Visible on Desktop when idle/unfocused. Removed from Mobile and disappears on focus */}
           {showAskAI && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const targetQuery = displayValue.trim();
+                setIsOpen(false);
+                if (targetQuery) {
+                  window.__pendingShopperAiQuery = targetQuery;
+                  window.dispatchEvent(new CustomEvent("shopper-ai-query", { detail: { query: targetQuery } }));
+                  setQuery("");
+                }
+                if (!isAssistantOpen) {
+                  onOpenAssistant ? onOpenAssistant() : onToggleAssistant?.();
+                } else if (!targetQuery) {
+                  onToggleAssistant?.();
+                }
+              }}
+              aria-label="Ask CartSettle AI"
+              title="Ask CartSettle AI"
+              className="hidden sm:inline-flex group relative items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-sm shadow-emerald-700/25 hover:shadow-md hover:shadow-emerald-700/35 hover:brightness-110 active:scale-95 transition-all duration-150 border border-emerald-400/40 cursor-pointer shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-200 group-hover:rotate-12 transition-transform duration-200 shrink-0" />
+              <span className="tracking-tight">Ask AI</span>
+            </button>
+          )}
+
+          {/* Microphone Voice Search: Visible on Mobile, and appears on Desktop upon click/focus or when listening */}
+          {(!showAskAI || isListening) ? (
             <Button
               type="button"
-              variant={isAssistantOpen ? "default" : "ghost"}
-              size="sm"
-              onClick={() => {
-                setIsOpen(false);
-                onToggleAssistant ? onToggleAssistant() : onOpenAssistant?.();
-              }}
-              aria-label="Ask AI"
-              aria-pressed={isAssistantOpen}
-              className={`hidden md:inline-flex h-8 shrink-0 px-2.5 text-xs font-bold transition-all rounded-md cursor-pointer ${
-                isAssistantOpen
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 shadow-xs ring-2 ring-emerald-500/20"
-                  : "text-primary hover:bg-accent hover:text-accent-foreground"
+              variant="ghost"
+              size="icon"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={handleVoiceToggle}
+              title={isListening ? "Listening... Click to stop" : "Search by voice"}
+              aria-label={isListening ? "Stop voice search" : "Search by voice"}
+              className={`relative h-8 w-8 shrink-0 p-1.5 rounded-lg transition-all flex items-center justify-center ${
+                isListening
+                  ? "bg-destructive text-destructive-foreground shadow-md scale-105"
+                  : "text-muted-foreground hover:text-primary hover:bg-accent"
               }`}
             >
-              Ask AI
+              {isListening && (
+                <span className="absolute inset-0 rounded-lg bg-destructive animate-ping opacity-75" />
+              )}
+              <Mic
+                size={16}
+                className={`relative z-10 ${isListening ? "text-destructive-foreground animate-pulse" : ""}`}
+              />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={handleVoiceToggle}
+              title={isListening ? "Listening... Click to stop" : "Search by voice"}
+              aria-label={isListening ? "Stop voice search" : "Search by voice"}
+              className="sm:hidden relative h-8 w-8 shrink-0 p-1.5 rounded-lg transition-all flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-accent"
+            >
+              <Mic size={16} className="relative z-10" />
             </Button>
           )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={handleVoiceToggle}
-            title={isListening ? "Listening... Click to stop" : "Search by voice"}
-            aria-label={isListening ? "Stop voice search" : "Search by voice"}
-            className={`relative h-8 w-8 shrink-0 p-1.5 rounded-lg transition-all items-center justify-center ${showAskAI ? "flex md:hidden" : "flex"} ${
-              isListening
-                ? "bg-destructive text-destructive-foreground shadow-md scale-105"
-                : "text-muted-foreground hover:text-primary hover:bg-accent"
-            }`}
-          >
-            {isListening && (
-              <span className="absolute inset-0 rounded-lg bg-destructive animate-ping opacity-75" />
-            )}
-            <Mic
-              size={16}
-              className={`relative z-10 ${isListening ? "text-destructive-foreground animate-pulse" : ""}`}
-            />
-          </Button>
         </div>
       </form>
 
@@ -426,6 +448,39 @@ function GlobalSearchBar({ settings, onActiveChange, onOpenAssistant, onToggleAs
       {/* Search Results Dropdown */}
       {isOpen && displayValue.trim().length > 1 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden z-50 max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+          {/* Top Interactive AI Action Row */}
+          <div className="p-2 bg-gradient-to-r from-emerald-50 via-teal-50/70 to-emerald-50/50 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-emerald-950/20 border-b border-emerald-100 dark:border-emerald-800/40">
+            <button
+              type="button"
+              onClick={() => {
+                const targetQuery = displayValue.trim();
+                setIsOpen(false);
+                setQuery("");
+                window.__pendingShopperAiQuery = targetQuery;
+                window.dispatchEvent(new CustomEvent("shopper-ai-query", { detail: { query: targetQuery } }));
+                if (!isAssistantOpen) {
+                  onOpenAssistant ? onOpenAssistant() : onToggleAssistant?.();
+                }
+              }}
+              className="w-full flex items-center justify-between p-2 rounded-xl bg-white/90 dark:bg-slate-900/90 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-slate-800 dark:text-slate-200 transition-all duration-150 group shadow-xs cursor-pointer border border-emerald-200/60 dark:border-emerald-700/40 text-left"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="size-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                  <Sparkles className="size-3.5 text-amber-200" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold block truncate">
+                    Ask CartSettle AI: &ldquo;{displayValue.trim()}&rdquo;
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 group-hover:text-emerald-100 block">
+                    Deals, recipes, budget shopping & instant actions
+                  </span>
+                </div>
+              </div>
+              <ArrowUpRight className="size-4 text-emerald-600 dark:text-emerald-400 group-hover:text-white shrink-0 ml-2" />
+            </button>
+          </div>
+
           {loading ? (
             <div className="p-3 space-y-2">
               {[1, 2, 3].map((skeletonIdx) => (
@@ -917,6 +972,7 @@ function WhatsAppSupportWidget({ settings }) {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat with us on WhatsApp"
+        data-floating-action="true"
         className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 ${isCartPage ? "hidden md:flex" : "flex"} items-center gap-2 group cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95`}
       >
         <div className="hidden md:flex items-center px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full shadow-lg text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">
@@ -1384,15 +1440,17 @@ export function CustomerLayout({ children }) {
             </Link>
           </div>
 
-          {/* Right 44%: Expansive Ask AI Hero Button with Exact h-12 (48px) and Emerald Glow Border */}
+          {/* Right 44%: Expansive CartSettle AI Hero Button with Exact h-12 (48px) and Emerald Glow Border */}
           <button
             type="button"
             onClick={() => setIsShopperAgentOpen((prev) => !prev)}
-            aria-label="Open AI Shopping Assistant"
-            className="flex items-center justify-center gap-2 h-12 w-[44%] max-w-[200px] rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-600/25 active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer border border-emerald-400/40"
+            aria-label="Open CartSettle AI"
+            className="flex items-center justify-center gap-2 h-12 w-[44%] max-w-[200px] rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md shadow-emerald-600/30 active:scale-95 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-pointer border border-emerald-400/40 relative overflow-hidden"
           >
-            <Sparkles size={17} className="stroke-[2.25] text-amber-200 animate-pulse" />
-            <span>Ask AI</span>
+            <span className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
+            <Sparkles size={17} className="stroke-[2.25] text-amber-200 animate-pulse shrink-0" />
+            <span className="tracking-tight">CartSettle AI</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-ping shrink-0" />
           </button>
         </div>
       </nav>

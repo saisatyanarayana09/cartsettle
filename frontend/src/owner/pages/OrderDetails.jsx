@@ -157,7 +157,7 @@ const OrderDetails = () => {
 
   if (loading && !order) {
     return (
-      <div className="max-w-5xl mx-auto py-16 text-center text-slate-500 dark:text-slate-400 font-medium">
+      <div className="max-w-5xl mx-auto py-16 text-center text-[#7D6671] dark:text-[#C5B0BA] font-medium">
         Loading order details...
       </div>
     );
@@ -167,7 +167,7 @@ const OrderDetails = () => {
     return (
       <div className="max-w-5xl mx-auto py-16 text-center space-y-4">
         <p className="text-rose-600 dark:text-rose-400 font-bold">{error || 'Order not found.'}</p>
-        <Link to="/owner/orders" className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-sm font-bold">
+        <Link to="/owner/orders" className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#56323E] dark:bg-[#3F2231] text-white rounded-xl text-sm font-bold">
           <ArrowLeft size={16} /> Back to Orders
         </Link>
       </div>
@@ -180,9 +180,9 @@ const OrderDetails = () => {
   const getStatusBanner = () => {
     switch (order.status) {
       case 'NEW':
-        return { bg: 'border-indigo-200/60 bg-indigo-50/50 dark:border-indigo-800/50 dark:bg-indigo-900/10', text: 'New Order Received', msg: 'Review items and accept or reject the order.', icon: Clock, textClass: 'text-indigo-900 dark:text-indigo-100', iconClass: 'text-indigo-600 dark:text-indigo-400' };
+        return { bg: 'border-[#E7DBCF]/60 bg-[#FAF5EF]/50 dark:border-white/10 dark:bg-[#432634]', text: 'New Order Received', msg: 'Review items and accept or reject the order.', icon: Clock, textClass: 'text-[#2D1822] dark:text-[#EFDFD2]', iconClass: 'text-[#56323E] dark:text-[#EFDFD2]' };
       case 'ACCEPTED':
-        return { bg: 'border-blue-200/60 bg-blue-50/50 dark:border-blue-800/50 dark:bg-blue-900/10', text: 'Order Accepted', msg: 'Begin gathering and packing the grocery items.', icon: Package, textClass: 'text-blue-900 dark:text-blue-100', iconClass: 'text-blue-600 dark:text-blue-400' };
+        return { bg: 'border-[#E7DBCF]/60 bg-[#FAF5EF]/50 dark:border-white/10 dark:bg-[#432634]', text: 'Order Accepted', msg: 'Begin gathering and packing the grocery items.', icon: Package, textClass: 'text-[#2D1822] dark:text-[#EFDFD2]', iconClass: 'text-[#56323E] dark:text-[#EFDFD2]' };
       case 'PREPARING':
         return { bg: 'border-amber-200/60 bg-amber-50/50 dark:border-amber-800/50 dark:bg-amber-900/10', text: 'Packing Order', msg: 'Check off items as you place them into bags.', icon: Clock, textClass: 'text-amber-900 dark:text-amber-100', iconClass: 'text-amber-600 dark:text-amber-400' };
       case 'READY':
@@ -190,11 +190,11 @@ const OrderDetails = () => {
       case 'OUT_FOR_DELIVERY':
         return { bg: 'border-emerald-200/60 bg-emerald-50/50 dark:border-emerald-800/50 dark:bg-emerald-900/10', text: 'Out for Delivery', msg: `Order is with ${order.delivery_partner_name || 'delivery rider'}.`, icon: Truck, textClass: 'text-emerald-900 dark:text-emerald-100', iconClass: 'text-emerald-600 dark:text-emerald-400' };
       case 'COMPLETED':
-        return { bg: 'border-slate-200 dark:bg-slate-800/40 bg-slate-50', text: 'Order Completed', msg: 'Delivered and payment settled.', icon: CheckCircle, textClass: 'text-slate-900 dark:text-slate-100', iconClass: 'text-slate-600 dark:text-slate-400' };
+        return { bg: 'border-[#E7DBCF] dark:bg-[#3F2231]/40 bg-[#FAF5EF]', text: 'Order Completed', msg: 'Delivered and payment settled.', icon: CheckCircle, textClass: 'text-[#2D1822] dark:text-[#FAF5EF]', iconClass: 'text-[#5E4752] dark:text-[#C5B0BA]' };
       case 'REJECTED':
         return { bg: 'border-rose-200/60 bg-rose-50/50 dark:border-rose-800/50 dark:bg-rose-900/10', text: 'Order Rejected', msg: 'This order was declined by the store.', icon: XCircle, textClass: 'text-rose-900 dark:text-rose-100', iconClass: 'text-rose-600 dark:text-rose-400' };
       default:
-        return { bg: 'border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/10', text: order.status, msg: '', icon: Clock, textClass: 'text-slate-900 dark:text-slate-100', iconClass: 'text-slate-600 dark:text-slate-400' };
+        return { bg: 'border-[#E7DBCF] bg-[#FAF5EF]/50 dark:border-white/[0.08] dark:bg-[#351D28]/10', text: order.status, msg: '', icon: Clock, textClass: 'text-[#2D1822] dark:text-[#FAF5EF]', iconClass: 'text-[#5E4752] dark:text-[#C5B0BA]' };
     }
   };
 
@@ -205,13 +205,13 @@ const OrderDetails = () => {
     if (!['NEW', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'].includes(order.status)) return null;
 
     return (
-      <div className={`bg-white dark:bg-[#0d1322] rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-5 transition-colors ${isMobileView ? 'block md:hidden' : 'hidden md:block'}`}>
+      <div className={`bg-white dark:bg-[#351D28] rounded-lg shadow-sm border border-[#E7DBCF] dark:border-white/[0.08] p-5 transition-colors ${isMobileView ? 'block md:hidden' : 'hidden md:block'}`}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+          <h3 className="text-sm font-semibold text-[#2D1822] dark:text-white">
             {isMobileView ? 'Quick Action' : 'Next Step'}
           </h3>
           {isUpdating && (
-            <span className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+            <span className="flex items-center gap-1.5 text-xs text-[#56323E] dark:text-[#EFDFD2] font-medium">
               <Loader2 size={13} className="animate-spin" /> Updating...
             </span>
           )}
@@ -222,14 +222,14 @@ const OrderDetails = () => {
             <button 
               onClick={() => updateStatus('ACCEPTED')} 
               disabled={isUpdating} 
-              className="w-full py-2 px-4 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-md font-medium transition-all shadow-sm flex items-center justify-center gap-1.5 text-sm disabled:opacity-60"
+              className="w-full py-2 px-4 bg-[#56323E] hover:bg-[#432634] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-md font-medium transition-all shadow-sm flex items-center justify-center gap-1.5 text-sm disabled:opacity-60"
             >
               Accept Order <ChevronRight size={16}/>
             </button>
             <button 
               onClick={() => setIsRejectModalOpen(true)} 
               disabled={isUpdating} 
-              className="w-full py-2 px-4 bg-white dark:bg-[#0d1322] text-rose-600 dark:text-rose-400 rounded-md font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors text-sm border border-rose-200 dark:border-rose-800/80 disabled:opacity-60"
+              className="w-full py-2 px-4 bg-white dark:bg-[#351D28] text-[#5E4752] dark:text-[#C5B0BA] rounded-md font-medium hover:bg-[#FAF5EF] dark:hover:bg-[#3F2231] transition-colors text-sm border border-[#E7DBCF] dark:border-white/[0.08] disabled:opacity-60"
             >
               Reject Order
             </button>
@@ -240,7 +240,7 @@ const OrderDetails = () => {
           <button 
             onClick={() => updateStatus('PREPARING')} 
             disabled={isUpdating} 
-            className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-md font-medium transition-all flex items-center justify-center gap-2 shadow-sm text-sm disabled:opacity-60"
+            className="w-full py-2.5 px-4 bg-[#56323E] hover:bg-[#432634] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-md font-medium transition-all flex items-center justify-center gap-2 shadow-sm text-sm disabled:opacity-60"
           >
             <Package size={16}/> Start Packing
           </button>
@@ -253,14 +253,14 @@ const OrderDetails = () => {
               disabled={isUpdating || !allPacked} 
               className={`w-full py-2.5 px-4 rounded-md font-medium transition-all flex items-center justify-center gap-2 text-sm ${
                 allPacked 
-                  ? 'bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 shadow-sm' 
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                  ? 'bg-[#56323E] hover:bg-[#432634] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 shadow-sm' 
+                  : 'bg-[#F2E9E0] dark:bg-[#3F2231] text-[#A68B98] dark:text-[#A68B98] cursor-not-allowed'
               }`}
             >
               <CheckCircle size={16}/> Mark as Ready
             </button>
             {!allPacked && (
-              <p className="text-xs text-center text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-center text-[#7D6671] dark:text-[#C5B0BA]">
                 Check off all {activeItems.length} active items first.
               </p>
             )}
@@ -269,17 +269,17 @@ const OrderDetails = () => {
 
         {order.status === 'READY' && (
           <div className="space-y-3">
-            <p className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-md border border-slate-200 dark:border-slate-700">
+            <p className="text-xs text-[#5E4752] dark:text-[#C5B0BA] bg-[#FAF5EF] dark:bg-[#3F2231]/60 p-3 rounded-md border border-[#E7DBCF] dark:border-white/[0.08]">
               {parseFloat(order.total_amount) > 0 ? (
-                <>Collect <strong className="text-slate-900 dark:text-white font-semibold">₹{order.total_amount}</strong> {order.order_type === 'DELIVERY' ? 'via COD' : 'at store'}.</>
+                <>Collect <strong className="text-[#2D1822] dark:text-white font-semibold">₹{order.total_amount}</strong> {order.order_type === 'DELIVERY' ? 'via COD' : 'at store'}.</>
               ) : (
-                <>Order fully paid via <strong className="text-slate-900 dark:text-white font-semibold">Wallet</strong>.</>
+                <>Order fully paid via <strong className="text-[#2D1822] dark:text-white font-semibold">Wallet</strong>.</>
               )}
             </p>
             <button 
               onClick={() => updateStatus('COMPLETED')} 
               disabled={isUpdating} 
-              className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-md font-medium transition-colors flex items-center justify-center gap-2 shadow-sm text-sm disabled:opacity-60"
+              className="w-full py-2.5 px-4 bg-[#56323E] hover:bg-[#432634] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-md font-medium transition-colors flex items-center justify-center gap-2 shadow-sm text-sm disabled:opacity-60"
             >
               {parseFloat(order.total_amount) > 0 ? 'Payment Received' : 'Handover & Complete'}
             </button>
@@ -291,7 +291,7 @@ const OrderDetails = () => {
             <button 
               onClick={() => updateStatus('COMPLETED')} 
               disabled={isUpdating} 
-              className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-md font-medium transition-colors flex items-center justify-center gap-2 shadow-sm text-sm disabled:opacity-60"
+              className="w-full py-2.5 px-4 bg-[#56323E] hover:bg-[#432634] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-md font-medium transition-colors flex items-center justify-center gap-2 shadow-sm text-sm disabled:opacity-60"
             >
               <CheckCircle size={16} /> Mark Delivered
             </button>
@@ -303,19 +303,19 @@ const OrderDetails = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 mb-12">
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
+      <div className="flex items-center justify-between border-b border-[#E7DBCF] dark:border-white/[0.08] pb-5">
         <div className="flex items-center gap-4">
           <Link 
             to="/owner/orders" 
-            className="p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-800 rounded-md transition-colors"
+            className="p-1.5 text-[#7D6671] hover:text-[#2D1822] dark:text-[#C5B0BA] dark:hover:text-white bg-[#F2E9E0] dark:bg-[#3F2231] rounded-md transition-colors"
           >
             <ArrowLeft size={16}/>
           </Link>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight text-[#2D1822] dark:text-white flex items-center gap-2">
               Order {order.id}
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-sm text-[#7D6671] dark:text-[#C5B0BA] mt-0.5">
               Placed on {new Date(order.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
             </p>
           </div>
@@ -323,7 +323,7 @@ const OrderDetails = () => {
         <button 
           type="button"
           onClick={() => setIsInvoiceModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#0d1322] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-medium shadow-sm transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#351D28] border border-[#E7DBCF] dark:border-white/[0.08] text-[#5E4752] dark:text-[#FAF5EF] rounded-md hover:bg-[#FAF5EF] dark:hover:bg-[#3F2231] text-sm font-medium shadow-sm transition-colors"
         >
           <Printer size={14}/> Invoice
         </button>
@@ -331,7 +331,7 @@ const OrderDetails = () => {
 
       <div className={`border ${banner.bg} rounded-lg p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm`}>
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-md bg-white/60 dark:bg-slate-950/20 ${banner.iconClass}`}>
+          <div className={`p-2 rounded-md bg-white/60 dark:bg-[#351D28]/20 ${banner.iconClass}`}>
             <BannerIcon className="w-5 h-5"/>
           </div>
           <div>
@@ -341,28 +341,15 @@ const OrderDetails = () => {
         </div>
       </div>
 
-      {order.payment_method === 'UPI' && ['NEW', 'ACCEPTED', 'PREPARING'].includes(order.status) && (
-        <div className="bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex items-start gap-3 shadow-sm">
-           <AlertTriangle className="text-slate-600 dark:text-slate-400 shrink-0 mt-0.5" size={18} />
-           <div>
-              <p className="font-semibold text-sm text-slate-900 dark:text-white">Verify UPI Payment</p>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                Amount: <span className="font-medium text-slate-900 dark:text-slate-200">₹{order.total_amount}</span>. 
-                UTR / Ref: <span className="font-mono font-medium text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded">{order.upi_transaction_id || 'N/A'}</span>
-              </p>
-           </div>
-        </div>
-      )}
-
       {renderActionButtons(true)}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-[#0d1322] rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-between items-center">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Items ({activeItems.length})</h2>
+          <div className="bg-white dark:bg-[#351D28] rounded-lg shadow-sm border border-[#E7DBCF] dark:border-white/[0.08] overflow-hidden">
+            <div className="px-5 py-3 border-b border-[#E7DBCF] dark:border-white/[0.08] bg-[#FAF5EF]/50 dark:bg-[#3F2231]/30 flex justify-between items-center">
+              <h2 className="text-sm font-semibold text-[#2D1822] dark:text-white">Items ({activeItems.length})</h2>
             </div>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            <div className="divide-y divide-[#E7DBCF] dark:divide-white/[0.08]">
               {order.items.map(item => {
                 const isRejected = item.status === 'REJECTED';
                 return (
@@ -370,8 +357,8 @@ const OrderDetails = () => {
                     key={item.id} 
                     className={`p-4 flex items-center gap-4 transition-colors ${
                       order.status === 'PREPARING' && packedItems[item.id] 
-                        ? 'bg-slate-50/50 dark:bg-slate-800/20' 
-                        : 'hover:bg-slate-50/30 dark:hover:bg-slate-800/20'
+                        ? 'bg-[#FAF5EF]/50 dark:bg-[#3F2231]/20' 
+                        : 'hover:bg-[#FAF5EF]/30 dark:hover:bg-[#3F2231]/20'
                     }`}
                     onClick={() => order.status === 'PREPARING' && !isRejected && togglePacked(item.id)}
                   >
@@ -379,13 +366,13 @@ const OrderDetails = () => {
                       <div className="flex-shrink-0 cursor-pointer">
                         <div className={`w-5 h-5 rounded flex items-center justify-center transition-all duration-200 ${
                           isRejected 
-                            ? 'border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800' 
+                            ? 'border border-[#E7DBCF] dark:border-white/[0.08] bg-[#F2E9E0] dark:bg-[#3F2231]' 
                             : packedItems[item.id] 
-                              ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900' 
-                              : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                              ? 'bg-[#56323E] dark:bg-slate-100 text-white dark:text-slate-900' 
+                              : 'border border-[#D9C6B8] dark:border-white/[0.08] bg-white dark:bg-[#3F2231]'
                         }`}>
                           {packedItems[item.id] && !isRejected && <CheckCircle className="w-3.5 h-3.5"/>}
-                          {isRejected && <XCircle className="w-3.5 h-3.5 text-slate-400"/>}
+                          {isRejected && <XCircle className="w-3.5 h-3.5 text-[#A68B98]"/>}
                         </div>
                       </div>
                     )}
@@ -394,27 +381,27 @@ const OrderDetails = () => {
                       <div className="flex items-center gap-2">
                         <h3 className={`text-sm font-medium ${
                           isRejected || (packedItems[item.id] && order.status === 'PREPARING')
-                            ? 'text-slate-500 dark:text-slate-400 line-through opacity-80' 
-                            : 'text-slate-900 dark:text-white'
+                            ? 'text-[#7D6671] dark:text-[#C5B0BA] line-through opacity-80' 
+                            : 'text-[#2D1822] dark:text-white'
                         }`}>
                           {item.product_name_snapshot}
                         </h3>
                         {isRejected && (
-                          <span className="text-[10px] font-medium text-slate-500 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-medium text-[#7D6671] border border-[#E7DBCF] dark:border-white/[0.08] px-1.5 py-0.5 rounded">
                             Rejected
                           </span>
                         )}
                       </div>
-                      <p className={`text-xs mt-0.5 ${isRejected ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <p className={`text-xs mt-0.5 ${isRejected ? 'text-[#A68B98]' : 'text-[#7D6671]'}`}>
                         {item.unit_snapshot} • ₹{item.price_snapshot}
                       </p>
                     </div>
 
                     <div className="text-right flex flex-col items-end shrink-0">
-                      <p className={`text-sm font-medium ${isRejected ? 'text-slate-400 line-through' : 'text-slate-900 dark:text-white'}`}>
+                      <p className={`text-sm font-medium ${isRejected ? 'text-[#A68B98] line-through' : 'text-[#2D1822] dark:text-white'}`}>
                         {item.quantity} × ₹{item.price_snapshot}
                       </p>
-                      <p className={`text-sm font-semibold mt-0.5 ${isRejected ? 'text-slate-400 line-through' : 'text-slate-900 dark:text-white'}`}>
+                      <p className={`text-sm font-semibold mt-0.5 ${isRejected ? 'text-[#A68B98] line-through' : 'text-[#2D1822] dark:text-white'}`}>
                         ₹{item.subtotal}
                       </p>
                       
@@ -433,33 +420,33 @@ const OrderDetails = () => {
             </div>
           </div>
           
-          <div className="bg-white dark:bg-[#0d1322] rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Notes</h2>
+          <div className="bg-white dark:bg-[#351D28] rounded-lg shadow-sm border border-[#E7DBCF] dark:border-white/[0.08] overflow-hidden">
+            <div className="px-5 py-3 border-b border-[#E7DBCF] dark:border-white/[0.08] bg-[#FAF5EF]/50 dark:bg-[#3F2231]/30">
+              <h2 className="text-sm font-semibold text-[#2D1822] dark:text-white">Notes</h2>
             </div>
             <div className="p-5 space-y-4">
               {order.customer_note ? (
                 <div>
-                  <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Customer Note</h3>
-                  <p className="text-sm text-slate-900 dark:text-slate-200 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-md border border-slate-200 dark:border-slate-700">{order.customer_note}</p>
+                  <h3 className="text-xs font-medium text-[#7D6671] dark:text-[#C5B0BA] mb-1">Customer Note</h3>
+                  <p className="text-sm text-[#2D1822] dark:text-[#FAF5EF] p-3 bg-[#FAF5EF] dark:bg-[#3F2231]/50 rounded-md border border-[#E7DBCF] dark:border-white/[0.08]">{order.customer_note}</p>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500 dark:text-slate-400 italic">No customer instructions.</p>
+                <p className="text-sm text-[#7D6671] dark:text-[#C5B0BA] italic">No customer instructions.</p>
               )}
               
               <div className="pt-2">
-                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Store Note</h3>
+                <h3 className="text-xs font-medium text-[#7D6671] dark:text-[#C5B0BA] mb-2">Store Note</h3>
                 <textarea 
                   value={ownerNote} 
                   onChange={e => setOwnerNote(e.target.value)} 
                   placeholder="Internal fulfillment note..."
-                  className="w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-md p-3 text-sm focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 outline-none resize-none h-20"
+                  className="w-full border border-[#E7DBCF] dark:border-white/[0.08] bg-white dark:bg-[#351D28] text-[#2D1822] dark:text-white rounded-md p-3 text-sm focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 outline-none resize-none h-20"
                 />
                 <div className="flex justify-end mt-2">
                   <button 
                     onClick={saveNote}
                     disabled={savingNote}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white text-xs font-medium rounded-md transition-colors disabled:opacity-50"
+                    className="px-3 py-1.5 bg-[#F2E9E0] hover:bg-[#EFDFD2] dark:bg-[#3F2231] dark:hover:bg-[#432634] text-[#2D1822] dark:text-white text-xs font-medium rounded-md transition-colors disabled:opacity-50"
                   >
                     {savingNote ? 'Saving...' : 'Save Note'}
                   </button>
@@ -472,52 +459,52 @@ const OrderDetails = () => {
         <div className="space-y-6">
           {renderActionButtons(false)}
 
-          <div className="bg-white dark:bg-[#0d1322] rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-5">
+          <div className="bg-white dark:bg-[#351D28] rounded-lg shadow-sm border border-[#E7DBCF] dark:border-white/[0.08] p-5 space-y-5">
             <div>
-              <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Customer</h3>
-              <p className="font-semibold text-slate-900 dark:text-white text-sm">
+              <h3 className="text-xs font-medium text-[#7D6671] dark:text-[#C5B0BA] mb-1">Customer</h3>
+              <p className="font-semibold text-[#2D1822] dark:text-white text-sm">
                 {order.customer_name || `Customer #${order.customer}`}
               </p>
               {order.customer_phone && (
                 <a 
                   href={`tel:${order.customer_phone}`}
-                  className="inline-block text-xs font-medium text-slate-600 dark:text-slate-300 mt-1 hover:text-slate-900 dark:hover:text-white"
+                  className="inline-block text-xs font-medium text-[#5E4752] dark:text-[#C5B0BA] mt-1 hover:text-[#2D1822] dark:hover:text-white"
                 >
                   {order.customer_phone}
                 </a>
               )}
               {order.customer_email && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{order.customer_email}</p>
+                <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA] mt-0.5">{order.customer_email}</p>
               )}
             </div>
 
-            <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
-              <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+            <div className="border-t border-[#E7DBCF] dark:border-white/[0.08] pt-4">
+              <h3 className="text-xs font-medium text-[#7D6671] dark:text-[#C5B0BA] mb-1">
                 {order.order_type === 'DELIVERY' ? 'Delivery Slot' : 'Pickup Slot'}
               </h3>
-              <p className="font-medium text-slate-900 dark:text-white text-sm">
+              <p className="font-medium text-[#2D1822] dark:text-white text-sm">
                 {order.delivery_slot_label || order.pickup_time || 'Standard Fulfillment'}
               </p>
               {order.delivery_slot_date && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{order.delivery_slot_date}</p>
+                <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA] mt-0.5">{order.delivery_slot_date}</p>
               )}
             </div>
 
             {order.order_type === 'DELIVERY' && (
-              <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-2">
-                <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Address</h3>
-                <p className="font-medium text-slate-900 dark:text-white text-sm whitespace-pre-line leading-relaxed">
+              <div className="border-t border-[#E7DBCF] dark:border-white/[0.08] pt-4 space-y-2">
+                <h3 className="text-xs font-medium text-[#7D6671] dark:text-[#C5B0BA] mb-1">Address</h3>
+                <p className="font-medium text-[#2D1822] dark:text-white text-sm whitespace-pre-line leading-relaxed">
                   {order.delivery_address || 'No address provided.'}
                 </p>
                 {order.delivery_pincode && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{order.delivery_pincode}</p>
+                  <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA]">{order.delivery_pincode}</p>
                 )}
                 
                 {order.delivery_latitude && order.delivery_longitude && (
                   <button 
                     onClick={handleGetDirections}
                     disabled={gettingLocation}
-                    className="mt-2 flex items-center justify-center w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-medium py-1.5 px-3 rounded-md transition-colors text-xs disabled:opacity-60"
+                    className="mt-2 flex items-center justify-center w-full bg-[#F2E9E0] hover:bg-[#EFDFD2] dark:bg-[#3F2231] dark:hover:bg-[#432634] text-[#2D1822] dark:text-white font-medium py-1.5 px-3 rounded-md transition-colors text-xs disabled:opacity-60"
                   >
                     <MapPin className="w-3.5 h-3.5 mr-1.5" /> 
                     {gettingLocation ? 'Locating...' : 'Directions'}
@@ -527,11 +514,11 @@ const OrderDetails = () => {
             )}
 
             {order.order_type === 'DELIVERY' && (
-              <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
+              <div className="border-t border-[#E7DBCF] dark:border-white/[0.08] pt-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">Delivery Partner</h3>
+                  <h3 className="text-xs font-medium text-[#7D6671] dark:text-[#C5B0BA]">Delivery Partner</h3>
                   {order.delivery_otp && (
-                    <span className="text-[10px] font-mono font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] font-mono font-medium text-[#5E4752] dark:text-[#C5B0BA] border border-[#E7DBCF] dark:border-white/[0.08] px-1.5 py-0.5 rounded">
                       OTP: {order.delivery_otp}
                     </span>
                   )}
@@ -539,15 +526,15 @@ const OrderDetails = () => {
 
                 {order.delivery_partner_name ? (
                   <div className="text-sm space-y-0.5">
-                    <p className="font-medium text-slate-900 dark:text-white">
+                    <p className="font-medium text-[#2D1822] dark:text-white">
                       {order.delivery_partner_name}
                     </p>
                     {order.delivery_partner_phone && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{order.delivery_partner_phone}</p>
+                      <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA]">{order.delivery_partner_phone}</p>
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Unassigned</p>
+                  <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA]">Unassigned</p>
                 )}
 
                 {['NEW', 'ACCEPTED', 'PREPARING', 'READY'].includes(order.status) && (
@@ -556,7 +543,7 @@ const OrderDetails = () => {
                       <select
                         value={selectedPartnerId}
                         onChange={(e) => setSelectedPartnerId(e.target.value)}
-                        className="flex-1 bg-white dark:bg-[#0d1322] border border-slate-200 dark:border-slate-700 text-xs rounded-md px-2 py-1.5 text-slate-900 dark:text-white outline-none"
+                        className="flex-1 bg-white dark:bg-[#351D28] border border-[#E7DBCF] dark:border-white/[0.08] text-xs rounded-md px-2 py-1.5 text-[#2D1822] dark:text-white outline-none"
                       >
                         <option value="">-- Select Rider --</option>
                         {deliveryPartners.map((dp) => (
@@ -567,7 +554,7 @@ const OrderDetails = () => {
                         type="button"
                         onClick={handleAssignPartner}
                         disabled={assigningPartner}
-                        className="px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-medium text-xs rounded-md transition disabled:opacity-50 shrink-0"
+                        className="px-3 py-1.5 bg-[#56323E] dark:bg-white text-white dark:text-slate-900 font-medium text-xs rounded-md transition disabled:opacity-50 shrink-0"
                       >
                         {assigningPartner ? '...' : 'Save'}
                       </button>
@@ -577,72 +564,72 @@ const OrderDetails = () => {
               </div>
             )}
 
-            <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-2">
+            <div className="border-t border-[#E7DBCF] dark:border-white/[0.08] pt-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500 dark:text-slate-400">Subtotal</span>
-                <span className="text-slate-900 dark:text-white font-medium">
+                <span className="text-[#7D6671] dark:text-[#C5B0BA]">Subtotal</span>
+                <span className="text-[#2D1822] dark:text-white font-medium">
                   ₹{activeItems.reduce((acc, item) => acc + parseFloat(item.subtotal), 0).toFixed(2)}
                 </span>
               </div>
               {parseFloat(order.delivery_fee) > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 dark:text-slate-400">Delivery</span>
-                  <span className="text-slate-900 dark:text-white font-medium">₹{order.delivery_fee}</span>
+                  <span className="text-[#7D6671] dark:text-[#C5B0BA]">Delivery</span>
+                  <span className="text-[#2D1822] dark:text-white font-medium">₹{order.delivery_fee}</span>
                 </div>
               )}
               {parseFloat(order.packaging_fee) > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 dark:text-slate-400">Packaging</span>
-                  <span className="text-slate-900 dark:text-white font-medium">₹{parseFloat(order.packaging_fee).toFixed(2)}</span>
+                  <span className="text-[#7D6671] dark:text-[#C5B0BA]">Packaging</span>
+                  <span className="text-[#2D1822] dark:text-white font-medium">₹{parseFloat(order.packaging_fee).toFixed(2)}</span>
                 </div>
               )}
               {parseFloat(order.promo_discount) > 0 && (
-                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-300">
+                <div className="flex justify-between text-sm text-[#5E4752] dark:text-[#C5B0BA]">
                   <span>Promo</span>
                   <span>-₹{parseFloat(order.promo_discount).toFixed(2)}</span>
                 </div>
               )}
               {parseFloat(order.wallet_discount) > 0 && (
-                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-300">
+                <div className="flex justify-between text-sm text-[#5E4752] dark:text-[#C5B0BA]">
                   <span>Wallet</span>
                   <span>-₹{parseFloat(order.wallet_discount).toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-200 dark:border-slate-800">
-                <span className="text-sm font-semibold text-slate-900 dark:text-white">Total</span>
-                <span className="text-lg font-semibold text-slate-900 dark:text-white">₹{order.total_amount}</span>
+              <div className="flex justify-between items-center pt-3 mt-3 border-t border-[#E7DBCF] dark:border-white/[0.08]">
+                <span className="text-sm font-semibold text-[#2D1822] dark:text-white">Total</span>
+                <span className="text-lg font-semibold text-[#2D1822] dark:text-white">₹{order.total_amount}</span>
               </div>
             </div>
           </div>
 
           {/* PayPal Dynamic Settlement Details */}
-          {(order.paypal_authorization_id || order.paypal_order_id) && (
-            <div className="bg-white dark:bg-[#0d1322] rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+          {(order.paypal_authorization_id || order.paypal_order_id || order.payment_method === 'PAYPAL') && (
+            <div className="bg-white dark:bg-[#351D28] rounded-lg shadow-sm border border-[#E7DBCF] dark:border-white/[0.08] p-5 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E7DBCF] dark:border-white/[0.08]">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-md bg-[#56323E] text-white flex items-center justify-center font-bold text-xs">
                     P
                   </div>
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  <h3 className="text-xs font-bold text-[#2D1822] dark:text-white uppercase tracking-wider">
                     PayPal Settlement
                   </h3>
                 </div>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  order.paypal_capture_id ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                  order.paypal_capture_id || order.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                 }`}>
-                  {order.paypal_capture_id ? 'Captured' : 'Hold Active'}
+                  {order.paypal_capture_id || order.status === 'COMPLETED' ? 'Paid & Captured' : 'Hold Active'}
                 </span>
               </div>
 
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Pre-Auth Hold:</span>
+                  <span className="text-[#7D6671]">Pre-Auth Hold:</span>
                   <span className="font-mono font-medium">${parseFloat(order.authorized_amount || order.total_amount).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Captured:</span>
-                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                    ${parseFloat(order.captured_amount || (order.paypal_capture_id ? order.total_amount : 0)).toFixed(2)}
+                  <span className="text-[#7D6671]">Captured:</span>
+                  <span className="font-mono font-bold text-[#56323E] dark:text-[#EFDFD2]">
+                    ${parseFloat(order.captured_amount || (order.paypal_capture_id || order.status === 'COMPLETED' ? order.total_amount : 0)).toFixed(2)}
                   </span>
                 </div>
                 {parseFloat(order.released_amount || 0) > 0 && (
@@ -651,14 +638,14 @@ const OrderDetails = () => {
                     <span className="font-mono font-bold">-${parseFloat(order.released_amount).toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-[11px] text-slate-400 font-mono pt-1 border-t border-slate-100 dark:border-slate-800 truncate">
+                <div className="flex justify-between text-[11px] text-[#A68B98] font-mono pt-1 border-t border-[#E7DBCF] dark:border-white/[0.08] truncate">
                   <span>Auth ID:</span>
                   <span className="truncate max-w-[140px]">{order.paypal_authorization_id || 'N/A'}</span>
                 </div>
               </div>
 
               {order.paypal_invoice_url && (
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="pt-2 border-t border-[#E7DBCF] dark:border-white/[0.08]">
                   <a
                     href={order.paypal_invoice_url}
                     target="_blank"
@@ -671,9 +658,9 @@ const OrderDetails = () => {
               )}
 
               {order.paypal_tracking_number && (
-                <div className="pt-1 text-[11px] text-slate-500 flex items-center justify-between font-mono">
+                <div className="pt-1 text-[11px] text-[#7D6671] flex items-center justify-between font-mono">
                   <span>Tracking:</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300">{order.paypal_tracking_number}</span>
+                  <span className="font-bold text-[#5E4752] dark:text-[#C5B0BA]">{order.paypal_tracking_number}</span>
                 </div>
               )}
             </div>
@@ -682,21 +669,21 @@ const OrderDetails = () => {
       </div>
 
       {isRejectModalOpen && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0d1322] rounded-lg w-full max-w-md p-6 shadow-xl border border-slate-200 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#56323E]/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#351D28] rounded-lg w-full max-w-md p-6 shadow-xl border border-[#E7DBCF] dark:border-white/[0.08]">
             <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400 mb-4">
               <AlertTriangle size={20} />
-              <h2 className="text-base font-semibold text-slate-900 dark:text-white">Decline Order?</h2>
+              <h2 className="text-base font-semibold text-[#2D1822] dark:text-white">Decline Order?</h2>
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
-              Reject Order <strong className="font-mono text-slate-900 dark:text-white">#{order.id}</strong> (Total: ₹{order.total_amount})? The customer will be informed and funds returned.
+            <p className="text-sm text-[#5E4752] dark:text-[#C5B0BA] leading-relaxed mb-6">
+              Reject Order <strong className="font-mono text-[#2D1822] dark:text-white">#{order.id}</strong> (Total: ₹{order.total_amount})? The customer will be informed and funds returned.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsRejectModalOpen(false)}
                 disabled={isUpdating}
-                className="px-4 py-2 text-slate-700 dark:text-slate-300 font-medium bg-slate-100 dark:bg-slate-800 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm"
+                className="px-4 py-2 text-[#5E4752] dark:text-[#C5B0BA] font-medium bg-[#F2E9E0] dark:bg-[#3F2231] rounded-md hover:bg-[#EFDFD2] dark:hover:bg-[#432634] transition-colors text-sm"
               >
                 Cancel
               </button>
@@ -716,21 +703,21 @@ const OrderDetails = () => {
       )}
 
       {rejectingItem && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#0d1322] rounded-lg w-full max-w-md p-6 shadow-xl border border-slate-200 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#56323E]/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#351D28] rounded-lg w-full max-w-md p-6 shadow-xl border border-[#E7DBCF] dark:border-white/[0.08]">
             <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400 mb-4">
               <AlertTriangle size={20} />
-              <h2 className="text-base font-semibold text-slate-900 dark:text-white">Reject Item?</h2>
+              <h2 className="text-base font-semibold text-[#2D1822] dark:text-white">Reject Item?</h2>
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
-              Remove <strong className="text-slate-900 dark:text-white">"{rejectingItem.product_name_snapshot}"</strong> from the order? The total will be reduced by ₹{rejectingItem.subtotal}.
+            <p className="text-sm text-[#5E4752] dark:text-[#C5B0BA] leading-relaxed mb-6">
+              Remove <strong className="text-[#2D1822] dark:text-white">"{rejectingItem.product_name_snapshot}"</strong> from the order? The total will be reduced by ₹{rejectingItem.subtotal}.
             </p>
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setRejectingItem(null)}
                 disabled={isUpdating}
-                className="px-4 py-2 text-slate-700 dark:text-slate-300 font-medium bg-slate-100 dark:bg-slate-800 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm"
+                className="px-4 py-2 text-[#5E4752] dark:text-[#C5B0BA] font-medium bg-[#F2E9E0] dark:bg-[#3F2231] rounded-md hover:bg-[#EFDFD2] dark:hover:bg-[#432634] transition-colors text-sm"
               >
                 Cancel
               </button>

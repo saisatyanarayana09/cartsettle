@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import "vitest-canvas-mock";
 
 Object.defineProperty(window, "scrollTo", {
   writable: true,

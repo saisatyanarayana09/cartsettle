@@ -74,10 +74,10 @@ export default function MidPageBannerEditor({ section, onUpdateSection, onSave }
 
       {/* Image Preview / Upload */}
       <div className="w-full md:w-2/3">
-        <p className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+        <p className="text-sm font-bold text-[#5E4752] mb-2 flex items-center gap-2">
           <ImageIcon size={16} /> Desktop & Mobile Banner Image
         </p>
-        <label className="relative flex flex-col items-center justify-center w-full aspect-[4/1] bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl hover:bg-slate-100 hover:border-emerald-300 transition-colors cursor-pointer overflow-hidden group">
+        <label className="relative flex flex-col items-center justify-center w-full aspect-[4/1] bg-[#FAF5EF] border-2 border-dashed border-[#E7DBCF] rounded-xl hover:bg-[#F2E9E0] hover:border-emerald-300 transition-colors cursor-pointer overflow-hidden group">
           {image ? (
             <>
               <img loading="lazy" decoding="async" src={image} alt="Banner" className="w-full h-full object-cover" />
@@ -88,8 +88,8 @@ export default function MidPageBannerEditor({ section, onUpdateSection, onSave }
           ) : (
             <div className="text-center p-4">
               <ImageIcon size={32} className="mx-auto text-slate-300 mb-2" />
-              <p className="text-sm font-bold text-slate-500">Upload Ultra-Wide Strip (4:1)</p>
-              <p className="text-xs text-slate-400 mt-1">Recommended: 1200x300px</p>
+              <p className="text-sm font-bold text-[#7D6671]">Upload Ultra-Wide Strip (4:1)</p>
+              <p className="text-xs text-[#A68B98] mt-1">Recommended: 1200x300px</p>
             </div>
           )}
           <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={saving} />
@@ -99,7 +99,7 @@ export default function MidPageBannerEditor({ section, onUpdateSection, onSave }
       {/* Settings */}
       <div className="w-full md:w-1/3 space-y-4">
         <div>
-          <label className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+          <label className="text-sm font-bold text-[#5E4752] mb-2 flex items-center gap-2">
             <LinkIcon size={16} /> Click Destination URL
           </label>
           <input
@@ -107,14 +107,14 @@ export default function MidPageBannerEditor({ section, onUpdateSection, onSave }
             value={link}
             onChange={(e) => setLink(e.target.value)}
             placeholder="e.g. /products?category=Snacks"
-            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+            className="w-full px-4 py-2 border border-[#E7DBCF] rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           />
-          <p className="text-xs text-slate-400 mt-1">Where should the user go when they tap the banner?</p>
+          <p className="text-xs text-[#A68B98] mt-1">Where should the user go when they tap the banner?</p>
         </div>
         <button
           onClick={saveLink}
           disabled={saving}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#56323E] text-white font-bold rounded-xl hover:bg-[#432634] transition-colors shadow-sm disabled:opacity-50"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Save Link Settings

@@ -1,11 +1,11 @@
 services:
-  # 1. CartSettle Django ASGI / Gunicorn Backend Service on Render
+  # 1. CartSettle Django ASGI / Daphne Backend Service on Render
   - type: web
     name: cartsettle-api
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60
+    buildCommand: chmod +x ./build.sh && ./build.sh
+    startCommand: daphne -b 0.0.0.0 -p $PORT config.asgi:application
     healthCheckPath: /api/v1/store/settings/
     envVars:
       - key: DJANGO_ENV
@@ -16,21 +16,27 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET
         sync: false
       - key: PAYPAL_MODE
         value: sandbox
-      - key: GEMINI_API_KEY
+      - key: FRONTEND_URL
         sync: false
 
-  # 2. CartSettle React 19 + Vite 8 Static SPA on Render
+  # 2. CartSettle React Vite Static Frontend on Render
   - type: web
     name: cartsettle-web
     runtime: static
     rootDir: frontend
-    buildCommand: npm install --legacy-peer-deps && npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: dist
     routes:
       - type: rewrite

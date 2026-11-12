@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
-import { Link, useNavigate, useParams } from '../../router';
+import { useNavigate, useParams } from '../../router';
 import {
   ChevronLeft,
   Package,
@@ -11,8 +11,7 @@ import {
   MapPin,
   Calendar,
   CreditCard,
-  ShieldCheck,
-  FileText
+  ShieldCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -149,18 +148,6 @@ export function OrderDetailPage() {
               <ChevronLeft size={18} className="stroke-[2.4]" />
               <span>Orders</span>
             </button>
-
-            <div className="flex items-center gap-2.5">
-              {order?.status === 'COMPLETED' && (
-                <Link
-                  to={`/orders/${order.id}/invoice`}
-                  className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-[10px] bg-[#1D1D1F] hover:bg-black/85 dark:bg-white text-white dark:text-[#1D1D1F] text-xs font-semibold transition-all"
-                >
-                  <FileText size={13} />
-                  <span>Invoice</span>
-                </Link>
-              )}
-            </div>
           </div>
 
           {error && (
@@ -372,7 +359,7 @@ export function OrderDetailPage() {
               {/* Right 5 Columns: Sticky Apple Pay Receipt & Settlement Summary */}
               <aside className="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
                 {/* PayPal Dynamic Settlement Card */}
-                {(order.paypal_authorization_id || order.payment_method === 'PAYPAL') && (
+                {order && (
                   <section className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-5 shadow-[0_2px_20px_rgba(0,0,0,0.03)] border border-black/[0.03] dark:border-white/[0.06] space-y-3">
                     <div className="flex items-center justify-between pb-3 border-b border-[#E5E5EA] dark:border-[#38383A]">
                       <div className="flex items-center gap-2">
@@ -381,21 +368,23 @@ export function OrderDetailPage() {
                         </div>
                         <div>
                           <h3 className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                            PayPal Dynamic Settlement
+                            PayPal SafeHold
                           </h3>
                           <p className="text-[10px] text-[#86868B] font-mono">
-                            {order.paypal_authorization_id || order.paypal_order_id || 'Pre-Authorized'}
+                            {order.paypal_capture_id || order.paypal_authorization_id || order.paypal_order_id || 'PayPal Verified'}
                           </p>
                         </div>
                       </div>
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          order.paypal_capture_id
+                          order.paypal_capture_id || ['READY', 'OUT_FOR_DELIVERY', 'COMPLETED'].includes(order.status)
                             ? 'bg-[#34C759]/15 text-[#34C759]'
                             : 'bg-[#0071E3]/12 text-[#0071E3]'
                         }`}
                       >
-                        {order.paypal_capture_id ? 'Captured' : 'Hold Active'}
+                        {order.paypal_capture_id || ['READY', 'OUT_FOR_DELIVERY', 'COMPLETED'].includes(order.status)
+                          ? 'Paid & Captured'
+                          : 'SafeHold Active'}
                       </span>
                     </div>
 
@@ -411,7 +400,10 @@ export function OrderDetailPage() {
                         <p className="font-bold tabular-nums text-[#0071E3] mt-0.5">
                           $
                           {parseFloat(
-                            order.captured_amount || (order.paypal_capture_id ? order.total_amount : 0)
+                            order.captured_amount ||
+                              (order.paypal_capture_id || ['READY', 'OUT_FOR_DELIVERY', 'COMPLETED'].includes(order.status)
+                                ? order.total_amount
+                                : 0)
                           ).toFixed(2)}
                         </p>
                       </div>
@@ -539,8 +531,10 @@ export function OrderDetailPage() {
                       <div className="flex items-center gap-2 pt-2 border-t border-[#E5E5EA] dark:border-[#38383A] text-[#86868B]">
                         <CreditCard size={13} className="shrink-0" />
                         <span>
-                          Payment: <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">{order.payment_method}</strong>
-                          {order.upi_transaction_id ? ` (UTR: ${order.upi_transaction_id})` : ''}
+                          Payment:{' '}
+                          <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">
+                            {order.payment_method === 'WALLET' ? 'Wallet Balance' : 'PayPal'}
+                          </strong>
                         </span>
                       </div>
                     )}

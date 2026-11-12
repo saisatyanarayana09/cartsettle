@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <radialGradient id="shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="60%" stop-color="#000000" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gloss" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="35%" stop-color="#FFFFFF" stop-opacity="0.1"/>
+      <stop offset="70%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="sackGrad_19" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FEE2E2"/>
+      <stop offset="25%" stop-color="#FFFFFF"/>
+      <stop offset="65%" stop-color="#FEE2E2"/>
+      <stop offset="100%" stop-color="#DC2626"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="200" cy="358" rx="135" ry="18" fill="url(#shadow)"/>
+  <path d="M 115 105 L 285 105 Q 315 220 295 340 Q 200 355 105 340 Q 85 220 115 105 Z" fill="url(#sackGrad_19)" stroke="#DC2626" stroke-width="1.5"/>
+  <rect x="110" y="95" width="180" height="18" rx="4" fill="#DC2626"/>
+  <line x1="115" y1="104" x2="285" y2="104" stroke="#FFFFFF" stroke-dasharray="4,4" stroke-width="2"/>
+  <rect x="125" y="140" width="150" height="60" rx="10" fill="#DC2626"/>
+  <text x="200" y="180" font-family="'Segoe UI', Roboto, sans-serif" font-size="30" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">FORTUNE</text>
+  <circle cx="200" cy="235" r="28" fill="#FFFFFF" stroke="#DC2626" stroke-width="2"/>
+  <text x="200" y="238" font-family="sans-serif" font-size="11" font-weight="900" fill="#DC2626" text-anchor="middle">EXTRA LONG</text>
+  <text x="200" y="292" font-family="'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="800" fill="#1E293B" text-anchor="middle">Fortune Rozana Basmati</text>
+  <text x="200" y="315" font-family="sans-serif" font-size="13" font-weight="700" fill="#64748B" text-anchor="middle">5 kg Bag</text>
+  <rect x="260" y="300" width="16" height="16" rx="2" fill="#FFFFFF" stroke="#16A34A" stroke-width="1.5"/>
+  <circle cx="268" cy="308" r="4.5" fill="#16A34A"/>
+</svg>

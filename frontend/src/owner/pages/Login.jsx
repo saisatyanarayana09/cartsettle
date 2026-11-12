@@ -112,7 +112,7 @@ const OwnerLoginForm = () => {
   };
 
   return (
-    <main className="min-h-screen flex bg-white dark:bg-slate-950 font-sans antialiased">
+    <main className="owner-theme min-h-screen flex bg-[#FAF5EF] dark:bg-[#2D1822] font-sans antialiased text-[#2D1822] dark:text-[#FAF5EF]">
       {/* Left Column: Form & Brand Console */}
       <div className="flex-1 flex items-center justify-center p-6 sm:p-10 lg:p-14">
         <div className="w-full max-w-md">
@@ -121,7 +121,7 @@ const OwnerLoginForm = () => {
           <div className="mb-6">
             <Link 
               to="/" 
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#7D6671] hover:text-[#2D1822] dark:text-[#C5B0BA] dark:hover:text-[#FAF5EF] transition-colors"
             >
               <ArrowLeft size={13} />
               <span>Back to Storefront</span>
@@ -134,14 +134,14 @@ const OwnerLoginForm = () => {
 
               <div>
                 <p className="text-[11px] font-black tracking-normal text-emerald-900 dark:text-emerald-400">
-                  Cart<span className="text-indigo-600 dark:text-indigo-400">Settle</span>
+                  Cart<span className="text-[#56323E] dark:text-[#EFDFD2]">Settle</span>
                 </p>
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-black text-[#2D1822] dark:text-white tracking-tight">
                   Owner Portal
                 </h1>
               </div>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+            <p className="text-sm text-[#7D6671] dark:text-[#C5B0BA] font-medium">
               Sign in with your registered <b>Owner Email</b> or username to manage orders, inventory, and sales.
             </p>
           </div>
@@ -160,10 +160,10 @@ const OwnerLoginForm = () => {
                 type="button"
                 disabled={submitting}
                 onClick={handleOneClickOwnerDemo}
-                className="w-full h-11 flex items-center justify-center gap-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-xs active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                className="w-full h-11 flex items-center justify-center gap-2 px-4 bg-[#56323E] hover:bg-[#432634] text-[#FAF5EF] dark:bg-[#EFDFD2] dark:hover:bg-[#E7DBCF] dark:text-[#2D1822] rounded-xl text-sm font-semibold transition-all shadow-xs active:scale-[0.99] disabled:opacity-60 cursor-pointer"
               >
                 <span>{submitting ? 'Logging in...' : 'Demo Login'}</span>
-                <ArrowRight size={16} className="text-indigo-200" />
+                <ArrowRight size={16} className="text-[#EFDFD2]" />
               </button>
             </div>
 
@@ -172,7 +172,7 @@ const OwnerLoginForm = () => {
               <button
                 type="button"
                 onClick={() => handleGoogleLogin()}
-                className="w-full h-11 flex items-center justify-center gap-2.5 px-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 hover:shadow-xs transition-all text-sm font-semibold text-slate-700 dark:text-slate-200 cursor-pointer active:scale-[0.99]"
+                className="w-full h-11 flex items-center justify-center gap-2.5 px-4 bg-white dark:bg-[#351D28] border border-[#E7DBCF] dark:border-white/[0.08] rounded-xl hover:bg-[#FAF5EF] dark:hover:bg-[#3F2231] hover:shadow-xs transition-all text-sm font-semibold text-[#5E4752] dark:text-[#FAF5EF] cursor-pointer active:scale-[0.99]"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
@@ -197,26 +197,26 @@ const OwnerLoginForm = () => {
             </div>
 
             <div className="relative flex items-center justify-center my-4">
-              <span className="absolute bg-white dark:bg-slate-950 px-3 text-xs font-medium text-slate-400">
+              <span className="absolute bg-white dark:bg-[#351D28] px-3 text-xs font-medium text-[#A68B98]">
                 or
               </span>
-              <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+              <div className="w-full border-t border-[#E7DBCF] dark:border-white/[0.08]" />
             </div>
 
             <div className="space-y-4">
               {/* Dynamic Email or Username Field */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="owner-identifier" className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  <label htmlFor="owner-identifier" className="block text-sm font-semibold text-[#5E4752] dark:text-[#FAF5EF]">
                     Email or Username
                   </label>
-                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${isEmail ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider ${isEmail ? 'text-[#56323E] dark:text-[#EFDFD2]' : 'text-[#A68B98]'}`}>
                     {isEmail ? '✓ Email' : 'Email or Username'}
                   </span>
                 </div>
                 <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    {isEmail ? <Mail size={18} className="text-indigo-600 dark:text-indigo-400" /> : <User size={18} />}
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A68B98]">
+                    {isEmail ? <Mail size={18} className="text-[#56323E] dark:text-[#EFDFD2]" /> : <User size={18} />}
                   </div>
                   <input
                     id="owner-identifier"
@@ -226,7 +226,7 @@ const OwnerLoginForm = () => {
                     placeholder="owner@cartsettle.store or username"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm shadow-2xs"
+                    className="w-full rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] pl-10 pr-4 py-3 bg-[#FAF5EF] dark:bg-[#351D28] text-[#2D1822] dark:text-white outline-none focus:bg-white dark:focus:bg-[#351D28] focus:ring-2 focus:ring-[#56323E]/20 focus:border-[#56323E] transition-all text-sm shadow-2xs"
                   />
                 </div>
               </div>
@@ -234,18 +234,18 @@ const OwnerLoginForm = () => {
               {/* Password Field */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="owner-password" className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  <label htmlFor="owner-password" className="block text-sm font-semibold text-[#5E4752] dark:text-[#FAF5EF]">
                     Password
                   </label>
                   <Link 
                     to="/owner/forgot-password" 
-                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 transition-colors"
+                    className="text-xs font-semibold text-[#56323E] dark:text-[#EFDFD2] hover:text-[#2D1822] transition-colors"
                   >
                     Forgot password?
                   </Link>
                 </div>
                 <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A68B98]">
                     <Lock size={18} />
                   </div>
                   <input
@@ -256,12 +256,12 @@ const OwnerLoginForm = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyUp={(e) => setCapsLockActive(e.getModifierState('CapsLock'))}
                     placeholder="••••••••"
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 pl-10 pr-12 py-3 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm shadow-2xs"
+                    className="w-full rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] pl-10 pr-12 py-3 bg-[#FAF5EF] dark:bg-[#351D28] text-[#2D1822] dark:text-white outline-none focus:bg-white dark:focus:bg-[#351D28] focus:ring-2 focus:ring-[#56323E]/20 focus:border-[#56323E] transition-all text-sm shadow-2xs"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none rounded-lg transition-colors cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[#A68B98] hover:text-[#5E4752] dark:hover:text-[#FAF5EF] focus:outline-none rounded-lg transition-colors cursor-pointer"
                     title={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -278,7 +278,7 @@ const OwnerLoginForm = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-3.5 font-bold text-white transition-all shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:hover:shadow-none disabled:transform-none flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full rounded-xl bg-[#56323E] hover:bg-[#432634] px-4 py-3.5 font-bold text-white transition-all shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:hover:shadow-none disabled:transform-none flex items-center justify-center gap-2 cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -295,8 +295,8 @@ const OwnerLoginForm = () => {
           </form>
 
           {/* Footer Customer Switcher */}
-          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="mt-8 pt-6 border-t border-[#E7DBCF] dark:border-white/[0.08] text-center">
+            <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA]">
               Looking for daily groceries and shopping?{' '}
               <Link to="/" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
                 Go to Customer Storefront →
@@ -308,8 +308,8 @@ const OwnerLoginForm = () => {
       </div>
 
       {/* Right Column: Hero Showcase (Desktop) */}
-      <div className="hidden lg:block lg:flex-1 relative overflow-hidden bg-slate-950">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/80 via-slate-900/90 to-emerald-950/80 z-10 mix-blend-multiply" />
+      <div className="hidden lg:block lg:flex-1 relative overflow-hidden bg-[#56323E]">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#56323E] via-slate-900/90 to-emerald-950/80 z-10 mix-blend-multiply" />
         <img
           src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1920"
           alt="Grocery store operations"
@@ -326,7 +326,7 @@ const OwnerLoginForm = () => {
             Manage your store <br />
             <span className="text-emerald-400">effortlessly in real-time.</span>
           </h2>
-          <p className="text-indigo-100/80 text-base leading-relaxed font-medium mb-6">
+          <p className="text-[#EFDFD2] text-base leading-relaxed font-medium mb-6">
             Track orders instantly, monitor inventory, manage dynamic homepage banners, and analyze sales performance across all channels.
           </p>
           <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-slate-300">

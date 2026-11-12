@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ActionCards } from "./ActionCards";
 
@@ -304,5 +304,381 @@ it("allows manual dismissal of auto-dismissing cards via X button", () => {
   expect(dismissBtn).toBeInTheDocument();
   fireEvent.click(dismissBtn);
 });
+
+it("renders SalesAnalyticsCard with gross revenue, paypal captured and navigates", () => {
+  const onNavigate = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "SALES_ANALYTICS_CARD",
+          analytics: {
+            total_revenue: 1842.50,
+            total_captured: 1690.00,
+            total_released: 152.50,
+            total_orders: 56,
+            pending_orders: 0,
+            aov: 32.90,
+          },
+        },
+      ]}
+      currency="USD"
+      onNavigate={onNavigate}
+    />,
+  );
+  expect(screen.getByText("Sales & Revenue Analytics")).toBeInTheDocument();
+  expect(screen.getByText("$1,842.50")).toBeInTheDocument();
+  expect(screen.getByText("$1,690.00")).toBeInTheDocument();
+  expect(screen.getByText("56")).toBeInTheDocument();
+
+  const navBtn = screen.getByRole("button", { name: /Open Sales Analytics/i });
+  fireEvent.click(navBtn);
+  expect(onNavigate).toHaveBeenCalledWith("/owner/sales");
+});
+
+it("renders PromoCodesCard with active coupon codes", () => {
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "PROMO_CODES_CARD",
+          promos: [
+            { code: "SAVE15", discount_type: "PERCENTAGE", discount_value: 15, status: "ACTIVE" },
+            { code: "WELCOME5", discount_type: "FLAT", discount_value: 5, status: "ACTIVE" },
+          ],
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText("Promotions & Coupons")).toBeInTheDocument();
+  expect(screen.getByText("SAVE15")).toBeInTheDocument();
+  expect(screen.getByText("15% OFF")).toBeInTheDocument();
+  expect(screen.getByText("WELCOME5")).toBeInTheDocument();
+  expect(screen.getByText("$5 OFF")).toBeInTheDocument();
+});
+
+it("renders CategoriesCard with active categories", () => {
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "CATEGORIES_CARD",
+          total_categories: 3,
+          categories: [
+            { name: "Produce", product_count: 18 },
+            { name: "Dairy & Eggs", product_count: 12 },
+            { name: "Bakery", product_count: 8 },
+          ],
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText("Catalog Categories")).toBeInTheDocument();
+  expect(screen.getByText("Produce")).toBeInTheDocument();
+  expect(screen.getByText("(18)")).toBeInTheDocument();
+  expect(screen.getByText("Dairy & Eggs")).toBeInTheDocument();
+});
+
+it("renders CustomersFleetCard for delivery partners and customer directory", () => {
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "CUSTOMERS_FLEET_CARD",
+          delivery_partners: [
+            { id: 1, name: "Rahul Sharma", phone: "+1 555-0192", vehicle: "EV Bike", status: "AVAILABLE" },
+            { id: 2, name: "Amit Patel", phone: "+1 555-0188", vehicle: "Motorcycle", status: "ON_DELIVERY" },
+          ],
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText("Delivery Fleet Partners")).toBeInTheDocument();
+  expect(screen.getByText("Rahul Sharma")).toBeInTheDocument();
+  expect(screen.getByText("AVAILABLE")).toBeInTheDocument();
+  expect(screen.getByText("Amit Patel")).toBeInTheDocument();
+  expect(screen.getByText("ON_DELIVERY")).toBeInTheDocument();
+});
+
+it("renders BroadcastCard with customer notification preview", () => {
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "BROADCAST_CARD",
+          title: "Weekend Flash Deals",
+          message: "Enjoy 15% off fresh produce for the next 4 hours.",
+          sent_at: "Just now",
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText("Customer Push Broadcast")).toBeInTheDocument();
+  expect(screen.getByText("Weekend Flash Deals")).toBeInTheDocument();
+  expect(screen.getByText("Enjoy 15% off fresh produce for the next 4 hours.")).toBeInTheDocument();
+  expect(screen.getByText("Transmitted")).toBeInTheDocument();
+});
+
+it("renders CartItemsCard with active cart items, quantity stepper, and checkout trigger", () => {
+  const onUpdate = vi.fn();
+  const onNavigate = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "CART_ITEMS_CARD",
+          items: [
+            { id: 101, name: "Organic Whole Milk", price: 4.5, quantity: 2 },
+            { id: 102, name: "Fresh Strawberries", price: 5.0, quantity: 1 },
+          ],
+          total: 14.0,
+          count: 3,
+        },
+      ]}
+      onUpdate={onUpdate}
+      onNavigate={onNavigate}
+    />,
+  );
+  expect(screen.getByText("Cart Items")).toBeInTheDocument();
+  expect(screen.getByText("3 items \u2022 $14.00")).toBeInTheDocument();
+  expect(screen.getByText("Organic Whole Milk")).toBeInTheDocument();
+  expect(screen.getByText("Fresh Strawberries")).toBeInTheDocument();
+  expect(screen.getByText("$14.00")).toBeInTheDocument();
+
+  const incBtn = screen.getByRole("button", { name: "Increase Organic Whole Milk quantity" });
+  fireEvent.click(incBtn);
+  expect(onUpdate).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 101, name: "Organic Whole Milk" }),
+    3,
+  );
+
+  const checkoutBtn = screen.getByRole("button", { name: /Checkout/i });
+  fireEvent.click(checkoutBtn);
+  expect(onNavigate).toHaveBeenCalledWith("/checkout");
+});
+
+it("renders empty state in CartItemsCard when cart is empty", () => {
+  const onNavigate = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "CART_ITEMS_CARD",
+          items: [],
+          total: 0,
+          count: 0,
+          empty: true,
+        },
+      ]}
+      onNavigate={onNavigate}
+    />,
+  );
+  expect(screen.getByText("Your cart is currently empty.")).toBeInTheDocument();
+  const browseBtn = screen.getByRole("button", { name: "Browse Products" });
+  fireEvent.click(browseBtn);
+  expect(onNavigate).toHaveBeenCalledWith("/products");
+});
+
+it("renders OrdersListCard with multi-order ledger and inspect trigger", () => {
+  const onSend = vi.fn();
+  const onNavigate = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "ORDERS_LIST_CARD",
+          count: 3,
+          orders: [
+            { id: "ORD202600005", customer: "Alex Rivera", status: "READY", total: 46.80, items_count: 3, can_settle: true, created_at: "Today, 2:30 PM" },
+            { id: "ORD202600004", customer: "Priya Sharma", status: "PREPARING", total: 32.50, items_count: 2, can_settle: true, created_at: "Today, 1:15 PM" },
+            { id: "ORD202600003", customer: "Marcus Vance", status: "ACCEPTED", total: 28.90, items_count: 2, can_settle: true, created_at: "Yesterday" },
+          ],
+        },
+      ]}
+      persona="owner"
+      onSend={onSend}
+      onNavigate={onNavigate}
+    />,
+  );
+  expect(screen.getByText("3 Recent Orders")).toBeInTheDocument();
+  expect(screen.getByText("3 items")).toBeInTheDocument();
+  expect(screen.getByText("#ORD202600005")).toBeInTheDocument();
+  expect(screen.getByText(/Alex Rivera/)).toBeInTheDocument();
+  expect(screen.getByText(/Priya Sharma/)).toBeInTheDocument();
+  expect(screen.getByText(/Marcus Vance/)).toBeInTheDocument();
+
+  // Test 1-click Inspect trigger
+  const inspectBtns = screen.getAllByRole("button", { name: /Inspect/i });
+  expect(inspectBtns.length).toBeGreaterThan(0);
+  fireEvent.click(inspectBtns[0]);
+  expect(onSend).toHaveBeenCalledWith("order details ORD202600005");
+});
+
+it("renders TopCustomersCard with ranked leaderboard and 1-click actions", () => {
+  const onSend = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "TOP_CUSTOMERS_CARD",
+          customers: [
+            { rank: 1, name: "Rahul Sharma", email: "rahul.s@example.com", total_spent: 1485.50, orders_count: 32, aov: 46.42, tier: "VIP Gold" },
+            { rank: 2, name: "Priya Verma", email: "priya.v@example.com", total_spent: 1240.00, orders_count: 24, aov: 51.67, tier: "Platinum" },
+          ],
+        },
+      ]}
+      onSend={onSend}
+    />,
+  );
+  expect(screen.getByText("Top Customers Leaderboard")).toBeInTheDocument();
+  expect(screen.getByText("#1")).toBeInTheDocument();
+  expect(screen.getByText("Rahul Sharma")).toBeInTheDocument();
+  expect(screen.getByText("VIP Gold")).toBeInTheDocument();
+  expect(screen.getByText("#2")).toBeInTheDocument();
+  expect(screen.getByText("Priya Verma")).toBeInTheDocument();
+
+  // Test 1-click Dossier button
+  const dossierBtns = screen.getAllByRole("button", { name: /Dossier/i });
+  fireEvent.click(dossierBtns[0]);
+  expect(onSend).toHaveBeenCalledWith("display Rahul Sharma customer details");
+
+  // Test 1-click Credit $10 button
+  const creditBtns = screen.getAllByRole("button", { name: /Credit \$10/i });
+  fireEvent.click(creditBtns[0]);
+  expect(onSend).toHaveBeenCalledWith("credit $10 to customer Rahul Sharma");
+});
+
+it("renders CustomerProfileCard for owner with dossier, wallet balance, and credit chips", () => {
+  const onSend = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "CUSTOMER_PROFILE_CARD",
+          persona: "owner",
+          customer: {
+            id: 101,
+            name: "Rahul Sharma",
+            email: "rahul.s@example.com",
+            phone: "+1 555-0192",
+            tier: "VIP Gold",
+            total_spent: 1485.50,
+            orders_count: 32,
+            wallet_balance: 45.00,
+            recent_orders: [
+              { id: "ORD202600005", created_at: "Today, 2:30 PM", total: 46.80, status: "READY", items_count: 3 },
+            ],
+          },
+        },
+      ]}
+      persona="owner"
+      onSend={onSend}
+    />,
+  );
+  expect(screen.getByText("Rahul Sharma")).toBeInTheDocument();
+  expect(screen.getByText(/rahul\.s@example\.com/)).toBeInTheDocument();
+  expect(screen.getByText("$45.00")).toBeInTheDocument();
+  expect(screen.getByText("#ORD202600005")).toBeInTheDocument();
+
+  // Test credit chips
+  const credit10Btn = screen.getByRole("button", { name: /Add \$10 Credit/i });
+  fireEvent.click(credit10Btn);
+  expect(onSend).toHaveBeenCalledWith("credit $10 to customer Rahul Sharma");
+});
+
+it("renders CustomerProfileCard for shopper with savings and referral hub", () => {
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "CUSTOMER_PROFILE_CARD",
+          persona: "shopper",
+          customer: {
+            name: "Alex Rivera",
+            tier: "Gold Shopper",
+            wallet_balance: 65.00,
+            lifetime_savings: 142.50,
+            referral_code: "CARTREF2026",
+            referral_earnings: 25.00,
+          },
+        },
+      ]}
+      persona="shopper"
+    />,
+  );
+  expect(screen.getByText("Alex Rivera")).toBeInTheDocument();
+  expect(screen.getByText("Gold Shopper")).toBeInTheDocument();
+  expect(screen.getByText("$65.00")).toBeInTheDocument();
+  expect(screen.getByText("$142.50")).toBeInTheDocument();
+  expect(screen.getByText("CARTREF2026")).toBeInTheDocument();
+});
+
+it("renders DynamicCompositeCard with polymorphic schema KPIs and actions", () => {
+  const onSend = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "DYNAMIC_COMPOSITE_CARD",
+          title: "Operations Pulse",
+          subtitle: "Live system telemetry",
+          badge: "Real-Time",
+          kpis: [
+            { label: "Active Orders", value: 14, trend: "+3", positive: true },
+            { label: "Fulfillment Rate", value: "98.4%", trend: "+1.2%", positive: true },
+          ],
+          key_values: [
+            { key: "Courier Fleet", value: "8 Online" },
+            { key: "Avg Delivery Time", value: "18 mins" },
+          ],
+          actions: [
+            { label: "Audit Fleet", action_type: "send", payload: "Show delivery fleet status", variant: "default" },
+          ],
+        },
+      ]}
+      onSend={onSend}
+    />,
+  );
+  expect(screen.getByText("Operations Pulse")).toBeInTheDocument();
+  expect(screen.getByText("Live system telemetry")).toBeInTheDocument();
+  expect(screen.getByText("Real-Time")).toBeInTheDocument();
+  expect(screen.getByText("Active Orders")).toBeInTheDocument();
+  expect(screen.getByText("14")).toBeInTheDocument();
+  expect(screen.getByText("Fulfillment Rate")).toBeInTheDocument();
+  expect(screen.getByText("98.4%")).toBeInTheDocument();
+  expect(screen.getByText("Courier Fleet")).toBeInTheDocument();
+  expect(screen.getByText("8 Online")).toBeInTheDocument();
+
+  const actionBtn = screen.getByRole("button", { name: "Audit Fleet" });
+  fireEvent.click(actionBtn);
+  expect(onSend).toHaveBeenCalledWith("Show delivery fleet status");
+});
+
+it("AutoDismissCardWrapper has duration=0 for turn-based persistence and dismiss button", () => {
+  vi.useFakeTimers();
+  const onDismiss = vi.fn();
+  render(
+    <ActionCards
+      actions={[
+        {
+          type: "DYNAMIC_COMPOSITE_CARD",
+          title: "Persistent Turn Card",
+          kpis: [{ label: "Turn State", value: "Active" }],
+        },
+      ]}
+      onDismiss={onDismiss}
+    />,
+  );
+  expect(screen.getByText("Persistent Turn Card")).toBeInTheDocument();
+  const dismissBtn = screen.getByRole("button", { name: "Dismiss preview" });
+  expect(dismissBtn).toBeInTheDocument();
+  act(() => {
+    fireEvent.click(dismissBtn);
+    vi.advanceTimersByTime(200);
+  });
+  expect(onDismiss).toHaveBeenCalled();
+  vi.useRealTimers();
+});
+
 
 

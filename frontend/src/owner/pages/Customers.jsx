@@ -231,15 +231,15 @@ const Customers = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Customer Directory</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-[#2D1822]">Customer Directory</h1>
+          <p className="text-sm text-[#7D6671] mt-1">
             View, filter, and manage registered customers
           </p>
         </div>
         <button
           onClick={fetchCustomers}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 text-sm font-medium shadow-sm transition disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#E7DBCF] text-[#5E4752] rounded-xl hover:bg-[#FAF5EF] text-sm font-medium shadow-sm transition disabled:opacity-50"
         >
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           Refresh
@@ -254,27 +254,27 @@ const Customers = () => {
           onClick={() => setActiveTab('all')}
           className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
             activeTab === 'all'
-              ? 'bg-indigo-50/70 border-indigo-300 ring-2 ring-indigo-500/20 shadow-sm'
-              : 'bg-white border-slate-200 hover:border-indigo-200 hover:shadow-sm'
+              ? 'bg-[#FAF5EF]/70 border-[#E7DBCF] ring-2 ring-[#56323E]/20 shadow-sm'
+              : 'bg-white border-[#E7DBCF] hover:border-[#E7DBCF] hover:shadow-sm'
           }`}
         >
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#7D6671]">
                 Total Customers
               </span>
-              <div className="text-3xl font-black text-slate-900 tracking-tight">
+              <div className="text-3xl font-black text-[#2D1822] tracking-tight">
                 {totalCount}
               </div>
-              <p className="text-xs font-medium text-slate-500">
+              <p className="text-xs font-medium text-[#7D6671]">
                 All registered accounts
               </p>
             </div>
             <div
               className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 ${
                 activeTab === 'all'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-indigo-50 text-indigo-600'
+                  ? 'bg-[#56323E] text-white shadow-md'
+                  : 'bg-[#FAF5EF] text-[#56323E]'
               }`}
             >
               <Users size={22} />
@@ -289,7 +289,7 @@ const Customers = () => {
           className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
             activeTab === 'active'
               ? 'bg-emerald-50/70 border-emerald-300 ring-2 ring-emerald-500/20 shadow-sm'
-              : 'bg-white border-slate-200 hover:border-emerald-200 hover:shadow-sm'
+              : 'bg-white border-[#E7DBCF] hover:border-emerald-200 hover:shadow-sm'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -300,7 +300,7 @@ const Customers = () => {
               <div className="text-3xl font-black text-emerald-700 tracking-tight">
                 {activeCount}
               </div>
-              <p className="text-xs font-medium text-slate-500">
+              <p className="text-xs font-medium text-[#7D6671]">
                 Active shopping accounts
               </p>
             </div>
@@ -322,19 +322,19 @@ const Customers = () => {
           onClick={() => setActiveTab('inactive')}
           className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
             activeTab === 'inactive'
-              ? 'bg-slate-100 border-slate-300 ring-2 ring-slate-500/20 shadow-sm'
-              : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+              ? 'bg-[#F2E9E0] border-[#D9C6B8] ring-2 ring-slate-500/20 shadow-sm'
+              : 'bg-white border-[#E7DBCF] hover:border-[#D9C6B8] hover:shadow-sm'
           }`}
         >
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#5E4752]">
                 Inactive Customers
               </span>
-              <div className="text-3xl font-black text-slate-700 tracking-tight">
+              <div className="text-3xl font-black text-[#5E4752] tracking-tight">
                 {inactiveCount}
               </div>
-              <p className="text-xs font-medium text-slate-500">
+              <p className="text-xs font-medium text-[#7D6671]">
                 Deactivated accounts
               </p>
             </div>
@@ -342,7 +342,7 @@ const Customers = () => {
               className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 ${
                 activeTab === 'inactive'
                   ? 'bg-slate-700 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-600'
+                  : 'bg-[#F2E9E0] text-[#5E4752]'
               }`}
             >
               <UserX size={22} />
@@ -357,7 +357,7 @@ const Customers = () => {
           className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
             activeTab === 'locked'
               ? 'bg-rose-50/80 border-rose-300 ring-2 ring-rose-500/20 shadow-sm'
-              : 'bg-white border-slate-200 hover:border-rose-200 hover:shadow-sm'
+              : 'bg-white border-[#E7DBCF] hover:border-rose-200 hover:shadow-sm'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -368,7 +368,7 @@ const Customers = () => {
               <div className="text-3xl font-black text-rose-700 tracking-tight">
                 {lockedCount}
               </div>
-              <p className="text-xs font-medium text-slate-500">
+              <p className="text-xs font-medium text-[#7D6671]">
                 Brute-force / blocked
               </p>
             </div>
@@ -417,13 +417,13 @@ const Customers = () => {
       {/* Tabs & Search Filter Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {/* Filter Tabs */}
-        <div className="bg-slate-100 p-1 rounded-xl inline-flex flex-wrap gap-1">
+        <div className="bg-[#F2E9E0] p-1 rounded-xl inline-flex flex-wrap gap-1">
           <button
             onClick={() => setActiveTab('all')}
             className={`px-3.5 py-2 rounded-lg text-sm font-bold transition-all ${
               activeTab === 'all'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-white text-[#2D1822] shadow-sm'
+                : 'text-[#7D6671] hover:text-[#5E4752]'
             }`}
           >
             All Customers ({totalCount})
@@ -433,7 +433,7 @@ const Customers = () => {
             className={`px-3.5 py-2 rounded-lg text-sm font-bold transition-all ${
               activeTab === 'active'
                 ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-slate-500 hover:text-emerald-700'
+                : 'text-[#7D6671] hover:text-emerald-700'
             }`}
           >
             Active ({activeCount})
@@ -442,8 +442,8 @@ const Customers = () => {
             onClick={() => setActiveTab('inactive')}
             className={`px-3.5 py-2 rounded-lg text-sm font-bold transition-all ${
               activeTab === 'inactive'
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-white text-[#2D1822] shadow-sm'
+                : 'text-[#7D6671] hover:text-[#5E4752]'
             }`}
           >
             Inactive ({inactiveCount})
@@ -453,7 +453,7 @@ const Customers = () => {
             className={`px-3.5 py-2 rounded-lg text-sm font-bold transition-all ${
               activeTab === 'locked'
                 ? 'bg-white text-rose-700 shadow-sm'
-                : 'text-slate-500 hover:text-rose-700'
+                : 'text-[#7D6671] hover:text-rose-700'
             }`}
           >
             Locked ({lockedCount})
@@ -464,7 +464,7 @@ const Customers = () => {
               className={`px-3.5 py-2 rounded-lg text-sm font-bold transition-all ${
                 activeTab === 'delete_requested'
                   ? 'bg-white text-rose-600 shadow-sm'
-                  : 'text-slate-500 hover:text-rose-600'
+                  : 'text-[#7D6671] hover:text-rose-600'
               }`}
             >
               Delete Requests ({deleteRequestedCount})
@@ -474,18 +474,18 @@ const Customers = () => {
 
         {/* Search Bar */}
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A68B98]" size={16} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, phone, email..."
-            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition shadow-sm"
+            className="w-full bg-white border border-[#E7DBCF] rounded-xl pl-9 pr-8 py-2 text-sm text-[#2D1822] placeholder-[#A68B98] focus:outline-none focus:ring-2 focus:ring-[#56323E]/20 focus:border-[#56323E] transition shadow-sm"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#A68B98] hover:text-[#5E4752]"
             >
               <X size={14} />
             </button>
@@ -494,21 +494,21 @@ const Customers = () => {
       </div>
 
       {/* Directory Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-[#E7DBCF] overflow-hidden">
         {loading ? (
           <div className="p-16 text-center">
-            <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-            <p className="font-bold text-slate-600 text-sm">Loading customer directory...</p>
+            <div className="w-8 h-8 border-3 border-[#56323E] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+            <p className="font-bold text-[#5E4752] text-sm">Loading customer directory...</p>
           </div>
         ) : displayedCustomers.length === 0 ? (
           <div className="py-16 px-4 text-center flex flex-col items-center justify-center">
-            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-dashed border-slate-200">
-              <Users className="w-8 h-8 text-slate-400" />
+            <div className="w-16 h-16 bg-[#FAF5EF] rounded-2xl flex items-center justify-center mb-4 border border-dashed border-[#E7DBCF]">
+              <Users className="w-8 h-8 text-[#A68B98]" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900">
+            <h3 className="text-lg font-bold text-[#2D1822]">
               {searchQuery ? 'No matching customers found' : 'No customers in this view'}
             </h3>
-            <p className="text-slate-500 mt-1 font-medium text-sm">
+            <p className="text-[#7D6671] mt-1 font-medium text-sm">
               {searchQuery
                 ? `No customers match "${searchQuery}". Try a different name or phone number.`
                 : activeTab === 'inactive'
@@ -520,7 +520,7 @@ const Customers = () => {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+                className="mt-4 px-4 py-2 bg-[#F2E9E0] hover:bg-[#EFDFD2] text-[#5E4752] rounded-xl text-xs font-bold transition"
               >
                 Clear Search
               </button>
@@ -528,27 +528,27 @@ const Customers = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100">
-              <thead className="bg-slate-50/80">
+            <table className="min-w-full divide-y divide-[#E7DBCF]">
+              <thead className="bg-[#FAF5EF]/80">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-extrabold text-slate-500 uppercase tracking-widest">
+                  <th className="px-6 py-4 text-left text-xs font-extrabold text-[#7D6671] uppercase tracking-widest">
                     Customer
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-extrabold text-slate-500 uppercase tracking-widest">
+                  <th className="px-6 py-4 text-left text-xs font-extrabold text-[#7D6671] uppercase tracking-widest">
                     Username
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-extrabold text-slate-500 uppercase tracking-widest">
+                  <th className="px-6 py-4 text-left text-xs font-extrabold text-[#7D6671] uppercase tracking-widest">
                     Mobile Number
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-extrabold text-slate-500 uppercase tracking-widest">
+                  <th className="px-6 py-4 text-left text-xs font-extrabold text-[#7D6671] uppercase tracking-widest">
                     Status
                   </th>
-                  <th className="px-6 py-4 text-right text-xs font-extrabold text-slate-500 uppercase tracking-widest">
+                  <th className="px-6 py-4 text-right text-xs font-extrabold text-[#7D6671] uppercase tracking-widest">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-50">
+              <tbody className="bg-white divide-y divide-[#E7DBCF]">
                 {displayedCustomers.map((customer) => {
                   const isDeleteRequested = customer.customer_profile?.delete_requested;
 
@@ -559,12 +559,12 @@ const Customers = () => {
                         if (e.target.closest('button')) return;
                         fetchCustomerDetails(customer.id);
                       }}
-                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                      className="hover:bg-[#FAF5EF]/80 transition-colors group cursor-pointer"
                     >
                       {/* Customer Info */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-700 font-extrabold group-hover:bg-indigo-100 transition-colors">
+                          <div className="flex-shrink-0 h-10 w-10 bg-[#FAF5EF] border border-[#E7DBCF] rounded-xl flex items-center justify-center text-[#56323E] font-extrabold group-hover:bg-[#EFDFD2] transition-colors">
                             {customer.first_name ? (
                               customer.first_name[0].toUpperCase()
                             ) : (
@@ -572,11 +572,11 @@ const Customers = () => {
                             )}
                           </div>
                           <div className="ml-3.5">
-                            <div className="text-sm font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
+                            <div className="text-sm font-bold text-[#2D1822] group-hover:text-[#56323E] transition-colors">
                               {customer.first_name || 'Customer'}{' '}
                               {customer.last_name || ''}
                             </div>
-                            <div className="text-xs font-medium text-slate-400">
+                            <div className="text-xs font-medium text-[#A68B98]">
                               ID: #{customer.id}
                               {customer.email ? ` · ${customer.email}` : ''}
                             </div>
@@ -586,14 +586,14 @@ const Customers = () => {
 
                       {/* Username */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-slate-700 font-mono">
+                        <div className="text-sm font-medium text-[#5E4752] font-mono">
                           {customer.username}
                         </div>
                       </td>
 
                       {/* Mobile Number */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-slate-700">
+                        <div className="text-sm font-medium text-[#5E4752]">
                           {customer.customer_profile?.mobile_number
                             ? `+91 ${customer.customer_profile.mobile_number}`
                             : 'N/A'}
@@ -618,7 +618,7 @@ const Customers = () => {
                             Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#F2E9E0] text-[#5E4752] border border-[#E7DBCF]">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                             Inactive
                           </span>
@@ -647,7 +647,7 @@ const Customers = () => {
                                 handleLockUser(customer.id, customer.username);
                               }}
                               disabled={actionInProgress === customer.id}
-                              className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 px-2 py-1.5 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1"
+                              className="text-[#A68B98] hover:text-rose-600 hover:bg-rose-50 px-2 py-1.5 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1"
                               title="Manually Lock Account"
                             >
                               <Lock size={13} /> Lock
@@ -674,7 +674,7 @@ const Customers = () => {
                                 e.stopPropagation();
                                 setNotifyUser(customer);
                               }}
-                              className="text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                              className="text-[#56323E] hover:text-white bg-[#FAF5EF] hover:bg-[#56323E] px-3 py-1.5 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5"
                               title="Send Notification"
                             >
                               <Bell size={14} /> Notify
@@ -698,7 +698,7 @@ const Customers = () => {
                                   e.stopPropagation();
                                   rejectDeletion(customer.id);
                                 }}
-                                className="text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 px-2 py-1 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1"
+                                className="text-[#5E4752] bg-white border border-[#E7DBCF] hover:bg-[#F2E9E0] px-2 py-1 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1"
                                 title="Reject Deletion"
                               >
                                 <XCircle size={13} /> Reject
@@ -711,7 +711,7 @@ const Customers = () => {
                               e.stopPropagation();
                               fetchCustomerDetails(customer.id);
                             }}
-                            className="text-slate-400 hover:text-indigo-600 p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+                            className="text-[#A68B98] hover:text-[#56323E] p-1.5 hover:bg-[#F2E9E0] rounded-lg transition-colors"
                             title="View Details"
                           >
                             <Eye size={16} />
@@ -730,52 +730,52 @@ const Customers = () => {
       {/* Notify User Modal */}
       {notifyUser &&
         createPortal(
-          <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="font-extrabold text-xl text-slate-900">
+          <div className="fixed inset-0 z-50 bg-[#56323E]/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-[#E7DBCF]">
+              <div className="p-6 border-b border-[#E7DBCF] flex justify-between items-center bg-[#FAF5EF]">
+                <h3 className="font-extrabold text-xl text-[#2D1822]">
                   Notify {notifyUser.first_name || notifyUser.username}
                 </h3>
                 <button
                   onClick={() => setNotifyUser(null)}
-                  className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-full transition-colors"
+                  className="text-[#A68B98] hover:text-[#5E4752] p-2 hover:bg-[#F2E9E0] rounded-full transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
               <form onSubmit={sendNotification} className="p-6 space-y-5">
                 <div>
-                  <label className="text-sm font-bold text-slate-700 block mb-1.5">Title</label>
+                  <label className="text-sm font-bold text-[#5E4752] block mb-1.5">Title</label>
                   <input
                     required
                     value={notifForm.title}
                     onChange={(e) => setNotifForm({ ...notifForm, title: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full bg-[#FAF5EF] border border-[#E7DBCF] rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-[#56323E]/20 focus:border-[#56323E] outline-none transition-all"
                     placeholder="e.g. Special Offer!"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-slate-700 block mb-1.5">Message</label>
+                  <label className="text-sm font-bold text-[#5E4752] block mb-1.5">Message</label>
                   <textarea
                     required
                     value={notifForm.message}
                     onChange={(e) => setNotifForm({ ...notifForm, message: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all h-28 resize-none"
+                    className="w-full bg-[#FAF5EF] border border-[#E7DBCF] rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-[#56323E]/20 focus:border-[#56323E] outline-none transition-all h-28 resize-none"
                     placeholder="Type your message here..."
                   />
                 </div>
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <div className="flex justify-end gap-3 pt-4 border-t border-[#E7DBCF]">
                   <button
                     type="button"
                     onClick={() => setNotifyUser(null)}
-                    className="px-5 py-2.5 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors"
+                    className="px-5 py-2.5 text-[#5E4752] font-bold hover:bg-[#F2E9E0] rounded-xl transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={notifSending}
-                    className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
+                    className="px-6 py-2.5 bg-[#56323E] text-white font-bold rounded-xl hover:bg-[#432634] disabled:opacity-50 transition-colors shadow-sm"
                   >
                     {notifSending ? 'Sending...' : 'Send Notification'}
                   </button>
@@ -789,16 +789,16 @@ const Customers = () => {
       {/* Customer Detail Modal */}
       {selectedCustomerDetail &&
         createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#56323E]/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
               {/* Header */}
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div className="px-6 py-4 border-b border-[#E7DBCF] flex justify-between items-center bg-[#FAF5EF]">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold">
+                  <div className="w-10 h-10 rounded-xl bg-[#FAF5EF] text-[#56323E] flex items-center justify-center font-bold">
                     <UserIcon size={20} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-[#2D1822] flex items-center gap-2">
                       Customer Profile
                       {selectedCustomerDetail.is_active ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -806,18 +806,18 @@ const Customers = () => {
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#F2E9E0] text-[#5E4752] border border-[#E7DBCF]">
                           <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                           Inactive
                         </span>
                       )}
                     </h2>
-                    <p className="text-xs text-slate-500 font-medium">ID: #{selectedCustomerDetail.id}</p>
+                    <p className="text-xs text-[#7D6671] font-medium">ID: #{selectedCustomerDetail.id}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedCustomerDetail(null)}
-                  className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-colors"
+                  className="text-[#A68B98] hover:text-[#5E4752] hover:bg-[#F2E9E0] p-2 rounded-full transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -826,18 +826,18 @@ const Customers = () => {
               {/* Body */}
               <div className="p-6 overflow-y-auto">
                 {detailsLoading ? (
-                  <div className="py-12 text-center text-slate-500 font-medium">
+                  <div className="py-12 text-center text-[#7D6671] font-medium">
                     Loading details...
                   </div>
                 ) : (
                   <div className="space-y-6">
                     {/* Quick Stats Grid */}
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
-                        <div className="text-xs font-bold text-indigo-900 mb-1 uppercase tracking-wider">
+                      <div className="bg-[#FAF5EF] border border-[#E7DBCF] p-4 rounded-xl">
+                        <div className="text-xs font-bold text-[#2D1822] mb-1 uppercase tracking-wider">
                           Lifetime Sales
                         </div>
-                        <div className="text-2xl font-extrabold text-indigo-700">
+                        <div className="text-2xl font-extrabold text-[#56323E]">
                           ₹{selectedCustomerDetail.total_spent?.toFixed(2) || '0.00'}
                         </div>
                       </div>
@@ -893,7 +893,7 @@ const Customers = () => {
                                 type="text"
                                 readOnly
                                 value={selectedCustomerDetail.activation_link}
-                                className="w-full bg-white border border-amber-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 font-mono select-all outline-none"
+                                className="w-full bg-white border border-amber-200 rounded-lg px-3 py-1.5 text-xs text-[#5E4752] font-mono select-all outline-none"
                               />
                               <button
                                 type="button"
@@ -918,11 +918,11 @@ const Customers = () => {
                     )}
 
                     {/* Account Security & Brute-Force Lockout Card */}
-                    <div className={`p-4 rounded-xl border space-y-3 ${selectedCustomerDetail.is_locked ? 'bg-rose-50/70 border-rose-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className={`p-4 rounded-xl border space-y-3 ${selectedCustomerDetail.is_locked ? 'bg-rose-50/70 border-rose-200' : 'bg-[#FAF5EF] border-[#E7DBCF]'}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <ShieldAlert size={18} className={selectedCustomerDetail.is_locked ? "text-rose-600" : "text-emerald-600"} />
-                          <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                          <h3 className="text-xs font-extrabold text-[#2D1822] uppercase tracking-wider">
                             Account Security & Lockout Status
                           </h3>
                         </div>
@@ -946,8 +946,8 @@ const Customers = () => {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                        <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-2xs">
-                          <span className="text-slate-400 block font-medium">Access Status</span>
+                        <div className="bg-white p-3 rounded-lg border border-[#E7DBCF] shadow-2xs">
+                          <span className="text-[#A68B98] block font-medium">Access Status</span>
                           <span className={`font-bold flex items-center gap-1 mt-0.5 ${selectedCustomerDetail.is_locked ? 'text-rose-600' : 'text-emerald-600'}`}>
                             {selectedCustomerDetail.is_locked ? (
                               <>
@@ -960,9 +960,9 @@ const Customers = () => {
                             )}
                           </span>
                         </div>
-                        <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-2xs">
-                          <span className="text-slate-400 block font-medium">Consecutive Failed Logins</span>
-                          <span className={`font-bold mt-0.5 block ${selectedCustomerDetail.failed_login_attempts >= 10 ? 'text-rose-600' : selectedCustomerDetail.failed_login_attempts > 5 ? 'text-amber-600' : 'text-slate-800'}`}>
+                        <div className="bg-white p-3 rounded-lg border border-[#E7DBCF] shadow-2xs">
+                          <span className="text-[#A68B98] block font-medium">Consecutive Failed Logins</span>
+                          <span className={`font-bold mt-0.5 block ${selectedCustomerDetail.failed_login_attempts >= 10 ? 'text-rose-600' : selectedCustomerDetail.failed_login_attempts > 5 ? 'text-amber-600' : 'text-[#2D1822]'}`}>
                             {selectedCustomerDetail.failed_login_attempts || 0} / 10 threshold
                           </span>
                         </div>
@@ -978,10 +978,10 @@ const Customers = () => {
                           </div>
                         )}
                         {selectedCustomerDetail.last_failed_login_ip && (
-                          <div className="sm:col-span-2 bg-white p-2.5 rounded-lg border border-slate-100 text-slate-600 flex flex-wrap justify-between gap-1">
-                            <span>Last Failed IP: <strong className="font-mono text-slate-800">{selectedCustomerDetail.last_failed_login_ip}</strong></span>
+                          <div className="sm:col-span-2 bg-white p-2.5 rounded-lg border border-[#E7DBCF] text-[#5E4752] flex flex-wrap justify-between gap-1">
+                            <span>Last Failed IP: <strong className="font-mono text-[#2D1822]">{selectedCustomerDetail.last_failed_login_ip}</strong></span>
                             {selectedCustomerDetail.last_failed_login_at && (
-                              <span className="text-slate-400">
+                              <span className="text-[#A68B98]">
                                 {new Date(selectedCustomerDetail.last_failed_login_at).toLocaleString()}
                               </span>
                             )}
@@ -992,46 +992,46 @@ const Customers = () => {
 
                     {/* Contact Info */}
                     <div>
-                      <h3 className="text-xs font-extrabold text-slate-500 mb-3 uppercase tracking-wider">
+                      <h3 className="text-xs font-extrabold text-[#7D6671] mb-3 uppercase tracking-wider">
                         Contact Information
                       </h3>
-                      <div className="bg-slate-50 rounded-xl p-4 space-y-3 border border-slate-100">
+                      <div className="bg-[#FAF5EF] rounded-xl p-4 space-y-3 border border-[#E7DBCF]">
                         <div className="flex justify-between">
-                          <span className="text-sm font-medium text-slate-500">Name</span>
-                          <span className="text-sm font-bold text-slate-900">
+                          <span className="text-sm font-medium text-[#7D6671]">Name</span>
+                          <span className="text-sm font-bold text-[#2D1822]">
                             {selectedCustomerDetail.first_name || 'Customer'}{' '}
                             {selectedCustomerDetail.last_name || ''}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm font-medium text-slate-500">Username</span>
-                          <span className="text-sm font-bold text-slate-900 font-mono">
+                          <span className="text-sm font-medium text-[#7D6671]">Username</span>
+                          <span className="text-sm font-bold text-[#2D1822] font-mono">
                             {selectedCustomerDetail.username}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm font-medium text-slate-500">Email</span>
-                          <span className="text-sm font-bold text-slate-900">
+                          <span className="text-sm font-medium text-[#7D6671]">Email</span>
+                          <span className="text-sm font-bold text-[#2D1822]">
                             {selectedCustomerDetail.email || 'N/A'}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm font-medium text-slate-500">Mobile</span>
-                          <span className="text-sm font-bold text-slate-900">
+                          <span className="text-sm font-medium text-[#7D6671]">Mobile</span>
+                          <span className="text-sm font-bold text-[#2D1822]">
                             {selectedCustomerDetail.customer_profile?.mobile_number
                               ? `+91 ${selectedCustomerDetail.customer_profile.mobile_number}`
                               : 'N/A'}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm font-medium text-slate-500">Date of Birth</span>
-                          <span className="text-sm font-bold text-slate-900">
+                          <span className="text-sm font-medium text-[#7D6671]">Date of Birth</span>
+                          <span className="text-sm font-bold text-[#2D1822]">
                             {selectedCustomerDetail.customer_profile?.dob || 'N/A'}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm font-medium text-slate-500">Referral Code</span>
-                          <span className="text-sm font-bold text-slate-900 font-mono">
+                          <span className="text-sm font-medium text-[#7D6671]">Referral Code</span>
+                          <span className="text-sm font-bold text-[#2D1822] font-mono">
                             {selectedCustomerDetail.customer_profile?.referral_code || 'N/A'}
                           </span>
                         </div>
@@ -1040,35 +1040,35 @@ const Customers = () => {
 
                     {/* Recent Orders */}
                     <div>
-                      <h3 className="text-xs font-extrabold text-slate-500 mb-3 uppercase tracking-wider">
+                      <h3 className="text-xs font-extrabold text-[#7D6671] mb-3 uppercase tracking-wider">
                         Recent Orders
                       </h3>
                       {selectedCustomerDetail.recent_orders?.length > 0 ? (
-                        <div className="border border-slate-100 rounded-xl overflow-hidden">
-                          <table className="min-w-full divide-y divide-slate-100">
-                            <thead className="bg-slate-50">
+                        <div className="border border-[#E7DBCF] rounded-xl overflow-hidden">
+                          <table className="min-w-full divide-y divide-[#E7DBCF]">
+                            <thead className="bg-[#FAF5EF]">
                               <tr>
-                                <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">
+                                <th className="px-4 py-2 text-left text-xs font-bold text-[#7D6671] uppercase">
                                   Order ID
                                 </th>
-                                <th className="px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase">
+                                <th className="px-4 py-2 text-left text-xs font-bold text-[#7D6671] uppercase">
                                   Status
                                 </th>
-                                <th className="px-4 py-2 text-right text-xs font-bold text-slate-500 uppercase">
+                                <th className="px-4 py-2 text-right text-xs font-bold text-[#7D6671] uppercase">
                                   Amount
                                 </th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50 bg-white">
+                            <tbody className="divide-y divide-[#E7DBCF] bg-white">
                               {selectedCustomerDetail.recent_orders.map((order) => (
                                 <tr key={order.id}>
-                                  <td className="px-4 py-3 text-sm font-bold text-indigo-600 font-mono">
+                                  <td className="px-4 py-3 text-sm font-bold text-[#56323E] font-mono">
                                     {order.id}
                                   </td>
-                                  <td className="px-4 py-3 text-sm font-medium text-slate-600">
+                                  <td className="px-4 py-3 text-sm font-medium text-[#5E4752]">
                                     {order.status}
                                   </td>
-                                  <td className="px-4 py-3 text-sm font-bold text-slate-900 text-right">
+                                  <td className="px-4 py-3 text-sm font-bold text-[#2D1822] text-right">
                                     ₹{order.total_amount?.toFixed(2)}
                                   </td>
                                 </tr>
@@ -1077,7 +1077,7 @@ const Customers = () => {
                           </table>
                         </div>
                       ) : (
-                        <div className="p-4 bg-slate-50 rounded-xl text-center text-sm font-medium text-slate-500 border border-slate-100">
+                        <div className="p-4 bg-[#FAF5EF] rounded-xl text-center text-sm font-medium text-[#7D6671] border border-[#E7DBCF]">
                           No orders found for this customer.
                         </div>
                       )}

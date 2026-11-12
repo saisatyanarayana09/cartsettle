@@ -19,7 +19,6 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { CustomerLayout } from '../../customer-layout';
 import { useCart } from '../../cart-context';
-import { QRCodeSVG } from 'qrcode.react';
 import {
   checkOperatingHours,
   parseTimeSlots,
@@ -39,9 +38,7 @@ export function CheckoutPage() {
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
   const [promoApplying, setPromoApplying] = useState(false);
-  const [copiedUpi, setCopiedUpi] = useState(false);
   const [showMobileBill, setShowMobileBill] = useState(false);
-  const [qrViewMode, setQrViewMode] = useState('dynamic'); // 'dynamic' | 'standee'
 
   async function handleApplyPromo(e) {
     if (e) e.preventDefault();
@@ -86,8 +83,7 @@ export function CheckoutPage() {
   const [addresses, setAddresses] = useState([]);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('PAYPAL'); // 'PAYPAL' | 'COD' | 'UPI'
-  const [upiTransactionId, setUpiTransactionId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('PAYPAL'); // 'PAYPAL' | 'COD'
   const [successOrderId, setSuccessOrderId] = useState(null);
 
   // Address Form State
@@ -134,6 +130,16 @@ export function CheckoutPage() {
     storeSettings?.emergency_pause_message || 'Online ordering is temporarily paused by the store.';
   const operatingHours = checkOperatingHours(storeSettings);
   const isClosedHours = operatingHours.isClosed;
+
+  // Pay at Store permission: Check storeSettings.enable_pay_at_store
+  const isPayAtStoreAllowed = orderType !== 'PICKUP' || storeSettings?.enable_pay_at_store !== false;
+
+  useEffect(() => {
+    // If user selected PICKUP and Pay at Store is disabled by store owner, enforce PAYPAL
+    if (orderType === 'PICKUP' && storeSettings?.enable_pay_at_store === false && paymentMethod === 'COD') {
+      setPaymentMethod('PAYPAL');
+    }
+  }, [orderType, storeSettings?.enable_pay_at_store, paymentMethod]);
 
   // Fetch initial data
   const fetchAddresses = () => {
@@ -311,10 +317,6 @@ export function CheckoutPage() {
   const walletApplied = useWallet ? Math.min(walletBalance, maxWalletAllowed, cartTotal) : 0;
   const finalTotal = Math.max(0, cartTotal - walletApplied);
 
-  const upiId = storeSettings?.upi_id || 'narendrakirana@okaxis';
-  const upiPayee = storeSettings?.upi_payee_name || storeSettings?.store_name || 'CartSettle';
-  const upiUri = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiPayee)}&am=${finalTotal.toFixed(2)}&cu=INR&tn=Order`;
-
   async function submit(customPaypalOrderId = null) {
     if (!cart?.items?.length) return;
 
@@ -346,6 +348,12 @@ export function CheckoutPage() {
         enableTimeSlots && allTimeSlots.length > 0 ? (slotDay === 'today' ? todayStr : tomorrowStr) : null;
       const chosenSlotLabel = enableTimeSlots && allTimeSlots.length > 0 ? selectedSlotLabel : '';
       const effectivePaymentMethod = finalTotal === 0 ? 'WALLET' : paymentMethod;
+
+      if (isPickup && !isPayAtStoreAllowed && effectivePaymentMethod === 'COD') {
+        toast.error('Pay at store is currently disabled. Please complete payment via PayPal.');
+        setLoading(false);
+        return;
+      }
 
       const selectedAddrObj = selectedAddressId ? addresses.find((a) => a.id === selectedAddressId) : null;
       const resolvedAddress = isPickup
@@ -383,9 +391,8 @@ export function CheckoutPage() {
         delivery_slot_label: String(chosenSlotLabel || ''),
         delivery_slot_date: chosenSlotDate || null,
         customer_note: String(note || ''),
-        payment_method: String(effectivePaymentMethod || 'COD'),
-        use_wallet: Boolean(useWallet),
-        upi_transaction_id: effectivePaymentMethod === 'UPI' ? String(upiTransactionId || '') : ''
+        payment_method: String(effectivePaymentMethod || 'PAYPAL'),
+        use_wallet: Boolean(useWallet)
       };
 
       if (customPaypalOrderId) {
@@ -421,7 +428,7 @@ export function CheckoutPage() {
 
       const response = await api.post('/orders/', payload);
       if (customPaypalOrderId && response.data?.id) {
-        api
+        await api
           .post(`/orders/${response.data.id}/authorize_paypal/`, {
             paypal_order_id: String(customPaypalOrderId)
           })
@@ -1015,138 +1022,20 @@ export function CheckoutPage() {
                       <span className="text-[13px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                         Payment Method
                       </span>
-                    </div>
-
-                    {/* iOS 3-Way Segmented Payment Bar */}
-                    <div className="grid grid-cols-3 p-1 rounded-[12px] bg-[#E8E8ED] dark:bg-[#2C2C2E] gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('PAYPAL')}
-                        className={`h-9 rounded-[9px] text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
-                          paymentMethod === 'PAYPAL'
-                            ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-xs'
-                            : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
-                        }`}
-                      >
-                        PayPal
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('UPI')}
-                        className={`h-9 rounded-[9px] text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
-                          paymentMethod === 'UPI'
-                            ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-xs'
-                            : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
-                        }`}
-                      >
-                        UPI QR
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('COD')}
-                        aria-label={orderType === 'DELIVERY' ? 'Cash' : 'Pay at Store'}
-                        className={`h-9 rounded-[9px] text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ${
-                          paymentMethod === 'COD'
-                            ? 'bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] shadow-xs'
-                            : 'text-[#86868B] hover:text-[#1D1D1F] dark:hover:text-white'
-                        }`}
-                      >
-                        {orderType === 'DELIVERY' ? 'Cash (COD)' : 'Pay at Store'}
-                      </button>
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#0071E3]/10 text-[#0071E3] dark:text-[#0A84FF]">
+                        PayPal SafeHold
+                      </span>
                     </div>
 
                     {/* PayPal Inline Stage (Isolated Stacking Context prevents overlap on scroll) */}
-                    {paymentMethod === 'PAYPAL' && (
-                      <div className="relative z-0 isolate">
-                        <PayPalAuthorizeButton
-                          amount={finalTotal}
-                          onAuthorized={async (paypalOrderId) => {
-                            await submit(paypalOrderId);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {/* UPI QR Inline Stage */}
-                    {paymentMethod === 'UPI' && (
-                      <div className="p-4 rounded-[16px] bg-[#F5F5F7] dark:bg-[#2C2C2E] space-y-3">
-                        <div className="flex flex-col sm:flex-row items-center gap-4">
-                          <div className="p-2.5 bg-white rounded-[14px] shadow-2xs shrink-0">
-                            {qrViewMode === 'standee' && storeSettings?.upi_qr_code_url ? (
-                              <img
-                                src={storeSettings.upi_qr_code_url}
-                                alt="Store UPI QR"
-                                className="size-28 object-contain rounded-lg"
-                              />
-                            ) : (
-                              <QRCodeSVG value={upiUri} size={112} level="M" />
-                            )}
-                          </div>
-
-                          <div className="flex-1 space-y-2 text-center sm:text-left w-full">
-                            <div className="flex items-center justify-center sm:justify-between gap-2">
-                              <span className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                                Scan with any UPI App
-                              </span>
-                              {storeSettings?.upi_qr_code_url && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setQrViewMode(qrViewMode === 'dynamic' ? 'standee' : 'dynamic')
-                                  }
-                                  className="text-[11px] font-medium text-[#0071E3] hover:underline cursor-pointer"
-                                >
-                                  {qrViewMode === 'dynamic' ? 'Store Standee' : 'Dynamic QR'}
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-[#1C1C1E] text-xs">
-                              <span className="font-mono text-[11px] text-[#1D1D1F] dark:text-[#F5F5F7] truncate max-w-[180px]">
-                                {upiId}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(upiId);
-                                  setCopiedUpi(true);
-                                  toast.success('UPI ID copied');
-                                  setTimeout(() => setCopiedUpi(false), 2000);
-                                }}
-                                className="text-[#0071E3] cursor-pointer"
-                                title="Copy UPI ID"
-                              >
-                                {copiedUpi ? <Check size={13} /> : <Copy size={13} />}
-                              </button>
-                            </div>
-
-                            <input
-                              placeholder="12-digit UPI Ref / UTR ID (Optional)"
-                              maxLength={12}
-                              value={upiTransactionId}
-                              onChange={(e) => setUpiTransactionId(e.target.value.replace(/\D/g, ''))}
-                              className="w-full h-9 px-3 text-xs font-mono rounded-[10px] bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] outline-none"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Cash / Pay at Store Stage */}
-                    {paymentMethod === 'COD' && (
-                      <div className="p-3.5 rounded-[14px] bg-[#F5F5F7] dark:bg-[#2C2C2E] text-xs">
-                        <p className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                          {orderType === 'DELIVERY' ? 'Pay on Delivery' : 'Pay at Store Counter'}
-                        </p>
-                        <p className="text-[#86868B] mt-0.5">
-                          {orderType === 'DELIVERY'
-                            ? 'Pay via cash or UPI QR directly at your doorstep upon arrival.'
-                            : 'Pay via cash, card, or UPI at the store counter when collecting your bag.'}
-                        </p>
-                      </div>
-                    )}
+                    <div className="relative z-0 isolate">
+                      <PayPalAuthorizeButton
+                        amount={finalTotal}
+                        onAuthorized={async (paypalOrderId) => {
+                          await submit(paypalOrderId);
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </section>
@@ -1221,10 +1110,6 @@ export function CheckoutPage() {
                           : 'Place order'
                       }
                       onClick={() => {
-                        if (paymentMethod === 'PAYPAL' && finalTotal > 0) {
-                          toast('Please authorize payment using the PayPal button.', { icon: 'ℹ️' });
-                          return;
-                        }
                         submit();
                       }}
                       disabled={
@@ -1338,10 +1223,6 @@ export function CheckoutPage() {
                     : 'Place order'
                 }
                 onClick={() => {
-                  if (paymentMethod === 'PAYPAL' && finalTotal > 0) {
-                    toast('Please authorize payment using the PayPal button above.', { icon: 'ℹ️' });
-                    return;
-                  }
                   submit();
                 }}
                 disabled={

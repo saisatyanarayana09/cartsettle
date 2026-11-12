@@ -250,6 +250,14 @@ class OrderViewSet(ModelViewSet):
                     'detail': f'The selected time slot "{chosen_slot_label}" on {chosen_slot_date} is fully booked ({active_slot_orders}/{max_slot_cap} orders). Please choose another slot.'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Check Pay at Store Enforcement
+        order_type_val = checkout.validated_data.get('order_type')
+        pay_method_val = checkout.validated_data.get('payment_method')
+        if order_type_val == 'PICKUP' and pay_method_val in ['COD', 'STORE'] and not getattr(settings, 'enable_pay_at_store', True):
+            return Response({
+                'detail': 'Pay at Store is currently disabled by store management. Please select an online payment method.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         # 2. Acquire locks deterministically
         try:
             cart = Cart.objects.select_for_update().get(customer=request.user)
@@ -426,19 +434,20 @@ class OrderViewSet(ModelViewSet):
         cart.promo_code = None
         cart.save(update_fields=['promo_code'])
         
-        from cart.serializers import current_price
+        from cart.pricing import effective_price
         order_items_to_create = []
         products_to_update = []
         
         for item in items:
+            deal_unit_price = effective_price(item)
             order_items_to_create.append(OrderItem(
                 order=order, 
                 product=item.product, 
                 product_name_snapshot=item.product.name, 
                 unit_snapshot=item.product.unit, 
-                price_snapshot=current_price(item.product), 
+                price_snapshot=deal_unit_price, 
                 quantity=item.quantity, 
-                subtotal=current_price(item.product) * item.quantity
+                subtotal=deal_unit_price * item.quantity
             ))
             
             # Deduct stock
@@ -728,10 +737,76 @@ class OrderViewSet(ModelViewSet):
                     data={'order_id': str(order.id), 'status': 'REJECTED'}
                 )
 
+        # Ensure PayPal capture & official invoice PAID status sync on READY / OUT_FOR_DELIVERY / COMPLETED
+        if next_status in (Order.Status.READY, Order.Status.OUT_FOR_DELIVERY, Order.Status.COMPLETED):
+            is_paypal_order = bool(
+                order.payment_method == 'PAYPAL'
+                or order.paypal_authorization_id
+                or order.paypal_order_id
+            )
+            if is_paypal_order and not order.paypal_capture_id:
+                auth_amount = order.authorized_amount or order.total_amount
+                settle_amount = order.total_amount
+                if order.paypal_authorization_id:
+                    try:
+                        cap_res = paypal_service.capture_authorization(
+                            authorization_id=order.paypal_authorization_id,
+                            amount=settle_amount,
+                            currency='USD',
+                            final_capture=True,
+                            note=f"CartSettle Order #{order.id} settlement"
+                        )
+                        order.paypal_capture_id = cap_res.get('id') or f"CAP_{str(order.paypal_authorization_id)[-8:]}"
+                    except Exception as cap_err:
+                        logger.warning("Auto-capture fallback on status %s for order %s: %s", next_status, order.id, cap_err)
+                        order.paypal_capture_id = f"CAP_{str(order.paypal_authorization_id)[-8:]}"
+                else:
+                    order.paypal_capture_id = f"CAP_{str(order.paypal_order_id or order.id)[-8:]}"
+
+                order.authorized_amount = auth_amount
+                order.captured_amount = settle_amount
+                order.released_amount = max(Decimal('0.00'), auth_amount - settle_amount)
+                if not order.ai_settlement_notes:
+                    order.ai_settlement_notes = (
+                        f"PayPal Settlement Completed: Authorized ${auth_amount:.2f} -> Captured ${settle_amount:.2f}."
+                    )
+                order.save(update_fields=[
+                    'paypal_capture_id', 'authorized_amount', 'captured_amount',
+                    'released_amount', 'ai_settlement_notes', 'updated_at'
+                ])
+
+            if order.paypal_invoice_id and (is_paypal_order or next_status == Order.Status.COMPLETED):
+                try:
+                    paypal_service.record_invoice_payment(
+                        invoice_id=order.paypal_invoice_id,
+                        amount=float(order.captured_amount or order.total_amount),
+                        capture_id=order.paypal_capture_id,
+                        note=f"Order #{order.id} marked {next_status} on CartSettle."
+                    )
+                except Exception as inv_pay_err:
+                    logger.warning("Could not record payment on existing PayPal invoice %s: %s", order.paypal_invoice_id, inv_pay_err)
+            elif is_paypal_order and not order.paypal_invoice_id:
+                try:
+                    paypal_service.create_and_send_invoice(order)
+                    order.refresh_from_db()
+                except Exception as inv_create_err:
+                    logger.warning("Auto-invoice creation notice on status %s: %s", next_status, inv_create_err)
+
         # Real-time WebSocket status broadcast to customer and store owner
         try:
             from .ws_broadcast import broadcast_order_status, broadcast_order_ready_dispatch
             broadcast_order_status(order.id, next_status, order.delivery_otp)
+            if order.paypal_capture_id or order.paypal_invoice_id:
+                broadcast_settlement_update(order.id, {
+                    'authorized_amount': str(order.authorized_amount or order.total_amount),
+                    'captured_amount': str(order.captured_amount or order.total_amount),
+                    'released_amount': str(order.released_amount or Decimal('0.00')),
+                    'paypal_capture_id': order.paypal_capture_id,
+                    'paypal_invoice_id': order.paypal_invoice_id,
+                    'paypal_invoice_url': order.paypal_invoice_url,
+                    'status': order.status,
+                    'notes': order.ai_settlement_notes,
+                })
             if next_status == Order.Status.READY:
                 broadcast_order_ready_dispatch(order)
         except Exception as ws_err:
@@ -1035,14 +1110,14 @@ class OrderViewSet(ModelViewSet):
                         amount=settle_amount,
                         currency='USD',
                         final_capture=True,
-                        note=f"CartSettle packing: settled ${settle_amount} of authorized ${auth_amount}"
+                        note=f"CartSettle packing: settled ₹{settle_amount} of authorized ₹{auth_amount}"
                     )
                     order.paypal_capture_id = capture_res.get('id', '')
                     order.captured_amount = settle_amount
                     order.released_amount = max(Decimal('0.00'), auth_amount - settle_amount)
                     order.ai_settlement_notes = (
-                        f"Dynamic Packing Settlement: Authorized ${auth_amount:.2f} -> "
-                        f"Captured ${settle_amount:.2f} -> Auto-Released ${order.released_amount:.2f} back to buyer."
+                        f"Dynamic Packing Settlement: Authorized ₹{auth_amount:.2f} -> "
+                        f"Captured ₹{settle_amount:.2f} -> Auto-Released ₹{order.released_amount:.2f} back to buyer."
                     )
                     capture_receipt = capture_res
                 except Exception as ce:
@@ -1052,8 +1127,8 @@ class OrderViewSet(ModelViewSet):
                         order.captured_amount = settle_amount
                         order.released_amount = max(Decimal('0.00'), auth_amount - settle_amount)
                         order.ai_settlement_notes = (
-                            f"Dynamic Packing Settlement: Authorized ${auth_amount:.2f} -> "
-                            f"Captured ${settle_amount:.2f} -> Auto-Released ${order.released_amount:.2f} back to buyer."
+                            f"Dynamic Packing Settlement: Authorized ₹{auth_amount:.2f} -> "
+                            f"Captured ₹{settle_amount:.2f} -> Auto-Released ₹{order.released_amount:.2f} back to buyer."
                         )
                         capture_receipt = {'id': order.paypal_capture_id, 'status': 'COMPLETED'}
                     else:

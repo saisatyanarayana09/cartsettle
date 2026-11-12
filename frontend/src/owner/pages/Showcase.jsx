@@ -230,7 +230,7 @@ export default function Showcase() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24 text-slate-400">
+      <div className="flex items-center justify-center py-24 text-[#A68B98]">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
         <span className="text-sm font-medium">Loading showcase…</span>
       </div>
@@ -243,19 +243,19 @@ export default function Showcase() {
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">Storefront Showcase</h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <h1 className="text-xl font-semibold tracking-tight text-[#2D1822]">Storefront Showcase</h1>
+            <p className="text-sm text-[#7D6671] mt-1">
               Curate the sections shown on the customer homepage. Drag to reorder.
             </p>
           </div>
           <div className="flex items-center gap-3">
             {savingOrder && (
-              <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              <div className="flex items-center gap-2 text-xs text-[#7D6671] font-medium">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Saving...
               </div>
             )}
-            <button onClick={handleAddSection} className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition text-sm shadow-sm">
+            <button onClick={handleAddSection} className="flex items-center gap-2 px-3.5 py-2 bg-[#56323E] text-white font-medium rounded-lg hover:bg-[#432634] transition text-sm shadow-sm">
               <Plus className="w-4 h-4" />
               Add Section
             </button>
@@ -266,21 +266,21 @@ export default function Showcase() {
         <section>
           <div className="mb-3 flex justify-between items-end">
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">Promotional Banners</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Main carousel images.</p>
+              <h2 className="text-sm font-semibold text-[#2D1822]">Promotional Banners</h2>
+              <p className="text-xs text-[#7D6671] mt-0.5">Main carousel images.</p>
             </div>
-            <label className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium rounded-lg transition-colors text-xs shadow-sm cursor-pointer">
+            <label className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E7DBCF] text-[#5E4752] hover:bg-[#FAF5EF] font-medium rounded-lg transition-colors text-xs shadow-sm cursor-pointer">
               <Plus size={14} /> Upload Banner
               <input type="file" accept="image/*" className="hidden" onChange={handleSelectBannerFile} />
             </label>
           </div>
           
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100">
+          <div className="bg-white rounded-xl shadow-sm border border-[#E7DBCF] overflow-hidden divide-y divide-[#E7DBCF]">
             <Droppable droppableId="banners-list" type="banner">
               {(provided) => (
                 <div {...provided.droppableProps} ref={provided.innerRef}>
                   {banners.length === 0 ? (
-                    <div className="p-6 text-center text-sm text-slate-500">No promotional banners yet.</div>
+                    <div className="p-6 text-center text-sm text-[#7D6671]">No promotional banners yet.</div>
                   ) : (
                     banners.map((ann, index) => (
                       <Draggable key={`ban-${ann.id}`} draggableId={`ban-${ann.id}`} index={index}>
@@ -288,24 +288,24 @@ export default function Showcase() {
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className={`p-3 flex items-center justify-between group hover:bg-slate-50 transition-colors ${snapshot.isDragging ? 'bg-slate-50 ring-1 ring-slate-200 z-50' : ''}`}
+                            className={`p-3 flex items-center justify-between group hover:bg-[#FAF5EF] transition-colors ${snapshot.isDragging ? 'bg-[#FAF5EF] ring-1 ring-[#E7DBCF] z-50' : ''}`}
                           >
                             <div className="flex items-center gap-3 min-w-0">
-                              <div {...provided.dragHandleProps} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-md cursor-grab active:cursor-grabbing">
+                              <div {...provided.dragHandleProps} className="p-1.5 text-[#A68B98] hover:text-[#5E4752] rounded-md cursor-grab active:cursor-grabbing">
                                 <GripVertical size={16} />
                               </div>
-                              <div className="w-20 h-10 bg-slate-100 rounded overflow-hidden flex-shrink-0 border border-slate-200">
+                              <div className="w-20 h-10 bg-[#F2E9E0] rounded overflow-hidden flex-shrink-0 border border-[#E7DBCF]">
                                 {ann.image && <img src={ann.image} className="w-full h-full object-cover" alt="Banner" />}
                               </div>
-                              <div className="text-sm font-medium text-slate-900 truncate px-2">
+                              <div className="text-sm font-medium text-[#2D1822] truncate px-2">
                                 {ann.title || 'Banner'}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 mr-2">
-                              <button onClick={() => handleToggleBanner(ann.id, ann.is_active)} className={`text-[10px] font-medium px-2 py-0.5 rounded-full transition-colors ${ann.is_active ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>
+                              <button onClick={() => handleToggleBanner(ann.id, ann.is_active)} className={`text-[10px] font-medium px-2 py-0.5 rounded-full transition-colors ${ann.is_active ? 'bg-[#F2E9E0] text-[#5E4752] hover:bg-[#EFDFD2]' : 'bg-[#FAF5EF] text-[#A68B98] hover:bg-[#F2E9E0]'}`}>
                                 {ann.is_active ? 'Active' : 'Hidden'}
                               </button>
-                              <button onClick={() => handleDeleteBanner(ann.id)} className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md transition-colors">
+                              <button onClick={() => handleDeleteBanner(ann.id)} className="p-1.5 text-[#A68B98] hover:text-rose-600 rounded-md transition-colors">
                                 <Trash2 size={16} />
                               </button>
                             </div>
@@ -319,7 +319,7 @@ export default function Showcase() {
               )}
             </Droppable>
             {bannerCropFile && (
-              <div className="p-4 border-t border-slate-100">
+              <div className="p-4 border-t border-[#E7DBCF]">
                 <ImageCropper
                   file={bannerCropFile}
                   aspectRatio={3}
@@ -334,7 +334,7 @@ export default function Showcase() {
         {/* Sections */}
         <section>
           <div className="mb-3">
-            <h2 className="text-sm font-semibold text-slate-900">Showcase Sections</h2>
+            <h2 className="text-sm font-semibold text-[#2D1822]">Showcase Sections</h2>
           </div>
 
           <Droppable droppableId="homepage-sections" type="section">
@@ -345,9 +345,9 @@ export default function Showcase() {
                 className="space-y-4"
               >
                 {sections.length === 0 && (
-                  <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
-                    <p className="text-sm text-slate-500 mb-3">No showcase sections yet.</p>
-                    <button onClick={handleAddSection} className="px-3 py-1.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 text-sm transition-colors">
+                  <div className="text-center py-12 bg-white rounded-xl border border-dashed border-[#D9C6B8]">
+                    <p className="text-sm text-[#7D6671] mb-3">No showcase sections yet.</p>
+                    <button onClick={handleAddSection} className="px-3 py-1.5 bg-[#F2E9E0] text-[#5E4752] font-medium rounded-lg hover:bg-[#EFDFD2] text-sm transition-colors">
                       Create Section
                     </button>
                   </div>
@@ -360,32 +360,32 @@ export default function Showcase() {
                         {...provided.draggableProps}
                         className={`bg-white rounded-xl border transition-all overflow-hidden ${
                           snapshot.isDragging
-                            ? 'shadow-lg ring-1 ring-slate-300 border-transparent'
-                            : 'border-slate-200 shadow-sm'
+                            ? 'shadow-lg ring-1 ring-[#E7DBCF] border-transparent'
+                            : 'border-[#E7DBCF] shadow-sm'
                         }`}
                       >
-                        <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 border-b border-slate-100">
+                        <div className="flex items-center gap-3 px-4 py-3 bg-[#FAF5EF]/50 border-b border-[#E7DBCF]">
                           <div
                             {...provided.dragHandleProps}
-                            className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-slate-400 hover:text-slate-600 rounded-md transition-colors"
+                            className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-[#A68B98] hover:text-[#5E4752] rounded-md transition-colors"
                           >
                             <GripVertical className="w-4 h-4" />
                           </div>
 
                           <div className="flex-1 flex items-center gap-2">
-                            <span className="text-sm font-semibold text-slate-900">
+                            <span className="text-sm font-semibold text-[#2D1822]">
                               {stripEmojis(section.title)}
                             </span>
-                            <button onClick={() => { setRenamingSection(section); setRenameTitle(stripEmojis(section.title)); }} className="text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors">
+                            <button onClick={() => { setRenamingSection(section); setRenameTitle(stripEmojis(section.title)); }} className="text-[#A68B98] hover:text-[#5E4752] p-1 rounded-md transition-colors">
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
 
                           <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-medium text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-medium text-[#7D6671] bg-white border border-[#E7DBCF] px-2 py-0.5 rounded-full">
                               #{index + 1}
                             </span>
-                            <button onClick={() => handleDeleteSection(section.id)} className="text-slate-400 hover:text-rose-600 p-1 transition-colors">
+                            <button onClick={() => handleDeleteSection(section.id)} className="text-[#A68B98] hover:text-rose-600 p-1 transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -417,11 +417,11 @@ export default function Showcase() {
         </section>
 
         {renamingSection && createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm">
-            <div className="bg-white rounded-xl w-full max-w-sm shadow-xl border border-slate-200 p-5">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#56323E]/20 backdrop-blur-sm">
+            <div className="bg-white rounded-xl w-full max-w-sm shadow-xl border border-[#E7DBCF] p-5">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-semibold text-slate-900">Rename Section</h3>
-                <button onClick={() => setRenamingSection(null)} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-4 h-4"/></button>
+                <h3 className="text-sm font-semibold text-[#2D1822]">Rename Section</h3>
+                <button onClick={() => setRenamingSection(null)} className="text-[#A68B98] hover:text-[#5E4752] transition-colors"><X className="w-4 h-4"/></button>
               </div>
               <input 
                 autoFocus
@@ -429,11 +429,11 @@ export default function Showcase() {
                 value={renameTitle} 
                 onChange={e => setRenameTitle(e.target.value)} 
                 onKeyDown={e => e.key === 'Enter' && submitRename()}
-                className="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-slate-900 outline-none mb-4" 
+                className="w-full text-sm px-3 py-2 border border-[#E7DBCF] rounded-lg focus:ring-1 focus:ring-slate-900 outline-none mb-4" 
               />
               <div className="flex justify-end gap-2">
-                <button onClick={() => setRenamingSection(null)} className="px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors">Cancel</button>
-                <button onClick={submitRename} className="px-3 py-1.5 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors">Save</button>
+                <button onClick={() => setRenamingSection(null)} className="px-3 py-1.5 text-sm font-medium text-[#5E4752] hover:bg-[#FAF5EF] border border-[#E7DBCF] rounded-lg transition-colors">Cancel</button>
+                <button onClick={submitRename} className="px-3 py-1.5 text-sm font-medium text-white bg-[#56323E] hover:bg-[#432634] rounded-lg transition-colors">Save</button>
               </div>
             </div>
           </div>

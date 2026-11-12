@@ -68,29 +68,29 @@ export default function DisputesModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#56323E]/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="owner-theme bg-white dark:bg-[#351D28] border border-[#E7DBCF] dark:border-white/10 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-[#2D1822] dark:text-[#FAF5EF]">
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-rose-50/40 dark:bg-rose-950/20">
+        <div className="p-4 border-b border-[#E7DBCF] dark:border-white/[0.08] flex items-center justify-between bg-rose-50/40 dark:bg-rose-950/20">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-xs">
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-[#2D1822] dark:text-[#FAF5EF] flex items-center gap-2">
                 PayPal Customer Disputes & Chargebacks
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
                   Disputes API v1
                 </span>
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-[#7D6671] dark:text-[#C5B0BA]">
                 Autonomous defense powered by CartSettle optical packing records
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            className="p-1 rounded-xl text-[#A68B98] hover:text-[#5E4752] dark:hover:text-[#FAF5EF] hover:bg-[#F2E9E0] dark:hover:bg-[#3F2231] cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -99,19 +99,19 @@ export default function DisputesModal({ isOpen, onClose }) {
         {/* Body */}
         <div className="p-5 overflow-y-auto flex-1 space-y-4">
           {loading ? (
-            <div className="text-center py-8 text-xs text-slate-400">
-              <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-indigo-500" />
+            <div className="text-center py-8 text-xs text-[#A68B98]">
+              <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-[#8A6773]" />
               Loading disputes from PayPal API...
             </div>
           ) : disputes.length === 0 ? (
-            <div className="text-center py-8 text-xs text-slate-400">
+            <div className="text-center py-8 text-xs text-[#A68B98]">
               <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
               No open customer disputes found. Clean store record!
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+            <div className="divide-y divide-[#E7DBCF] dark:divide-white/[0.08] border border-[#E7DBCF] dark:border-white/[0.08] rounded-2xl overflow-hidden">
               {disputes.map((d) => (
-                <div key={d.dispute_id} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-850 transition-colors">
+                <div key={d.dispute_id} className="p-4 flex items-center justify-between gap-4 hover:bg-[#FAF5EF]/50 dark:hover:bg-[#351D28] transition-colors">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-mono font-bold text-xs text-rose-600 dark:text-rose-400">
@@ -121,10 +121,10 @@ export default function DisputesModal({ isOpen, onClose }) {
                         {d.status || 'Action Required'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                      Reason: <strong className="text-slate-900 dark:text-slate-100">{d.reason || 'General Inquiry'}</strong>
+                    <p className="text-xs text-[#5E4752] dark:text-[#C5B0BA] font-medium">
+                      Reason: <strong className="text-[#2D1822] dark:text-[#FAF5EF]">{d.reason || 'General Inquiry'}</strong>
                     </p>
-                    <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                    <p className="text-[11px] text-[#7D6671] font-mono mt-0.5">
                       Amount: ${d.dispute_amount?.value || '0.00'} {d.dispute_amount?.currency_code || 'USD'}
                     </p>
                   </div>
@@ -134,7 +134,7 @@ export default function DisputesModal({ isOpen, onClose }) {
                       setSelectedDispute(d);
                       setEvidenceNotes(`CartSettle packing verified via Gemini Vision camera scanner. Dynamic capture captured only accepted line items, and the unfulfilled difference was auto-released back to buyer on PayPal.`);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#56323E] hover:bg-[#432634] text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
                     Provide Evidence
@@ -146,12 +146,12 @@ export default function DisputesModal({ isOpen, onClose }) {
 
           {/* Evidence Submission Drawer */}
           {selectedDispute && (
-            <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 space-y-3 mt-4">
-              <div className="flex justify-between items-center text-xs font-bold text-indigo-900 dark:text-indigo-200">
+            <div className="p-4 rounded-2xl bg-[#FAF5EF]/50 dark:bg-[#432634] border border-[#E7DBCF] dark:border-white/10 space-y-3 mt-4">
+              <div className="flex justify-between items-center text-xs font-bold text-[#2D1822] dark:text-[#EFDFD2]">
                 <span>Submit Defense for {selectedDispute.dispute_id}</span>
                 <button
                   onClick={() => setSelectedDispute(null)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="text-[#A68B98] hover:text-[#5E4752] dark:hover:text-[#FAF5EF]"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -162,14 +162,14 @@ export default function DisputesModal({ isOpen, onClose }) {
                 onChange={(e) => setEvidenceNotes(e.target.value)}
                 placeholder="Fulfillment and packing audit proof..."
                 rows={3}
-                className="w-full text-xs p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-hidden focus:ring-2 focus:ring-indigo-500 text-slate-800 dark:text-slate-200"
+                className="w-full text-xs p-3 bg-white dark:bg-[#351D28] border border-[#E7DBCF] dark:border-white/[0.08] rounded-xl outline-hidden focus:ring-2 focus:ring-[#56323E]/20 text-[#2D1822] dark:text-[#FAF5EF]"
               />
 
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setSelectedDispute(null)}
-                  className="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 rounded-xl"
+                  className="px-3 py-1.5 text-xs text-[#5E4752] dark:text-[#C5B0BA] hover:bg-[#F2E9E0] rounded-xl"
                 >
                   Cancel
                 </button>
@@ -177,7 +177,7 @@ export default function DisputesModal({ isOpen, onClose }) {
                   type="button"
                   onClick={handleProvideEvidence}
                   disabled={submitting}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#56323E] hover:bg-[#432634] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   {submitting ? 'Submitting...' : 'Send to PayPal Disputes API'}
                 </button>

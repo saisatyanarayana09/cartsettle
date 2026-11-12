@@ -138,9 +138,9 @@ def build_order_tax_invoice_html(order):
     total = order.total_amount or Decimal('0.00')
     wallet = getattr(order, 'wallet_discount', Decimal('0.00')) or Decimal('0.00')
 
-    if raw_method == 'UPI':
-        upi_id = getattr(order, 'upi_transaction_id', '')
-        method_text = f"UPI (Ref: {upi_id})" if upi_id else "UPI Instant Payment"
+    if raw_method in ('PAYPAL', 'UPI'):
+        cap_id = getattr(order, 'paypal_capture_id', '') or getattr(order, 'paypal_authorization_id', '')
+        method_text = f"PayPal Digital Settlement (Ref: {cap_id})" if cap_id else "PayPal Digital Settlement"
     elif getattr(order, 'order_type', '') == 'PICKUP' and raw_method == 'COD':
         method_text = "Cash at Store Counter"
     elif raw_method == 'CARD':

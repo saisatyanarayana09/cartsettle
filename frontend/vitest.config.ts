@@ -12,8 +12,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "motion/react": path.resolve(__dirname, "./src/lib/motion-react.tsx"),
+      "@": path.resolve(import.meta.dirname, "./src"),
+      "motion/react": path.resolve(import.meta.dirname, "./src/lib/motion-react.tsx"),
     },
   },
 });

@@ -45,6 +45,11 @@ Thumbs.db
 *.keystore
 *.jks
 **/credentials/credentials.json
+*.log
+backend/*.log
+backend/scratch/
+backend/rag_store/
+backend/live_30_question_audit.py
 
 DEVPOST_SUBMISSION.md
 HACKATHON_DEMO_SCRIPT.md

@@ -7,6 +7,7 @@ from accounts.permissions import IsCustomerUser
 from products.models import Product
 from .models import Cart, CartItem
 from .serializers import CartItemSerializer, CartSerializer
+from .pricing import effective_price, clamp_to_deal_range, read_deal, DEAL_HOLD_SECONDS
 from .ws_broadcast import broadcast_cart_updated
 
 
@@ -158,19 +159,18 @@ class ApplyPromoView(APIView):
                 return Response({'detail': f'You have reached the maximum usage limit ({promo.max_uses_per_user}) for this promo code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validate minimum order amount and eligible category against cart items
-        from cart.serializers import current_price
         from decimal import Decimal
         items = list(cart.items.select_related('product').all())
         if not items:
             return Response({'detail': 'Your cart is empty. Add products before applying a promo code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        base_total = sum((current_price(item.product) * item.quantity for item in items), Decimal('0.00'))
+        base_total = sum((effective_price(item) * item.quantity for item in items), Decimal('0.00'))
         if promo.min_order_amount and base_total < promo.min_order_amount:
             shortfall = promo.min_order_amount - base_total
             return Response({'detail': f'This promo code requires a minimum order amount of ₹{promo.min_order_amount}. Add ₹{shortfall:.2f} more to apply.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if hasattr(promo, 'applicable_category') and promo.applicable_category:
-            eligible_total = sum((current_price(item.product) * item.quantity for item in items if item.product.category_id == promo.applicable_category_id), Decimal('0.00'))
+            eligible_total = sum((effective_price(item) * item.quantity for item in items if item.product.category_id == promo.applicable_category_id), Decimal('0.00'))
             if eligible_total == Decimal('0.00'):
                 return Response({'detail': f'This promo code is only applicable to products in "{promo.applicable_category.name}".'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -180,6 +180,62 @@ class ApplyPromoView(APIView):
         data = CartSerializer(cart, context={'request': request}).data
         broadcast_cart_updated(request.user.id, data)
         return Response(data)
+
+
+class ApplyDealView(APIView):
+    """Applies a server-issued negotiated deal (signed token from the AI agent) to the cart.
+
+    The client never chooses prices: the token carries the exact per-line prices the agent
+    offered, and every line is re-clamped into [margin floor, catalog price].
+    """
+    permission_classes = [IsAuthenticated, IsCustomerUser]
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        from django.core import signing
+        from django.utils import timezone
+        from datetime import timedelta
+
+        token = (request.data.get('deal_token') or '').strip()
+        if not token:
+            return Response({'detail': 'deal_token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            deal = read_deal(token, user_id=request.user.id)
+        except signing.SignatureExpired:
+            return Response({'detail': 'This deal has expired. Ask the assistant for a fresh offer.'}, status=status.HTTP_410_GONE)
+        except signing.BadSignature:
+            return Response({'detail': 'Invalid deal.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cart = customer_cart(request.user)
+        cart = Cart.objects.select_for_update().get(id=cart.id)
+        until = timezone.now() + timedelta(seconds=DEAL_HOLD_SECONDS)
+        applied = 0
+        from products.models import Product
+        for pid, offered in deal.items():
+            item = cart.items.select_related('product').filter(product_id=pid).first()
+            if not item:
+                prod = Product.objects.filter(id=pid, is_active=True).first()
+                if prod:
+                    CartItem.objects.create(
+                        cart=cart,
+                        product=prod,
+                        quantity=1,
+                        negotiated_unit_price=clamp_to_deal_range(prod, offered),
+                        negotiated_until=until,
+                    )
+                    applied += 1
+            else:
+                item.negotiated_unit_price = clamp_to_deal_range(item.product, offered)
+                item.negotiated_until = until
+                item.save(update_fields=['negotiated_unit_price', 'negotiated_until'])
+                applied += 1
+        if not applied:
+            return Response({'detail': 'None of the deal items could be applied.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cart = Cart.objects.prefetch_related('items__product').select_related('promo_code').get(id=cart.id)
+        data = CartSerializer(cart, context={'request': request}).data
+        broadcast_cart_updated(request.user.id, data)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class CartClearView(APIView):

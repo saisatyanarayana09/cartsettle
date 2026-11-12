@@ -350,6 +350,26 @@ class PayPalService:
         else:
             logger.warning("PayPal Send Invoice Notice: %s %s (using standard URL)", send_res.status_code, send_res.text)
 
+        # Step 3: Record Payment if order is paid/captured or PayPal-authorized so receipt shows PAID
+        invoice_status = "SENT"
+        is_paid_or_settled = bool(
+            getattr(order, 'paypal_capture_id', None)
+            or getattr(order, 'payment_method', '') == 'PAYPAL'
+            or getattr(order, 'status', '') in ('READY', 'OUT_FOR_DELIVERY', 'COMPLETED')
+        )
+        if is_paid_or_settled and item_total > 0:
+            try:
+                pay_res = self.record_invoice_payment(
+                    invoice_id=invoice_id,
+                    amount=item_total,
+                    capture_id=getattr(order, 'paypal_capture_id', None) or getattr(order, 'paypal_authorization_id', None),
+                    note=f"Order #{order.id} settled via CartSettle PayPal Checkout."
+                )
+                if pay_res.get("status") == "PAID":
+                    invoice_status = "PAID"
+            except Exception as pe:
+                logger.warning("Could not auto-record payment on PayPal invoice %s: %s", invoice_id, pe)
+
         # Update order instance if persisted
         try:
             order.paypal_invoice_id = invoice_id
@@ -363,8 +383,66 @@ class PayPalService:
             "invoice_number": invoice_number,
             "invoice_url": invoice_url,
             "total_amount": f"{item_total:.2f}",
-            "status": "SENT"
+            "status": invoice_status
         }
+
+    def record_invoice_payment(self, invoice_id, amount, note=None, capture_id=None):
+        """
+        Records a payment against a sent PayPal Invoice (POST /v2/invoicing/invoices/{invoice_id}/payments)
+        so the official PayPal receipt status transitions from SENT (Unpaid) to PAID.
+        """
+        import datetime
+        url = f"{self.base_url}/v2/invoicing/invoices/{invoice_id}/payments"
+        formatted_amount = f"{float(amount):.2f}"
+        default_note = note or (
+            f"Settled via PayPal (Ref: {capture_id})" if capture_id else "Settled via CartSettle PayPal Checkout"
+        )
+        payload = {
+            "method": "PAYPAL",
+            "payment_date": datetime.date.today().isoformat(),
+            "amount": {
+                "currency_code": "USD",
+                "value": formatted_amount
+            },
+            "note": default_note[:255]
+        }
+        if capture_id and not str(capture_id).startswith(("CAP_", "SIM_", "AUTH_")):
+            payload["payment_id"] = str(capture_id)
+
+        res = requests.post(url, headers=self._auth_headers(), json=payload, timeout=20)
+        if res.status_code not in (200, 201, 204):
+            # Inspect live invoice state in case it is already PAID, still DRAFT, or has a different due_amount
+            try:
+                inv_data = self.get_invoice(invoice_id)
+                inv_status = inv_data.get("status", "")
+                if inv_status in ("PAID", "MARKED_AS_PAID"):
+                    return {"status": "PAID", "response": inv_data}
+                if inv_status == "DRAFT":
+                    send_url = f"{self.base_url}/v2/invoicing/invoices/{invoice_id}/send"
+                    requests.post(send_url, headers=self._auth_headers(), json={"send_to_recipient": True}, timeout=20)
+                due_val = (
+                    inv_data.get("due_amount", {}).get("value")
+                    or inv_data.get("amount", {}).get("value")
+                )
+                if due_val and float(due_val) > 0:
+                    formatted_amount = f"{float(due_val):.2f}"
+            except Exception as get_err:
+                logger.debug("Could not fetch invoice %s before retry: %s", invoice_id, get_err)
+
+            fallback_payload = {
+                "method": "OTHER",
+                "payment_date": datetime.date.today().isoformat(),
+                "amount": {
+                    "currency_code": "USD",
+                    "value": formatted_amount
+                },
+                "note": default_note[:255]
+            }
+            res = requests.post(url, headers=self._auth_headers(), json=fallback_payload, timeout=20)
+            if res.status_code not in (200, 201, 204):
+                logger.warning("PayPal Record Invoice Payment Notice: %s %s", res.status_code, res.text)
+                return {"status": "SENT"}
+        return {"status": "PAID", "response": res.json() if res.text else {}}
 
     def get_invoice(self, invoice_id):
         """Retrieves details of an existing PayPal invoice."""

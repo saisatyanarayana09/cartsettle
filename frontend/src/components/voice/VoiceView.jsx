@@ -80,10 +80,6 @@ export function PanelMenu({ onClear, disabled }) {
             ? "Orb: Switch to Crystal Ribbon 3D"
             : "Orb: Switch to Liquid Silk 3D"}
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={disabled} onSelect={onClear}>
-          <Trash2 />
-          Clear conversation
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -101,12 +97,17 @@ function condenseForVoiceCaption(rawText) {
       return `₹${Number.isInteger(val) ? val : val.toFixed(2)}`;
     })
     .replace(/\s*\([^)]*\)/g, "")
+    .replace(/\s*\([^)]*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0] || cleaned;
+  const firstSentence = cleaned.split(/(?<!\d\.\d*)(?<!\$\d+)(?<=[.!?])\s+(?=[A-Z0-9]|$)/)[0] || cleaned;
   const words = firstSentence.split(/\s+/).filter(Boolean);
   if (words.length <= 12) return firstSentence;
-  return `${words.slice(0, 12).join(" ")}...`;
+  let result = `${words.slice(0, 12).join(" ")}...`;
+  const openCount = (result.match(/\(/g) || []).length;
+  const closeCount = (result.match(/\)/g) || []).length;
+  if (openCount > closeCount) result = result.replace(/\([^)]*$/, "").trim();
+  return result;
 }
 
 /** Compact 1–2 Line Kinetic Caption: Subtle 14.5px typography that auto-fades 3s after speech */
@@ -147,6 +148,7 @@ export function VoiceView({
   hint = "Tap orb to speak",
   replyText,
   activeTaskType = "idle",
+  modelBadge,
 }) {
   const [orbModel] = useOrbModel();
   const status = busy && voice.status !== "speaking" ? "working" : voice.status;
@@ -262,6 +264,12 @@ export function VoiceView({
           label={label}
           disabled={busy && voice.status !== "speaking"}
         />
+
+        {modelBadge && (
+          <div className="mt-3 text-[11px] font-medium tracking-wide text-slate-500 dark:text-slate-400 select-none">
+            Engine: {modelBadge}
+          </div>
+        )}
 
         {voice.status === "unavailable" && (
           <p className="mt-2.5 text-xs text-slate-400 dark:text-slate-500 text-center">

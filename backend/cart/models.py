@@ -17,6 +17,9 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='cart_items')
     quantity = models.PositiveIntegerField(default=1)
+    # Server-issued, margin-validated deal price (see cart/pricing.py). Null = catalog price.
+    negotiated_unit_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    negotiated_until = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['cart', 'product'], name='unique_cart_product')]

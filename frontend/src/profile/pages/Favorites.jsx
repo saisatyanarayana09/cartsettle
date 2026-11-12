@@ -1,9 +1,20 @@
 import { Link } from '../../router';
-import { Heart, Package, ChevronRight } from 'lucide-react';
+import { Heart, Package, ChevronRight, ShoppingBag } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useCart } from '../../cart-context';
 
 export default function Favorites() {
-  const { favorites, toggleFavorite } = useCart();
+  const { favorites, toggleFavorite, add } = useCart();
+
+  const handleAddToCart = async (productDetails) => {
+    if (!productDetails?.id) return;
+    try {
+      await add(productDetails);
+      toast.success(`${productDetails.name || 'Item'} added to cart`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to add to cart');
+    }
+  };
 
   return (
     <div>
@@ -32,27 +43,46 @@ export default function Favorites() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {favorites.map(fav => (
-            <div key={fav.id} className="group flex items-center gap-4 bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 hover:border-primary-300 dark:hover:border-primary-500 hover:shadow-md transition-all">
-              <div className="w-20 h-20 shrink-0 bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 flex items-center justify-center">
-                {fav.product_details?.image ? (
-                  <img loading="lazy" decoding="async" src={fav.product_details.image} alt="Product" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
-                ) : (
-                  <Package className="text-slate-300 dark:text-slate-600" size={24}/>
-                )}
-              </div>
-              <div className="flex-1 min-w-0 py-1">
-                <Link to={`/product/${fav.product_details?.id}`} className="font-extrabold text-slate-900 dark:text-white truncate block hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-base mb-0.5">{fav.product_details?.name}</Link>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{fav.product_details?.unit}</p>
-                <div className="flex items-center justify-between">
-                  <p className="font-black text-slate-900 dark:text-white">₹{fav.product_details?.regular_price}</p>
+          {favorites.map(fav => {
+            const prod = fav.product_details || {};
+            const targetProductId = prod.id || fav.product?.id || fav.product;
+            const displayPrice = prod.offer_price || prod.regular_price;
+            return (
+              <div key={fav.id || targetProductId} className="group flex items-center gap-4 bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 hover:border-primary-300 dark:hover:border-primary-500 hover:shadow-md transition-all">
+                <div className="w-20 h-20 shrink-0 bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 flex items-center justify-center">
+                  {prod.image ? (
+                    <img loading="lazy" decoding="async" src={prod.image} alt={prod.name || 'Product'} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+                  ) : (
+                    <Package className="text-slate-300 dark:text-slate-600" size={24}/>
+                  )}
                 </div>
+                <div className="flex-1 min-w-0 py-1">
+                  <Link to={`/product/${targetProductId}`} className="font-extrabold text-slate-900 dark:text-white truncate block hover:text-primary-600 dark:hover:text-primary-400 transition-colors text-base mb-0.5">{prod.name || 'Saved Product'}</Link>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">{prod.unit}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-black text-slate-900 dark:text-white">₹{displayPrice}</p>
+                    {prod.id && (
+                      <button
+                        type="button"
+                        onClick={() => handleAddToCart(prod)}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
+                      >
+                        <ShoppingBag size={12} /> Add
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(targetProductId)}
+                  className="shrink-0 p-2.5 text-rose-500 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-xl transition-colors self-start cursor-pointer"
+                  title="Remove from favorites"
+                >
+                  <Heart fill="currentColor" size={18}/>
+                </button>
               </div>
-              <button onClick={() => toggleFavorite(fav.product_details?.id)} className="shrink-0 p-2.5 text-rose-500 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-xl transition-colors self-start" title="Remove from favorites">
-                <Heart fill="currentColor" size={18}/>
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

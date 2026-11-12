@@ -6,7 +6,6 @@ import { LanguageProvider } from './context/LanguageContext';
 import { Toaster } from 'react-hot-toast';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { lazyWithRetry } from './utils/lazyWithRetry';
-import { SmartAppBanner } from './components/SmartAppBanner';
 
 const DEFAULT_GOOGLE_CLIENT_ID = '729937153109-6e8fivp20b3ri2qsah1d6u2a7oi0uls6.apps.googleusercontent.com';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID;
@@ -150,7 +149,6 @@ function CustomerGuard({ children }) {
 function CustomerApp() {
  return (
    <>
-     <SmartAppBanner />
      <OfflineBanner />
      <CartProvider>
        <Outlet />
@@ -500,7 +498,7 @@ function App() {
                         <Route path="products" element={<Products />} />
                         <Route path="orders" element={<Orders />} />
                         <Route path="orders/:id" element={<OrderDetails />} />
-                        <Route path="invoices" element={<Invoices />} />
+                        <Route path="invoices" element={<Navigate to="/owner/orders" replace />} />
                         <Route path="offers" element={<Offers />} />
                         <Route path="referrals" element={<Referrals />} />
                         <Route path="customers" element={<Customers />} />

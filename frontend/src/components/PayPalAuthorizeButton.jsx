@@ -56,7 +56,7 @@ export default function PayPalAuthorizeButton({
     try {
       setLoading(true);
       const paypalOrderId = data.orderID;
-      toast.success('PayPal authorization confirmed. Placing order...');
+      toast.success('SafeHold authorized. Placing order...');
 
       if (onAuthorized) {
         await onAuthorized(paypalOrderId);
@@ -79,7 +79,7 @@ export default function PayPalAuthorizeButton({
           </div>
           <div className="min-w-0">
             <h4 className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
-              CartSettle Dynamic Hold
+              PayPal SafeHold
             </h4>
             <p className="text-[11px] text-[#86868B] truncate">
               Only packed items are captured on dispatch

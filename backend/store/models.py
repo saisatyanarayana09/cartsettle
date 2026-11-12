@@ -70,6 +70,12 @@ class StoreSettings(models.Model):
     custom_text_color = models.CharField(max_length=20, default="#323232", blank=True)
     apply_theme_to_owner_app = models.BooleanField(default=False, help_text="Sync theme to store owner app as well")
 
+    # Payments
+    enable_pay_at_store = models.BooleanField(
+        default=True,
+        help_text="Allow customers to select Pay at Store / Cash on Pickup upon order collection"
+    )
+
     # UPI
     upi_id = models.CharField(max_length=100, blank=True, default="")
     upi_payee_name = models.CharField(max_length=100, blank=True, default="Narendra Kirana")

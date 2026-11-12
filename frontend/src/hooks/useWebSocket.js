@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 const getBaseWsUrl = () => {
-  const apiUrl = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || 'https://narendra-kirana.onrender.com/api/v1';
+  const apiUrl = import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || 'https://cartsettle-api.onrender.com/api/v1';
   return apiUrl.replace(/^http/, 'ws').replace(/\/api\/v1\/?$/, '');
 };
 

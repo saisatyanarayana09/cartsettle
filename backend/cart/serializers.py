@@ -1,12 +1,13 @@
 from decimal import Decimal
 from rest_framework import serializers
 from .models import Cart, CartItem
+from .pricing import catalog_price, effective_price
 from products.models import Product
 from store.models import StoreSettings
 
 
 def current_price(product):
-    return product.offer_price if product.offer_price is not None else product.regular_price
+    return catalog_price(product)
 
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -19,18 +20,22 @@ class CartItemSerializer(serializers.ModelSerializer):
     quantity = serializers.IntegerField(min_value=1, required=False)
     regular_price = serializers.DecimalField(source='product.regular_price', max_digits=10, decimal_places=2, read_only=True)
     unit_price = serializers.SerializerMethodField()
+    negotiated = serializers.SerializerMethodField()
     subtotal = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem
-        fields = ['id', 'product', 'product_name', 'product_unit', 'product_image', 'is_in_stock', 'stock_quantity', 'max_order_quantity', 'quantity', 'regular_price', 'unit_price', 'subtotal']
+        fields = ['id', 'product', 'product_name', 'product_unit', 'product_image', 'is_in_stock', 'stock_quantity', 'max_order_quantity', 'quantity', 'regular_price', 'unit_price', 'subtotal', 'negotiated']
         read_only_fields = ['id']
 
     def get_unit_price(self, item):
-        return current_price(item.product)
+        return effective_price(item)
+
+    def get_negotiated(self, item):
+        return effective_price(item) < current_price(item.product)
 
     def get_subtotal(self, item):
-        return current_price(item.product) * item.quantity
+        return effective_price(item) * item.quantity
 
     def validate_product(self, product):
         if not product.is_active or not product.is_in_stock:
@@ -72,7 +77,7 @@ class CartSerializer(serializers.ModelSerializer):
             for item in items:
                 qty = Decimal(item.quantity)
                 reg_price = item.product.regular_price
-                cur_price = current_price(item.product)
+                cur_price = effective_price(item)
                 
                 subtotal += reg_price * qty
                 items_total += cur_price * qty

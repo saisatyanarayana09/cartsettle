@@ -36,31 +36,31 @@ const Feedback = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Customer Feedback</h1>
-        <p className="text-slate-500 mt-1">See what your customers are saying about your store.</p>
+        <h1 className="text-3xl font-extrabold text-[#2D1822] tracking-tight">Customer Feedback</h1>
+        <p className="text-[#7D6671] mt-1">See what your customers are saying about your store.</p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white dark:bg-[#351D28] rounded-2xl shadow-sm border border-[#E7DBCF] dark:border-white/10 overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-500 font-medium">Loading feedback...</div>
+          <div className="p-12 text-center text-[#7D6671] font-medium">Loading feedback...</div>
         ) : feedbacks.length === 0 ? (
           <div className="p-16 text-center flex flex-col items-center">
             <MessageSquare className="w-16 h-16 text-slate-200 mb-4" />
-            <h3 className="text-xl font-bold text-slate-900 mb-1">No feedback yet</h3>
-            <p className="text-slate-500">When customers leave feedback, it will appear here.</p>
+            <h3 className="text-xl font-bold text-[#2D1822] mb-1">No feedback yet</h3>
+            <p className="text-[#7D6671]">When customers leave feedback, it will appear here.</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[#E7DBCF]">
             {feedbacks.map((fb) => (
-              <div key={fb.id} className="p-6 hover:bg-slate-50 transition-colors">
+              <div key={fb.id} className="p-6 hover:bg-[#FAF5EF] dark:hover:bg-[#3F2231] transition-colors">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-lg">
+                    <div className="w-10 h-10 rounded-full bg-[#56323E] text-[#FAF5EF] dark:bg-[#EFDFD2] dark:text-[#2D1822] flex items-center justify-center font-bold text-lg">
                       {fb.customer_name ? fb.customer_name.charAt(0).toUpperCase() : 'A'}
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-900">{fb.customer_name || 'Anonymous'}</h4>
-                      <p className="text-sm text-slate-500">{new Date(fb.created_at).toLocaleString()}</p>
+                      <h4 className="font-bold text-[#2D1822]">{fb.customer_name || 'Anonymous'}</h4>
+                      <p className="text-sm text-[#7D6671]">{new Date(fb.created_at).toLocaleString()}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -74,9 +74,9 @@ const Feedback = () => {
                 </div>
                 
                 {fb.comments ? (
-                  <p className="text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{fb.comments}</p>
+                  <p className="text-[#56323E] dark:text-[#E8DED5] leading-relaxed bg-[#FAF5EF] dark:bg-[#2D1822] p-4 rounded-xl border border-[#E7DBCF] dark:border-white/10">{fb.comments}</p>
                 ) : (
-                  <p className="text-slate-400 italic">No comments provided.</p>
+                  <p className="text-[#A68B98] italic">No comments provided.</p>
                 )}
 
                 <div className="mt-4 flex justify-end">

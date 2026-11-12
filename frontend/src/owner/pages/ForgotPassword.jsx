@@ -47,14 +47,14 @@ export default function OwnerForgotPassword() {
   };
 
   return (
-    <main className="min-h-screen flex bg-white dark:bg-slate-950">
+    <main className="min-h-screen flex bg-white dark:bg-[#351D28]">
       {/* Left Column: Reset Form */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12">
         <div className="w-full max-w-md">
           {/* Back to Login link */}
           <Link 
             to="/owner/login" 
-            className="inline-flex items-center gap-0 text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors mb-8"
+            className="inline-flex items-center gap-0 text-sm font-bold text-[#7D6671] hover:text-[#56323E] transition-colors mb-8"
           >
             <ArrowLeft size={16} /> Back to Owner Sign In
           </Link>
@@ -62,12 +62,12 @@ export default function OwnerForgotPassword() {
           <div className="mb-8">
             <p className="text-sm font-black tracking-normal drop-shadow-sm mb-3 flex items-center gap-0">
               <span className="text-emerald-900 dark:text-emerald-400">Cart</span>
-              <span className="text-indigo-600 dark:text-indigo-400">Settle</span>
+              <span className="text-[#56323E] dark:text-[#EFDFD2]">Settle</span>
             </p>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#2D1822] dark:text-white tracking-tight">
               Reset Password
             </h1>
-            <p className="text-base text-slate-500 dark:text-slate-400 mt-2 font-medium">
+            <p className="text-base text-[#7D6671] dark:text-[#C5B0BA] mt-2 font-medium">
               Choose your recovery method and enter your registered owner or manager email address.
             </p>
           </div>
@@ -95,7 +95,7 @@ export default function OwnerForgotPassword() {
                       href={getEmailProviderUrl(email)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition shadow-md shadow-indigo-600/20 active:scale-[0.98]"
+                      className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#56323E] hover:bg-[#432634] text-white font-bold text-sm transition shadow-md shadow-[#56323E]/20 active:scale-[0.98]"
                     >
                       <ExternalLink size={16} />
                       <span>Open {getEmailProviderName(email)}</span>
@@ -108,7 +108,7 @@ export default function OwnerForgotPassword() {
                         setStatus('idle');
                         setMessage('');
                       }}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-indigo-200 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/30 hover:bg-indigo-100 font-bold transition-all text-xs cursor-pointer"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#E7DBCF] dark:border-white/10 text-[#56323E] dark:text-[#EFDFD2] bg-[#FAF5EF]/50 dark:bg-[#432634] hover:bg-[#EFDFD2] font-bold transition-all text-xs cursor-pointer"
                     >
                       <KeyRound size={14} />
                       <span>Didn't get an email? Try 6-Digit OTP instead</span>
@@ -117,7 +117,7 @@ export default function OwnerForgotPassword() {
                 ) : (
                   <Link
                     to={`/owner/reset-password?email=${encodeURIComponent(email)}&mode=otp`}
-                    className="block w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition shadow-md shadow-indigo-600/20"
+                    className="block w-full py-3 px-4 rounded-xl bg-[#56323E] hover:bg-[#432634] text-white font-bold text-sm transition shadow-md shadow-[#56323E]/20"
                   >
                     Enter 6-Digit OTP Code Now →
                   </Link>
@@ -125,14 +125,14 @@ export default function OwnerForgotPassword() {
 
                 <Link
                   to="/owner/login"
-                  className="block w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-300 font-bold text-xs transition shadow-sm"
+                  className="block w-full py-2.5 px-4 rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] hover:bg-[#FAF5EF] dark:hover:bg-[#351D28] text-[#5E4752] dark:text-[#C5B0BA] font-bold text-xs transition shadow-sm"
                 >
                   Return to Owner Sign In
                 </Link>
                 <button
                   type="button"
                   onClick={() => { setStatus('idle'); setMessage(''); }}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition cursor-pointer pt-1"
+                  className="text-xs font-bold text-[#7D6671] hover:text-[#5E4752] dark:hover:text-[#C5B0BA] transition cursor-pointer pt-1"
                 >
                   Did not receive an email? Try again
                 </button>
@@ -149,7 +149,7 @@ export default function OwnerForgotPassword() {
 
               {/* Method Choice */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2.5">
+                <label className="block text-xs font-bold text-[#5E4752] dark:text-[#C5B0BA] uppercase tracking-wider mb-2.5">
                   Select Recovery Method
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -159,24 +159,24 @@ export default function OwnerForgotPassword() {
                     onClick={() => setMethod('link')}
                     className={`p-3.5 rounded-xl border text-left transition-all flex flex-col gap-1.5 relative cursor-pointer ${
                       method === 'link'
-                        ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/50 ring-2 ring-indigo-500/20 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 hover:bg-slate-100/60'
+                        ? 'border-[#56323E] bg-[#FAF5EF]/70 dark:bg-[#432634] ring-2 ring-[#56323E]/20 shadow-sm'
+                        : 'border-[#E7DBCF] dark:border-white/[0.08] bg-[#FAF5EF]/60 dark:bg-[#351D28]/60 hover:bg-[#F2E9E0]/60'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-0">
-                        <div className={`p-1.5 rounded-lg ${method === 'link' ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                        <div className={`p-1.5 rounded-lg ${method === 'link' ? 'bg-[#56323E] text-white' : 'bg-[#EFDFD2] dark:bg-[#3F2231] text-[#5E4752] dark:text-[#C5B0BA]'}`}>
                           <Link2 size={16} />
                         </div>
-                        <span className={`text-xs font-extrabold ${method === 'link' ? 'text-indigo-900 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <span className={`text-xs font-extrabold ${method === 'link' ? 'text-[#2D1822] dark:text-[#EFDFD2]' : 'text-[#5E4752] dark:text-[#C5B0BA]'}`}>
                           Reset Link
                         </span>
                       </div>
-                      <span className="text-[9px] font-extrabold tracking-tight uppercase px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                      <span className="text-[9px] font-extrabold tracking-tight uppercase px-1.5 py-0.5 rounded-md bg-[#EFDFD2] dark:bg-[#432634] text-[#56323E] dark:text-[#EFDFD2]">
                         Default
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mt-1">
+                    <span className="text-[11px] text-[#7D6671] dark:text-[#C5B0BA] leading-tight mt-1">
                       1-click recovery button sent to inbox
                     </span>
                   </button>
@@ -187,19 +187,19 @@ export default function OwnerForgotPassword() {
                     onClick={() => setMethod('otp')}
                     className={`p-3.5 rounded-xl border text-left transition-all flex flex-col gap-1.5 cursor-pointer ${
                       method === 'otp'
-                        ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/50 ring-2 ring-indigo-500/20 shadow-sm'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 hover:bg-slate-100/60'
+                        ? 'border-[#56323E] bg-[#FAF5EF]/70 dark:bg-[#432634] ring-2 ring-[#56323E]/20 shadow-sm'
+                        : 'border-[#E7DBCF] dark:border-white/[0.08] bg-[#FAF5EF]/60 dark:bg-[#351D28]/60 hover:bg-[#F2E9E0]/60'
                     }`}
                   >
                     <div className="flex items-center gap-0">
-                      <div className={`p-1.5 rounded-lg ${method === 'otp' ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                      <div className={`p-1.5 rounded-lg ${method === 'otp' ? 'bg-[#56323E] text-white' : 'bg-[#EFDFD2] dark:bg-[#3F2231] text-[#5E4752] dark:text-[#C5B0BA]'}`}>
                         <KeyRound size={16} />
                       </div>
-                      <span className={`text-xs font-extrabold ${method === 'otp' ? 'text-indigo-900 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-300'}`}>
+                      <span className={`text-xs font-extrabold ${method === 'otp' ? 'text-[#2D1822] dark:text-[#EFDFD2]' : 'text-[#5E4752] dark:text-[#C5B0BA]'}`}>
                         6-Digit OTP
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mt-1">
+                    <span className="text-[11px] text-[#7D6671] dark:text-[#C5B0BA] leading-tight mt-1">
                       Fast reset directly on this screen
                     </span>
                   </button>
@@ -207,7 +207,7 @@ export default function OwnerForgotPassword() {
               </div>
 
               <div>
-                <label htmlFor="owner-email" className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                <label htmlFor="owner-email" className="block text-sm font-bold text-[#5E4752] dark:text-[#FAF5EF] mb-1.5">
                   Owner Email Address
                 </label>
                 <div className="relative">
@@ -219,16 +219,16 @@ export default function OwnerForgotPassword() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="owner@example.com"
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3.5 pl-11 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm text-sm"
+                    className="w-full rounded-xl border border-[#E7DBCF] dark:border-white/[0.08] px-4 py-3.5 pl-11 bg-[#FAF5EF] dark:bg-[#351D28] text-[#2D1822] dark:text-white outline-none focus:bg-white dark:focus:bg-[#351D28] focus:ring-2 focus:ring-[#56323E]/20 focus:border-[#56323E] transition-all shadow-sm text-sm"
                   />
-                  <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A68B98]" />
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={status === 'loading'}
-                className="w-full rounded-xl bg-indigo-600 px-4 py-3.5 font-bold text-white hover:bg-indigo-700 transition-all shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:shadow-none disabled:transform-none flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full rounded-xl bg-[#56323E] px-4 py-3.5 font-bold text-white hover:bg-[#432634] transition-all shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:shadow-none disabled:transform-none flex items-center justify-center gap-2 cursor-pointer"
               >
                 {status === 'loading' ? (
                   <>
@@ -243,7 +243,7 @@ export default function OwnerForgotPassword() {
               <div className="text-center pt-2">
                 <Link
                   to="/owner/login"
-                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                  className="text-xs font-bold text-[#56323E] dark:text-[#EFDFD2] hover:underline"
                 >
                   Remember your password? Sign in
                 </Link>
@@ -254,8 +254,8 @@ export default function OwnerForgotPassword() {
       </div>
 
       {/* Right Column: Hero Showcase */}
-      <div className="hidden lg:block lg:flex-1 relative overflow-hidden bg-slate-900">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/40 to-slate-900/80 z-10 mix-blend-multiply" />
+      <div className="hidden lg:block lg:flex-1 relative overflow-hidden bg-[#56323E]">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#56323E] to-slate-900/80 z-10 mix-blend-multiply" />
         <img
           src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1920"
           alt="Grocery store interior"
@@ -264,13 +264,13 @@ export default function OwnerForgotPassword() {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent z-10" />
 
         <div className="absolute bottom-0 left-0 p-16 z-20 w-full max-w-2xl">
-          <div className="inline-flex items-center gap-0 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-indigo-200 mb-4">
+          <div className="inline-flex items-center gap-0 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-bold text-[#EFDFD2] mb-4">
             <span>🛡️ Owner Account Security</span>
           </div>
           <h2 className="text-4xl font-extrabold text-white mb-4 tracking-tight leading-tight">
             Protecting your store <br />and business data.
           </h2>
-          <p className="text-indigo-100/80 text-lg leading-relaxed font-medium max-w-lg">
+          <p className="text-[#EFDFD2] text-lg leading-relaxed font-medium max-w-lg">
             Encrypted recovery links ensure only authorized store owners and operators can access management tools and analytics.
           </p>
         </div>

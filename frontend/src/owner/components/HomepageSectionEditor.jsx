@@ -77,7 +77,7 @@ export default function HomepageSectionEditor({
             Add Products
           </button>
           
-          <span className="text-xs font-semibold text-slate-500">
+          <span className="text-xs font-semibold text-[#7D6671]">
             {items.length} products in section
           </span>
         </div>
@@ -95,8 +95,8 @@ export default function HomepageSectionEditor({
 
       {/* ── Horizontal Product Grid ─────────────────────────────────────── */}
       {items.length === 0 ? (
-        <div className="text-center py-10 bg-slate-50 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-2xl">
-          <p className="font-semibold text-slate-500 mb-1">No products in {cleanTitle} yet.</p>
+        <div className="text-center py-10 bg-[#FAF5EF] text-[#A68B98] text-sm border-2 border-dashed border-[#E7DBCF] rounded-2xl">
+          <p className="font-semibold text-[#7D6671] mb-1">No products in {cleanTitle} yet.</p>
           <p className="text-xs">Click <strong>Add Products</strong> to curate this section.</p>
         </div>
       ) : (
@@ -117,25 +117,25 @@ export default function HomepageSectionEditor({
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
                         className={`w-40 sm:w-48 shrink-0 snap-start bg-white border rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing group hover:border-emerald-300 hover:shadow-lg transition-all relative ${
-                          snapshot.isDragging ? 'shadow-2xl ring-2 ring-emerald-500 border-emerald-500 z-50' : 'border-gray-200'
+                          snapshot.isDragging ? 'shadow-2xl ring-2 ring-emerald-500 border-emerald-500 z-50' : 'border-[#E7DBCF]'
                         }`}
                         style={provided.draggableProps.style}
                       >
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); removeProduct(item.id); }}
-                          className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm text-gray-400 rounded-full hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm"
+                          className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm text-[#A68B98] rounded-full hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm"
                           title="Remove"
                         >
                           <X className="w-4 h-4" />
                         </button>
-                        <div className="absolute top-2 left-2 p-1.5 bg-white/90 backdrop-blur-sm text-gray-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm">
+                        <div className="absolute top-2 left-2 p-1.5 bg-white/90 backdrop-blur-sm text-[#A68B98] rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm">
                           <ArrowRightLeft className="w-3 h-3" />
                         </div>
                         <div className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-full z-10 shadow-sm">
                           #{idx + 1}
                         </div>
-                        <div className="aspect-square bg-gray-50 border-b border-gray-100 p-2 pointer-events-none">
+                        <div className="aspect-square bg-[#FAF5EF] border-b border-[#E7DBCF] p-2 pointer-events-none">
                           {(item.image || item.name?.toLowerCase().includes('pumpkin'))
                             ? <img 
                                 loading="lazy"
@@ -149,11 +149,11 @@ export default function HomepageSectionEditor({
                           }
                         </div>
                         <div className="p-3 pointer-events-none">
-                          <p className="text-sm font-bold text-gray-900 line-clamp-2 leading-snug">{item.name}</p>
+                          <p className="text-sm font-bold text-[#2D1822] line-clamp-2 leading-snug">{item.name}</p>
                           <div className="mt-1.5 flex items-baseline gap-1.5">
                             {item.offer_price && Number(item.offer_price) < Number(item.regular_price)
-                              ? <><span className="text-sm font-extrabold text-emerald-600">{fmt(item.offer_price)}</span> <span className="text-xs font-bold text-gray-400 line-through">{fmt(item.regular_price)}</span></>
-                              : <span className="text-sm font-extrabold text-gray-900">{fmt(item.regular_price)}</span>
+                              ? <><span className="text-sm font-extrabold text-emerald-600">{fmt(item.offer_price)}</span> <span className="text-xs font-bold text-[#A68B98] line-through">{fmt(item.regular_price)}</span></>
+                              : <span className="text-sm font-extrabold text-[#2D1822]">{fmt(item.regular_price)}</span>
                             }
                           </div>
                           {!item.is_in_stock && <span className="text-[10px] uppercase tracking-wider font-extrabold text-red-600 mt-1 block">Out of stock</span>}
@@ -171,40 +171,40 @@ export default function HomepageSectionEditor({
 
       {/* ── Add Products Modal ──────────────────────────────────────────── */}
       {pickerOpen && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl border border-slate-100 flex flex-col h-[85vh]">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 flex-shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#56323E]/40 backdrop-blur-sm transition-opacity">
+          <div className="owner-theme bg-white dark:bg-[#351D28] rounded-3xl w-full max-w-4xl shadow-2xl border border-[#E7DBCF] dark:border-white/10 flex flex-col h-[85vh] text-[#2D1822] dark:text-[#FAF5EF]">
+            <div className="flex justify-between items-center p-6 border-b border-[#E7DBCF] flex-shrink-0">
               <div>
-                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Curate {cleanTitle}</h2>
-                <p className="text-sm text-slate-500 mt-0.5">Select products to feature in this showcase section.</p>
+                <h2 className="text-2xl font-extrabold text-[#2D1822] tracking-tight">Curate {cleanTitle}</h2>
+                <p className="text-sm text-[#7D6671] mt-0.5">Select products to feature in this showcase section.</p>
               </div>
-              <button onClick={() => { setPickerOpen(false); setSearch(''); }} className="text-slate-400 hover:text-slate-600 transition-colors p-2 bg-slate-50 rounded-full hover:bg-slate-100">
+              <button onClick={() => { setPickerOpen(false); setSearch(''); }} className="text-[#A68B98] hover:text-[#5E4752] transition-colors p-2 bg-[#FAF5EF] rounded-full hover:bg-[#F2E9E0]">
                 <X className="w-6 h-6" />
               </button>
             </div>
             
-            <div className="p-4 border-b border-slate-100 bg-slate-50 shrink-0">
+            <div className="p-4 border-b border-[#E7DBCF] bg-[#FAF5EF] shrink-0">
               <div className="relative max-w-md">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A68B98]" />
                 <input
                   autoFocus
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search products by name or category…"
-                  className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all shadow-sm text-sm font-medium"
+                  className="w-full pl-11 pr-4 py-2.5 bg-white border border-[#E7DBCF] rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all shadow-sm text-sm font-medium"
                 />
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-6 bg-[#FAF5EF]/50 custom-scrollbar">
               {filteredProducts.length === 0 ? (
                 <div className="text-center py-20">
-                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Search className="w-8 h-8 text-slate-400" />
+                  <div className="w-16 h-16 bg-[#F2E9E0] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-[#A68B98]" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900">No products found</h3>
-                  <p className="text-slate-500 mt-1">Try a different search term.</p>
+                  <h3 className="text-lg font-bold text-[#2D1822]">No products found</h3>
+                  <p className="text-[#7D6671] mt-1">Try a different search term.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -217,7 +217,7 @@ export default function HomepageSectionEditor({
                         className={`relative p-3 rounded-2xl cursor-pointer transition-all ${
                           isAdded 
                             ? 'bg-emerald-50 ring-2 ring-emerald-500 shadow-md' 
-                            : 'bg-white border border-slate-200 hover:border-emerald-300 hover:shadow-lg'
+                            : 'bg-white border border-[#E7DBCF] hover:border-emerald-300 hover:shadow-lg'
                         }`}
                       >
                         {isAdded && (
@@ -225,7 +225,7 @@ export default function HomepageSectionEditor({
                             <span className="text-white text-xs font-black">✓</span>
                           </div>
                         )}
-                        <div className="aspect-square bg-slate-50 rounded-xl mb-3 p-2 border border-slate-100">
+                        <div className="aspect-square bg-[#FAF5EF] rounded-xl mb-3 p-2 border border-[#E7DBCF]">
                           {(p.image || p.name?.toLowerCase().includes('pumpkin'))
                             ? <img 
                                 loading="lazy"
@@ -238,8 +238,8 @@ export default function HomepageSectionEditor({
                             : <div className="w-full h-full flex items-center justify-center text-slate-300 font-bold text-2xl">{p.name?.charAt(0)}</div>
                           }
                         </div>
-                        <p className="text-xs font-bold text-slate-900 line-clamp-2 leading-tight">{p.name}</p>
-                        <p className="text-xs text-slate-500 mt-1 font-semibold">{fmt(p.offer_price || p.regular_price)}</p>
+                        <p className="text-xs font-bold text-[#2D1822] line-clamp-2 leading-tight">{p.name}</p>
+                        <p className="text-xs text-[#7D6671] mt-1 font-semibold">{fmt(p.offer_price || p.regular_price)}</p>
                       </div>
                     );
                   })}
@@ -247,8 +247,8 @@ export default function HomepageSectionEditor({
               )}
             </div>
             
-            <div className="p-4 md:px-6 md:py-4 border-t border-slate-100 bg-white flex justify-between items-center flex-shrink-0 rounded-b-3xl">
-              <span className="text-sm font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg">
+            <div className="p-4 md:px-6 md:py-4 border-t border-[#E7DBCF] bg-white flex justify-between items-center flex-shrink-0 rounded-b-3xl">
+              <span className="text-sm font-bold text-[#5E4752] bg-[#F2E9E0] px-3 py-1.5 rounded-lg">
                 {items.length} products selected
               </span>
               <button 
